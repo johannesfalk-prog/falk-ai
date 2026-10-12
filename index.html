@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <title>WAYJS - FALK Engine</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f4f9; padding: 20px; }
+        .chat-container { max-width: 650px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 20px; }
+        .chat-box { height: 400px; overflow-y: auto; border: 1px solid #eee; padding: 15px; border-radius: 6px; margin-bottom: 15px; }
+        .msg { margin-bottom: 12px; line-height: 1.5; }
+        .user { color: #1a1a1a; font-weight: 600; }
+        .falk { color: #2b5278; font-weight: 500; background: #f0f4f8; padding: 10px; border-radius: 6px; }
+        .input-group { display: flex; gap: 10px; }
+        input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 15px; }
+        button { padding: 12px 20px; background: #2b5278; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; }
+        .reset-btn { background: #d9534f; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <h2>FALK — Digital Mentor (MVE Test)</h2>
+        <div id="chat" class="chat-box"></div>
+        <div class="input-group">
+            <input type="text" id="input" placeholder="Skriv ditt meddelande här..." onkeypress="if(event.key==='Enter') send()">
+            <button onclick="send()">Skicka</button>
+        </div>
+        <button class="reset-btn" onclick="resetChat()">Nollställ samtal</button>
+    </div>
+
+    <script>
+        async function send() {
+            let input = document.getElementById('input');
+            let chat = document.getElementById('chat');
+            let msg = input.value.trim();
+            if(!msg) return;
+
+            chat.innerHTML += `<div class="msg user"><b>Du:</b> ${msg}</div>`;
+            input.value = '';
+            chat.scrollTop = chat.scrollHeight;
+
+            try {
+                let res = await fetch('http://localhost:5000/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message: msg})
+                });
+                let data = await res.json();
+                chat.innerHTML += `<div class="msg falk"><b>FALK:</b> ${data.reply}</div>`;
+                chat.scrollTop = chat.scrollHeight;
+            } catch(e) {
+                chat.innerHTML += `<div class="msg" style="color:red;"><b>Fel:</b> Kunde inte nå FALK-backend. Slå på python3 app.py i terminalen.</div>`;
+            }
+        }
+
+        async function resetChat() {
+            await fetch('http://localhost:5000/reset', {method: 'POST'});
+            document.getElementById('chat').innerHTML = '<div class="msg" style="color:gray;"><i>Samtalet har nollställts.</i></div>';
+        }
+    </script>
+</body>
+</html>
