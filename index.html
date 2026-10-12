@@ -1,61 +1,103 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-    <meta charset="UTF-8">
-    <title>WAYJS - FALK Engine</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f4f9; padding: 20px; }
-        .chat-container { max-width: 650px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 20px; }
-        .chat-box { height: 400px; overflow-y: auto; border: 1px solid #eee; padding: 15px; border-radius: 6px; margin-bottom: 15px; }
-        .msg { margin-bottom: 12px; line-height: 1.5; }
-        .user { color: #1a1a1a; font-weight: 600; }
-        .falk { color: #2b5278; font-weight: 500; background: #f0f4f8; padding: 10px; border-radius: 6px; }
-        .input-group { display: flex; gap: 10px; }
-        input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 15px; }
-        button { padding: 12px 20px; background: #2b5278; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; }
-        .reset-btn { background: #d9534f; margin-top: 10px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FALK - Digital Mentor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #f4f5f7; display: flex; justify-content: center; align-items: center; height: 100vh; padding: 10px; }
+    .chat-card { background: #ffffff; width: 100%; max-width: 480px; height: 90vh; max-height: 680px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; }
+    .chat-header { background: #1a1a1a; color: #ffffff; padding: 20px; font-weight: 600; font-size: 1.1rem; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
+    .chat-header span { font-size: 0.8rem; background: #333; padding: 4px 8px; border-radius: 4px; color: #aaa; }
+    .chat-body { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+    .msg { max-width: 82%; padding: 12px 16px; border-radius: 12px; font-size: 0.95rem; line-height: 1.45; word-wrap: break-word; }
+    .msg.user { background: #0066ff; color: #ffffff; align-self: flex-end; border-bottom-right-radius: 2px; }
+    .msg.bot { background: #f0f1f3; color: #1a1a1a; align-self: flex-start; border-bottom-left-radius: 2px; }
+    .msg.status { background: transparent; color: #888; font-size: 0.85rem; font-style: italic; align-self: center; }
+    .chat-footer { padding: 16px; border-top: 1px solid #eee; display: flex; gap: 8px; background: #fafafa; }
+    input { flex: 1; padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; outline: none; }
+    input:focus { border-color: #0066ff; }
+    button { background: #1a1a1a; color: #fff; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    button:hover { background: #333; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+  </style>
 </head>
 <body>
-    <div class="chat-container">
-        <h2>FALK — Digital Mentor (MVE Test)</h2>
-        <div id="chat" class="chat-box"></div>
-        <div class="input-group">
-            <input type="text" id="input" placeholder="Skriv ditt meddelande här..." onkeypress="if(event.key==='Enter') send()">
-            <button onclick="send()">Skicka</button>
-        </div>
-        <button class="reset-btn" onclick="resetChat()">Nollställ samtal</button>
-    </div>
 
-    <script>
-        async function send() {
-            let input = document.getElementById('input');
-            let chat = document.getElementById('chat');
-            let msg = input.value.trim();
-            if(!msg) return;
+<div class="chat-card">
+  <div class="chat-header">
+    FALK <span>WAYJS</span>
+  </div>
+  <div class="chat-body" id="chat">
+    <div class="msg bot">Välkommen. Vad upptar dina tankar idag?</div>
+  </div>
+  <div class="chat-footer">
+    <input type="text" id="input" placeholder="Skriv ditt meddelande..." onkeydown="if(event.key==='Enter') send()">
+    <button id="send-btn" onclick="send()">Skicka</button>
+  </div>
+</div>
 
-            chat.innerHTML += `<div class="msg user"><b>Du:</b> ${msg}</div>`;
-            input.value = '';
-            chat.scrollTop = chat.scrollHeight;
+<script>
+  const API_URL = "https://falk-ai-engine.onrender.com/chat";
+  let sessionId = localStorage.getItem("falk_session_id") || null;
 
-            try {
-                let res = await fetch('http://localhost:5000/chat', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({message: msg})
-                });
-                let data = await res.json();
-                chat.innerHTML += `<div class="msg falk"><b>FALK:</b> ${data.reply}</div>`;
-                chat.scrollTop = chat.scrollHeight;
-            } catch(e) {
-                chat.innerHTML += `<div class="msg" style="color:red;"><b>Fel:</b> Kunde inte nå FALK-backend. Slå på python3 app.py i terminalen.</div>`;
-            }
+  async function send() {
+    const input = document.getElementById("input");
+    const btn = document.getElementById("send-btn");
+    const chat = document.getElementById("chat");
+    const text = input.value.trim();
+
+    if (!text) return;
+
+    appendMessage(text, "user");
+    input.value = "";
+    input.disabled = true;
+    btn.disabled = true;
+
+    const loadingElem = appendMessage("Falk tänker...", "status");
+    chat.scrollTop = chat.scrollHeight;
+
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, session_id: sessionId })
+      });
+
+      const data = await res.json();
+      loadingElem.remove();
+
+      if (data.reply) {
+        appendMessage(data.reply, "bot");
+        if (data.session_id) {
+          sessionId = data.session_id;
+          localStorage.setItem("falk_session_id", sessionId);
         }
+      } else {
+        appendMessage("Ett fel uppstod. Försök igen.", "bot");
+      }
+    } catch (err) {
+      loadingElem.remove();
+      appendMessage("Kunde inte ansluta till Falk. Servern startar upp, var god försök igen om ett ögonblick.", "bot");
+    } finally {
+      input.disabled = false;
+      btn.disabled = false;
+      input.focus();
+      chat.scrollTop = chat.scrollHeight;
+    }
+  }
 
-        async function resetChat() {
-            await fetch('http://localhost:5000/reset', {method: 'POST'});
-            document.getElementById('chat').innerHTML = '<div class="msg" style="color:gray;"><i>Samtalet har nollställts.</i></div>';
-        }
-    </script>
+  function appendMessage(text, role) {
+    const chat = document.getElementById("chat");
+    const msg = document.createElement("div");
+    msg.className = `msg ${role}`;
+    msg.innerText = text;
+    chat.appendChild(msg);
+    chat.scrollTop = chat.scrollHeight;
+    return msg;
+  }
+</script>
+
 </body>
 </html>
