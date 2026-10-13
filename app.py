@@ -3,11 +3,30 @@ import json
 import logging
 from flask import Flask, request, Response, jsonify
 from flask_cors import CORS
+from flask_limiter import Limiter
 from groq import Groq
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
+# --- PROXY-SÄKER IP-IDENTIFIERING ---
+def get_client_ip():
+    """Hämtar den faktiska klientens IP bakom Cloudflare / Render proxy."""
+    if request.headers.get("CF-Connecting-IP"):
+        return request.headers.get("CF-Connecting-IP")
+    if request.headers.get("X-Forwarded-For"):
+        return request.headers.get("X-Forwarded-For").split(",")[0].strip()
+    return request.remote_addr
+
+# --- RATE LIMITER SETUP ---
+limiter = Limiter(
+    key_func=get_client_ip,
+    app=app,
+    default_limits=["200 per day", "60 per hour"],
+    storage_uri="memory://"
+)
+
+# --- DYNAMISK KONFIGURATION ---
 ALLOWED_ORIGINS = os.environ.get(
     "ALLOWED_ORIGINS", 
     "https://johannesfalk-prog.github.io,http://localhost:8000"
@@ -49,9 +68,10 @@ client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({"status": "online", "streaming": True, "model": GROQ_MODEL}), 200
+    return jsonify({"status": "online", "streaming": True, "rate_limiting": True}), 200
 
 @app.route('/feedback', methods=['POST', 'OPTIONS'])
+@limiter.limit("30 per minute", exempt_when=lambda: request.method == "OPTIONS")
 def feedback():
     if request.method == 'OPTIONS':
         response = jsonify({"status": "ok"})
@@ -66,10 +86,11 @@ def feedback():
     rating = data.get("rating")
     reply = data.get("reply", "")[:200]
 
-    app.logger.info(f"[QUALITY_FEEDBACK] Rating: {rating} | Reply snippet: {reply}")
+    app.logger.info(f"[QUALITY_FEEDBACK] IP: {get_client_ip()} | Rating: {rating} | Reply: {reply}")
     return jsonify({"status": "received"}), 200
 
 @app.route('/chat', methods=['POST', 'OPTIONS'])
+@limiter.limit("15 per minute", exempt_when=lambda: request.method == "OPTIONS")
 def chat():
     if request.method == 'OPTIONS':
         response = jsonify({"status": "ok"})
@@ -127,6 +148,10 @@ def chat():
     }
 
     return Response(generate_stream(), headers=headers)
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return jsonify({"error": "Du skickar meddelanden för snabbt. Vänta en minut och försök igen."}), 429
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
