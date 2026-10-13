@@ -42,10 +42,10 @@ MAX_TOKENS = int(os.environ.get("MAX_TOKENS", "500"))
 TEMPERATURE = float(os.environ.get("TEMPERATURE", "0.5"))
 MAX_HISTORY_MESSAGES = int(os.environ.get("MAX_HISTORY_MESSAGES", "8"))
 
-# VERIFIERADE, TILLÅTNA EMBED-SPÅR FÖR SÖMN
+# PERMANENTA, VERIFIERADE LIVE- OCH SÖMNSTRÖMMAR
 VALIDATED_SLEEP_TRACKS = {
-    "frequency": "https://www.youtube.com/watch?v=2OEL4P5uJJ4", # 432Hz Sleep Sound (Embed Verified)
-    "rain": "https://www.youtube.com/watch?v=mPZkdNFkNps"      # Heavy Rain Sleep (Embed Verified)
+    "lofi": "https://www.youtube.com/watch?v=jfKfPfyJRdk",  # Lofi Girl - Chill/Sleep Beats (Permanent)
+    "rain": "https://www.youtube.com/watch?v=mPZkdNFkNps"   # Heavy Rain & Thunder (Permanent)
 }
 
 SYSTEM_PROMPT = f"""Du är FALK, en handlingsorienterad digital mentor baserad på WAYJS-metodiken och vetenskaplig psykoedukation.
@@ -53,8 +53,8 @@ SYSTEM_PROMPT = f"""Du är FALK, en handlingsorienterad digital mentor baserad p
 ### SÄRSKILT PROTOKOLL FÖR SÖMNPROBLEMATIK:
 1. FRÅGA OM TILLÅTELSE FÖRST: När en användare nämner sömnproblem, fråga om de vill ha ett lugnande spår i chatten eller prata om orsakerna.
 2. NÄR ANVÄNDAREN TACKAR JA TILL SPÅR:
-   - Skicka EXAKT en av följande länkar i ditt svar:
-     * Lugnande frekvenser: {VALIDATED_SLEEP_TRACKS['frequency']}
+   - Skicka EXAKT en av följande verifierade länkar i ditt svar:
+     * Lugnande musik/frekvenser: {VALIDATED_SLEEP_TRACKS['lofi']}
      * Regnljud / Vitt brus: {VALIDATED_SLEEP_TRACKS['rain']}
    - Ge instruktionen: "Starta spåret nedan, lägg bort mobilen med skärmen nedåt och fokusera på andningen."
    - Hitta ALDRIG på egna YouTube-länkar.
