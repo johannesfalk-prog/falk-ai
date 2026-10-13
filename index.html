@@ -37,7 +37,7 @@
   </div>
   <div class="chat-body" id="chat">
     <div class="msg-wrapper bot">
-      <div class="msg">Välkommen. Vad upptar dina tankar idag?</div>
+      <div class="msg">Välkommen, hur kan jag hjälpa dig eller vad funderar du på?</div>
     </div>
   </div>
   <div class="chat-footer">
@@ -207,9 +207,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rating: rating, reply: replyText })
       });
-    } catch (e) {
-      // Tyst felhantering i UI
-    }
+    } catch (e) {}
   }
 </script>
 
