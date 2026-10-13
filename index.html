@@ -18,7 +18,9 @@
     .msg-wrapper.user .msg { background: #0066ff; color: #ffffff; border-bottom-right-radius: 2px; }
     .msg-wrapper.bot .msg { background: #f0f1f3; color: #1a1a1a; border-bottom-left-radius: 2px; }
     .msg.status { background: transparent; color: #888; font-size: 0.85rem; font-style: italic; text-align: center; align-self: center; }
-    .yt-player { width: 100%; height: 200px; border-radius: 8px; margin-top: 8px; border: none; }
+    .yt-container { width: 100%; margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+    .yt-player { width: 100%; height: 200px; border-radius: 8px; border: none; }
+    .yt-fallback-link { font-size: 0.75rem; color: #0066ff; text-decoration: underline; margin-left: 2px; }
     .feedback-actions { display: flex; gap: 6px; font-size: 0.75rem; color: #888; margin-top: 2px; margin-left: 4px; }
     .feedback-btn { background: none; border: none; cursor: pointer; opacity: 0.6; transition: opacity 0.2s; font-size: 0.85rem; padding: 2px 4px; }
     .feedback-btn:hover { opacity: 1.0; }
@@ -151,22 +153,33 @@
   }
 
   function parseAndEmbedMedia(wrapperElem, msgElem, text) {
-    // Robust sökning efter YouTube-ID oavsett om det finns extra parametrar eller radbrytningar
     const match = text.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     if (match && match[1]) {
       const videoId = match[1];
+      const rawUrl = `https://www.youtube.com/watch?v=${videoId}`;
       
-      // Rensa bort råa URL:er från textbubblan
       const cleanText = text.replace(/https?:\/\/[^\s]+/g, '').trim();
       msgElem.innerText = cleanText || "Här är ditt lugnande spår:";
 
-      if (!wrapperElem.querySelector("iframe")) {
+      if (!wrapperElem.querySelector(".yt-container")) {
+        const container = document.createElement("div");
+        container.className = "yt-container";
+
         const iframe = document.createElement("iframe");
         iframe.className = "yt-player";
-        iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`;
+        iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
         iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
         iframe.allowFullscreen = true;
-        wrapperElem.appendChild(iframe);
+
+        const fallback = document.createElement("a");
+        fallback.className = "yt-fallback-link";
+        fallback.href = rawUrl;
+        fallback.target = "_blank";
+        fallback.innerText = "Öppna i YouTube om spelaren inte laddas ↗";
+
+        container.appendChild(iframe);
+        container.appendChild(fallback);
+        wrapperElem.appendChild(container);
       }
     }
   }
