@@ -11,15 +11,21 @@
     .chat-header { background: #1a1a1a; color: #ffffff; padding: 20px; font-weight: 600; font-size: 1.1rem; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
     .chat-header span { font-size: 0.75rem; background: #333; padding: 4px 8px; border-radius: 4px; color: #aaa; text-transform: uppercase; }
     .chat-body { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-    .msg { max-width: 82%; padding: 12px 16px; border-radius: 12px; font-size: 0.95rem; line-height: 1.45; word-wrap: break-word; }
-    .msg.user { background: #0066ff; color: #ffffff; align-self: flex-end; border-bottom-right-radius: 2px; }
-    .msg.bot { background: #f0f1f3; color: #1a1a1a; align-self: flex-start; border-bottom-left-radius: 2px; }
-    .msg.status { background: transparent; color: #888; font-size: 0.85rem; font-style: italic; align-self: center; text-align: center; }
+    .msg-wrapper { display: flex; flex-direction: column; gap: 4px; max-width: 82%; }
+    .msg-wrapper.user { align-self: flex-end; }
+    .msg-wrapper.bot { align-self: flex-start; }
+    .msg { padding: 12px 16px; border-radius: 12px; font-size: 0.95rem; line-height: 1.45; word-wrap: break-word; }
+    .msg-wrapper.user .msg { background: #0066ff; color: #ffffff; border-bottom-right-radius: 2px; }
+    .msg-wrapper.bot .msg { background: #f0f1f3; color: #1a1a1a; border-bottom-left-radius: 2px; }
+    .msg.status { background: transparent; color: #888; font-size: 0.85rem; font-style: italic; text-align: center; align-self: center; }
+    .feedback-actions { display: flex; gap: 6px; font-size: 0.75rem; color: #888; margin-top: 2px; margin-left: 4px; }
+    .feedback-btn { background: none; border: none; cursor: pointer; opacity: 0.6; transition: opacity 0.2s; font-size: 0.85rem; padding: 2px 4px; }
+    .feedback-btn:hover { opacity: 1.0; }
     .chat-footer { padding: 16px; border-top: 1px solid #eee; display: flex; gap: 8px; background: #fafafa; }
     input { flex: 1; padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; outline: none; }
     input:focus { border-color: #0066ff; }
-    button { background: #1a1a1a; color: #fff; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-    button:hover { background: #333; }
+    button.send-btn { background: #1a1a1a; color: #fff; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    button.send-btn:hover { background: #333; }
     button:disabled { background: #ccc; cursor: not-allowed; }
   </style>
 </head>
@@ -30,21 +36,24 @@
     FALK-Light <span>powered by WAYJS</span>
   </div>
   <div class="chat-body" id="chat">
-    <div class="msg bot">Välkommen. Vad upptar dina tankar idag?</div>
+    <div class="msg-wrapper bot">
+      <div class="msg">Välkommen. Vad upptar dina tankar idag?</div>
+    </div>
   </div>
   <div class="chat-footer">
     <input type="text" id="input" placeholder="Skriv ditt meddelande..." onkeydown="if(event.key==='Enter') send()">
-    <button id="send-btn" onclick="send()">Skicka</button>
+    <button class="send-btn" id="send-btn" onclick="send()">Skicka</button>
   </div>
 </div>
 
 <script>
   const API_URL = "https://falk-ai.onrender.com/chat";
+  const FEEDBACK_URL = "https://falk-ai.onrender.com/feedback";
   let history = JSON.parse(sessionStorage.getItem("falk_light_history") || "[]");
 
   window.onload = () => {
     history.forEach(msg => {
-      appendMessage(msg.content, msg.role === "user" ? "user" : "bot");
+      appendMessage(msg.content, msg.role === "user" ? "user" : "bot", false);
     });
   };
 
@@ -56,12 +65,12 @@
 
     if (!text) return;
 
-    appendMessage(text, "user");
+    appendMessage(text, "user", false);
     input.value = "";
     input.disabled = true;
     btn.disabled = true;
 
-    const loadingElem = appendMessage("Falk tänker...", "status");
+    const loadingElem = appendStatusMessage("Falk tänker...");
     chat.scrollTop = chat.scrollHeight;
 
     const coldStartTimer = setTimeout(() => {
@@ -79,12 +88,11 @@
       loadingElem.remove();
 
       if (!res.ok) {
-        appendMessage("Ett fel uppstod på servern.", "bot");
+        appendMessage("Ett fel uppstod på servern.", "bot", false);
         return;
       }
 
-      // Skapa tom bot-bubbla för streaming
-      const botMsgElem = appendMessage("", "bot");
+      const { wrapperElem, msgElem } = createBotMessagePlaceholder();
       let fullReply = "";
 
       const reader = res.body.getReader();
@@ -97,7 +105,7 @@
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n\n");
-        buffer = lines.pop() || ""; // Spara ofullständig rad i buffert
+        buffer = lines.pop() || "";
 
         for (const line of lines) {
           if (line.startsWith("data: ")) {
@@ -108,20 +116,16 @@
               const data = JSON.parse(dataStr);
               if (data.token) {
                 fullReply += data.token;
-                botMsgElem.innerText = fullReply;
+                msgElem.innerText = fullReply;
                 chat.scrollTop = chat.scrollHeight;
-              } else if (data.error) {
-                botMsgElem.innerText = "Ett fel uppstod under svarscykeln.";
               }
-            } catch (e) {
-              // Ignorera parsningsfel för delvis överförda chunks
-            }
+            } catch (e) {}
           }
         }
       }
 
-      // Spara till sessionStorage FÖRST NÄR HELA STREAMEN ÄR KLAR
       if (fullReply.trim()) {
+        attachFeedbackButtons(wrapperElem, fullReply);
         history.push({ role: "user", content: text });
         history.push({ role: "assistant", content: fullReply });
         if (history.length > 16) history = history.slice(-16);
@@ -131,7 +135,7 @@
     } catch (err) {
       clearTimeout(coldStartTimer);
       loadingElem.remove();
-      appendMessage("Kunde inte ansluta till Falk. Kontrollera anslutningen.", "bot");
+      appendMessage("Kunde inte ansluta till Falk.", "bot", false);
     } finally {
       input.disabled = false;
       btn.disabled = false;
@@ -140,14 +144,72 @@
     }
   }
 
-  function appendMessage(text, role) {
+  function appendMessage(text, role, showFeedback = false) {
+    const chat = document.getElementById("chat");
+    const wrapper = document.createElement("div");
+    wrapper.className = `msg-wrapper ${role}`;
+    
+    const msg = document.createElement("div");
+    msg.className = "msg";
+    msg.innerText = text;
+    wrapper.appendChild(msg);
+
+    if (role === "bot" && showFeedback) {
+      attachFeedbackButtons(wrapper, text);
+    }
+
+    chat.appendChild(wrapper);
+    chat.scrollTop = chat.scrollHeight;
+    return wrapper;
+  }
+
+  function createBotMessagePlaceholder() {
+    const chat = document.getElementById("chat");
+    const wrapperElem = document.createElement("div");
+    wrapperElem.className = "msg-wrapper bot";
+    const msgElem = document.createElement("div");
+    msgElem.className = "msg";
+    wrapperElem.appendChild(msgElem);
+    chat.appendChild(wrapperElem);
+    return { wrapperElem, msgElem };
+  }
+
+  function appendStatusMessage(text) {
     const chat = document.getElementById("chat");
     const msg = document.createElement("div");
-    msg.className = `msg ${role}`;
+    msg.className = "msg status";
     msg.innerText = text;
     chat.appendChild(msg);
-    chat.scrollTop = chat.scrollHeight;
     return msg;
+  }
+
+  function attachFeedbackButtons(wrapperElem, replyText) {
+    const actions = document.createElement("div");
+    actions.className = "feedback-actions";
+    actions.innerHTML = `
+      <button class="feedback-btn" onclick="sendFeedback(this, 'up', \`${escapeQuotes(replyText)}\`)">👍</button>
+      <button class="feedback-btn" onclick="sendFeedback(this, 'down', \`${escapeQuotes(replyText)}\`)">👎</button>
+    `;
+    wrapperElem.appendChild(actions);
+  }
+
+  function escapeQuotes(str) {
+    return str.replace(/`/g, '\\`').replace(/\$/g, '\\$');
+  }
+
+  async function sendFeedback(btn, rating, replyText) {
+    const parent = btn.parentElement;
+    parent.innerHTML = "<span>Tack för feedback!</span>";
+
+    try {
+      await fetch(FEEDBACK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating: rating, reply: replyText })
+      });
+    } catch (e) {
+      // Tyst felhantering i UI
+    }
   }
 </script>
 

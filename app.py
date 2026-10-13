@@ -1,12 +1,13 @@
 import os
 import json
+import logging
 from flask import Flask, request, Response, jsonify
 from flask_cors import CORS
 from groq import Groq
 
 app = Flask(__name__)
+logging.basicConfig(level=logging.INFO)
 
-# --- DYNAMISK KONFIGURATION ---
 ALLOWED_ORIGINS = os.environ.get(
     "ALLOWED_ORIGINS", 
     "https://johannesfalk-prog.github.io,http://localhost:8000"
@@ -48,11 +49,25 @@ client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({
-        "status": "online",
-        "streaming": True,
-        "model": GROQ_MODEL
-    }), 200
+    return jsonify({"status": "online", "streaming": True, "model": GROQ_MODEL}), 200
+
+@app.route('/feedback', methods=['POST', 'OPTIONS'])
+def feedback():
+    if request.method == 'OPTIONS':
+        response = jsonify({"status": "ok"})
+        origin = request.headers.get('Origin')
+        if origin in ALLOWED_ORIGINS:
+            response.headers.add("Access-Control-Allow-Origin", origin)
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+        return response, 200
+
+    data = request.get_json() or {}
+    rating = data.get("rating")
+    reply = data.get("reply", "")[:200]
+
+    app.logger.info(f"[QUALITY_FEEDBACK] Rating: {rating} | Reply snippet: {reply}")
+    return jsonify({"status": "received"}), 200
 
 @app.route('/chat', methods=['POST', 'OPTIONS'])
 def chat():
@@ -107,7 +122,7 @@ def chat():
     headers = {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
-        "X-Accel-Buffering": "no", # KRITISKT för Render/Cloudflare streaming
+        "X-Accel-Buffering": "no",
         "Access-Control-Allow-Origin": origin if origin in ALLOWED_ORIGINS else ALLOWED_ORIGINS[0]
     }
 
