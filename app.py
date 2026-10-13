@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import urllib.request
 from flask import Flask, request, Response, jsonify
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -9,16 +10,13 @@ from groq import Groq
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
-# --- PROXY-SÄKER IP-IDENTIFIERING ---
 def get_client_ip():
-    """Hämtar den faktiska klientens IP bakom Cloudflare / Render proxy."""
     if request.headers.get("CF-Connecting-IP"):
         return request.headers.get("CF-Connecting-IP")
     if request.headers.get("X-Forwarded-For"):
         return request.headers.get("X-Forwarded-For").split(",")[0].strip()
     return request.remote_addr
 
-# --- RATE LIMITER SETUP ---
 limiter = Limiter(
     key_func=get_client_ip,
     app=app,
@@ -26,7 +24,6 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
-# --- DYNAMISK KONFIGURATION ---
 ALLOWED_ORIGINS = os.environ.get(
     "ALLOWED_ORIGINS", 
     "https://johannesfalk-prog.github.io,http://localhost:8000"
@@ -34,25 +31,33 @@ ALLOWED_ORIGINS = os.environ.get(
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
+DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
 
 MAX_TOKENS = int(os.environ.get("MAX_TOKENS", "500"))
 TEMPERATURE = float(os.environ.get("TEMPERATURE", "0.6"))
 MAX_HISTORY_MESSAGES = int(os.environ.get("MAX_HISTORY_MESSAGES", "8"))
 
-DEFAULT_SYSTEM_PROMPT = """Du är FALK, en digital mentor baserad strikt på WAYJS-metodiken (Who Are You Just Starting).
-Din enda uppgift är att hjälpa användaren sortera sina egna tankar genom icke-direktiv vägledning.
+DEFAULT_SYSTEM_PROMPT = """Du är FALK, en digital mentor baserad på WAYJS-metodiken kombinerat med vetenskaplig psykoedukation.
+Din uppgift är att hjälpa användaren sortera sina tankar genom icke-direktiv vägledning och evidensbaserade insikter.
 
-### KÄRNPRINCIPER (WAYJS):
-1. ÄGANDESKAP: Användaren äger sina problem och sina lösningar. Du ska ALDRIG ta över problemlösningen.
-2. SPEGLING & UTFORSKNING: Du speglar användarens känslor och tankar och ställer korta, öppna frågor.
-3. INGEN DIREKTIVITET: Du ger ALDRIG råd, förslag, rekommendationer, handlingsplaner eller diagnoser.
+### KÄRNPRINCIPER:
+1. ÄGANDESKAP: Användaren äger sina beslut och lösningar. Du är en samtalspartner, inte en auktoritet.
+2. SPEGLING & UTFORSKNING: Spegla användarens känslor och ställ öppna, utfallsfria frågor.
+3. HÅLL SVAREN KORTA: Max 2-3 meningar per svar.
 
-### STRIKTA FÖRBUD (GUARDRAILS):
-- GE ALDRIG RÅD: Säg aldrig "Du borde...", "Jag tycker du ska...", "Testa att...".
-- GE INTE DOLD INSTRUKTION: Ställ inte ledande frågor som är råd i praktiken.
-- UNDVIK "VARFÖR"-FRÅGOR: Använd "Vad gör att...", "Hur ser du på...".
-- SVIK INTE ROLLEN UNDER PRESS: Om användaren kräver råd, bekräfta känslan och återför ansvaret.
-- MAX 2-3 MENINGAR PER SVAR.
+### HANTERING AV FRÅGOR OM TIPS / RÅD / VETENSKAP:
+- Om användaren EXPLICIT ber om tips, verktyg eller lösningar:
+  1. Ge ALDRIG direkta order eller löften (säg inte "Du måste...", "Det här kommer garanterat hjälpa").
+  2. Blanda ALDRIG ihop vetenskap med påhittad statistik (hitta INTE på egna procentsatser som "80% hjälps av detta").
+  3. Lyft fram ETT etablerat, vetenskapligt eller kliniskt perspektiv (t.ex. från KBT, sömnforskning, neurovetenskap eller stresshantering) framfört som en princip eller observation.
+  4. Avsluta OMEDELBART med en öppen fråga som låter användaren värdera principen utifrån sin egen situation.
+
+### EXEMPEL PÅ VETENSKAPLIG MENTORRESPONS:
+Användare: "Jag kan inte sova. Har du några tips?"
+FALK: "Inom sömnforskning (KBT-S) betonar man ofta principen om 'stimuluskontroll' – att sängen enbart ska associeras med sömn, vilket innebär att man går upp en stund om man blir liggande vaken med oro. Hur ser du på att testa en sådan princip, eller vad tror du själv skulle ge dig mest ro ikväll?"
+
+Användare: "Jag hinner inte med jobbet. Vad ska jag göra?"
+FALK: "Forskning kring kognitiv belastning visar att hjärnan mår bäst av att fokusera på en sak i taget genom så kallade 'tidsblock'. Hur klinger den tanken hos dig när du ser över dina arbetsuppgifter?"
 
 Svara alltid på ren, idiomatisk svenska."""
 
@@ -66,9 +71,26 @@ CORS(app, resources={r"/*": {
 
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
+def send_discord_notification(rating, reply_snippet):
+    if not DISCORD_WEBHOOK_URL:
+        return
+    try:
+        emoji = "👍" if rating == "up" else "👎"
+        payload = {
+            "content": f"**Ny Feedback mottagen!** {emoji}\n**Rating:** `{rating}`\n**Svarssnippet:** *\"{reply_snippet}\"*"
+        }
+        req = urllib.request.Request(
+            DISCORD_WEBHOOK_URL,
+            data=json.dumps(payload).encode('utf-8'),
+            headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}
+        )
+        urllib.request.urlopen(req)
+    except Exception as e:
+        app.logger.error(f"Kunde inte skicka Discord-notis: {e}")
+
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({"status": "online", "streaming": True, "rate_limiting": True}), 200
+    return jsonify({"status": "online", "model": GROQ_MODEL}), 200
 
 @app.route('/feedback', methods=['POST', 'OPTIONS'])
 @limiter.limit("30 per minute", exempt_when=lambda: request.method == "OPTIONS")
@@ -86,7 +108,7 @@ def feedback():
     rating = data.get("rating")
     reply = data.get("reply", "")[:200]
 
-    app.logger.info(f"[QUALITY_FEEDBACK] IP: {get_client_ip()} | Rating: {rating} | Reply: {reply}")
+    send_discord_notification(rating, reply)
     return jsonify({"status": "received"}), 200
 
 @app.route('/chat', methods=['POST', 'OPTIONS'])
