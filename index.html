@@ -18,7 +18,7 @@
     .msg-wrapper.user .msg { background: #0066ff; color: #ffffff; border-bottom-right-radius: 2px; }
     .msg-wrapper.bot .msg { background: #f0f1f3; color: #1a1a1a; border-bottom-left-radius: 2px; }
     .msg.status { background: transparent; color: #888; font-size: 0.85rem; font-style: italic; text-align: center; align-self: center; }
-    .yt-player { width: 100%; height: 180px; border-radius: 8px; margin-top: 8px; border: none; }
+    .yt-player { width: 100%; height: 200px; border-radius: 8px; margin-top: 8px; border: none; }
     .feedback-actions { display: flex; gap: 6px; font-size: 0.75rem; color: #888; margin-top: 2px; margin-left: 4px; }
     .feedback-btn { background: none; border: none; cursor: pointer; opacity: 0.6; transition: opacity 0.2s; font-size: 0.85rem; padding: 2px 4px; }
     .feedback-btn:hover { opacity: 1.0; }
@@ -54,7 +54,7 @@
 
   window.onload = () => {
     history.forEach(msg => {
-      appendMessage(msg.content, msg.role === "user" ? "user" : "bot", false);
+      appendMessage(msg.content, msg.role === "user" ? "user" : "bot", true);
     });
   };
 
@@ -130,10 +130,9 @@
         msgElem.innerText = fullReply;
       }
 
-      // HETA ATT PARSA OCH BÄDDA IN YOUTUBE-VIDEOR
       parseAndEmbedMedia(wrapperElem, msgElem, fullReply);
-
       attachFeedbackButtons(wrapperElem, fullReply);
+
       history.push({ role: "user", content: text });
       history.push({ role: "assistant", content: fullReply });
       if (history.length > 16) history = history.slice(-16);
@@ -152,23 +151,27 @@
   }
 
   function parseAndEmbedMedia(wrapperElem, msgElem, text) {
-    const ytRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
-    const match = text.match(ytRegex);
+    // Robust sökning efter YouTube-ID oavsett om det finns extra parametrar eller radbrytningar
+    const match = text.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     if (match && match[1]) {
       const videoId = match[1];
-      // Rensa länken från den råa texten i bubblan för snyggare UX
-      msgElem.innerText = text.replace(ytRegex, "").trim();
       
-      const iframe = document.createElement("iframe");
-      iframe.className = "yt-player";
-      iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`;
-      iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
-      iframe.allowFullscreen = true;
-      wrapperElem.appendChild(iframe);
+      // Rensa bort råa URL:er från textbubblan
+      const cleanText = text.replace(/https?:\/\/[^\s]+/g, '').trim();
+      msgElem.innerText = cleanText || "Här är ditt lugnande spår:";
+
+      if (!wrapperElem.querySelector("iframe")) {
+        const iframe = document.createElement("iframe");
+        iframe.className = "yt-player";
+        iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`;
+        iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+        iframe.allowFullscreen = true;
+        wrapperElem.appendChild(iframe);
+      }
     }
   }
 
-  function appendMessage(text, role, showFeedback = false) {
+  function appendMessage(text, role, renderMedia = false) {
     const chat = document.getElementById("chat");
     const wrapper = document.createElement("div");
     wrapper.className = `msg-wrapper ${role}`;
@@ -178,8 +181,10 @@
     msg.innerText = text;
     wrapper.appendChild(msg);
 
-    if (role === "bot" && showFeedback) {
-      parseAndEmbedMedia(wrapper, msg, text);
+    if (role === "bot") {
+      if (renderMedia) {
+        parseAndEmbedMedia(wrapper, msg, text);
+      }
       attachFeedbackButtons(wrapper, text);
     }
 
@@ -209,6 +214,7 @@
   }
 
   function attachFeedbackButtons(wrapperElem, replyText) {
+    if (wrapperElem.querySelector(".feedback-actions")) return;
     const actions = document.createElement("div");
     actions.className = "feedback-actions";
     actions.innerHTML = `
