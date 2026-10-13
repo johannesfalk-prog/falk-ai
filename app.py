@@ -1,14 +1,28 @@
 import os
 import json
+import time
 import logging
 import urllib.request
 from flask import Flask, request, Response, jsonify
 from flask_cors import CORS
-from flask_limiter import Limiter
 from groq import Groq
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
+
+# --- BEROENDEFRI IN-MEMORY RATE LIMITER ---
+RATE_LIMIT_STORE = {} # {ip: [timestamps]}
+
+def check_rate_limit(ip, limit=15, window=60):
+    now = time.time()
+    timestamps = RATE_LIMIT_STORE.get(ip, [])
+    # Rejsa gamla tidsstämplar utanför fönstret
+    valid_timestamps = [t for t in timestamps if now - t < window]
+    if len(valid_timestamps) >= limit:
+        return False
+    valid_timestamps.append(now)
+    RATE_LIMIT_STORE[ip] = valid_timestamps
+    return True
 
 def get_client_ip():
     if request.headers.get("CF-Connecting-IP"):
@@ -17,13 +31,7 @@ def get_client_ip():
         return request.headers.get("X-Forwarded-For").split(",")[0].strip()
     return request.remote_addr
 
-limiter = Limiter(
-    key_func=get_client_ip,
-    app=app,
-    default_limits=["200 per day", "60 per hour"],
-    storage_uri="memory://"
-)
-
+# --- DYNAMISK KONFIGURATION ---
 ALLOWED_ORIGINS = os.environ.get(
     "ALLOWED_ORIGINS", 
     "https://johannesfalk-prog.github.io,http://localhost:8000"
@@ -34,28 +42,32 @@ GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
 
 MAX_TOKENS = int(os.environ.get("MAX_TOKENS", "500"))
-TEMPERATURE = float(os.environ.get("TEMPERATURE", "0.6"))
+TEMPERATURE = float(os.environ.get("TEMPERATURE", "0.5"))
 MAX_HISTORY_MESSAGES = int(os.environ.get("MAX_HISTORY_MESSAGES", "8"))
 
-DEFAULT_SYSTEM_PROMPT = """Du är FALK, en digital mentor baserad på WAYJS-metodiken och vetenskaplig psykoedukation.
-Din uppgift är att vara en organisk, lyhörd samtalspartner som hjälper användaren sortera sina tankar.
+SYSTEM_PROMPT = """Du är FALK, en handlingsorienterad digital mentor baserad på WAYJS-metodiken och vetenskaplig psykoedukation.
 
-### DYNAMISK SPRÅKANPASSNING OCH NÄRVARO:
-1. ADOPTERA ANVÄNDARENS SPRÅK: Anpassa din ton, meningsbyggnad och ordval efter användarens nivå. Om användaren är rak och vardaglig, var rak och vardaglig. Om användaren är analytisk, var analytisk.
-2. FÖRBUD MOT KLYSCHIGA INLEDNINGAR: Starta ALDRIG svar med "Jag hör att...", "Det låter som...", "Det verkar som...", "Jag förstår att...". Gå direkt på sak.
-3. SYNTETISERANDE BEKRÄFTELSE (KOPPLA IHOP PUNKTERNA):
-   - Bekräfta ELSINTE varje enskilt meddelande.
-   - När du väl bekräftar, gör det genom att knyta ihop flera trådar från konversationen till en helhetsbild (t.ex. "När du beskriver både tidspressen och oron för teamet låter det som att källan är...").
-   - Om det inte finns flera trådar att knyta ihop ännu: Ställ direkt en fördjupande fråga eller ge ett kort vetenskapligt perspektiv utan inledande plattskärms-empati.
+### DINA 3 KONVERSATIONSVÄXLAR (FÖLJ DESSA STRIKT):
 
-### KÄRNPRINCIPER (WAYJS & VETENSKAP):
-- ÄGANDESKAP: Användaren äger sina beslut och lösningar.
-- MÄNSKLIG TON: Håll svaren korta (2-3 meningar). Var koncis, rak och undvik AI-artad över-artighet.
-- EXPLICITA RÅD/TIPS: Om användaren ber om tips, ge ETT vetenskapligt/kliniskt ramverk utan att garantera resultat eller hitta på statistik, och avsluta med en fråga som återför reflektionen.
+1. VÄXEL 1 (UTFORSKA - MAX 1 ANROP):
+   - När användaren lyfter ett problem: Bekräfta kort utan floskler och ställ EN fördjupande fråga.
+   - FÖRBUD: Säg ALDRIG "Jag hör att...", "Det låter som...", "Hur ser du på att bara observera känslan utan att göra något?".
 
-Svara alltid på ren, idiomatisk svenska."""
+2. VÄXEL 2 (ERBJUD VETENSKAPLIGT VERKTYG / ÅTGÄRD):
+   - SÅ FORT användaren ber om tips, lösning, hjälp eller uttrycker frustration över att sitta fast: SKIFTA DIREKT TILL VÄXEL 2.
+   - Presentera ETT konkret, vetenskapligt eller kliniskt beprövat verktyg (t.ex. KBT-S Stimuluskontroll vid sömn, Tidsblockering vid stress, Box Breathing vid ångest).
+   - Beskriv verktyget i 1-2 konsekventa meningar.
 
-SYSTEM_PROMPT = os.environ.get("SYSTEM_PROMPT", DEFAULT_SYSTEM_PROMPT)
+3. VÄXEL 3 (SAMDESIGNA ETT MIKROSTEG):
+   - Avsluta ALLTID Växel 2 med att erbjuda ett omedelbart mikrosteg eller ett val:
+   - Exempel: "Vill du testa att gå upp ur sängen i 15 minuter och göra något tråkigt tills kroppen blir tung, eller vad känner du själv är det lättaste steget att börja med just nu?"
+
+### STRIKTA FÖRBUD (GUARDRAILS):
+- TAPE-LOOP FÖRBUD: Upprepa ALDRIG samma fråga eller formulering i två påföljande meddelanden.
+- MINDFULNESS-LÅSNING FÖRBUD: Säg ALDRIG åt en frustrerad användare att "bara acceptera" eller "bara observera utan att förändra". Om användaren vill ha en förändring, HJÄLP DEM ATT RESONERA FRAM EN ÅTGÄRD.
+- MAX 3 MENINGAR PER SVAR.
+
+Svara alltid på ren, kraftfull och idiomatisk svenska."""
 
 CORS(app, resources={r"/*": {
     "origins": ALLOWED_ORIGINS,
@@ -84,10 +96,9 @@ def send_discord_notification(rating, reply_snippet):
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({"status": "online", "model": GROQ_MODEL}), 200
+    return jsonify({"status": "online", "model": GROQ_MODEL, "clean_build": True}), 200
 
 @app.route('/feedback', methods=['POST', 'OPTIONS'])
-@limiter.limit("30 per minute", exempt_when=lambda: request.method == "OPTIONS")
 def feedback():
     if request.method == 'OPTIONS':
         response = jsonify({"status": "ok"})
@@ -106,7 +117,6 @@ def feedback():
     return jsonify({"status": "received"}), 200
 
 @app.route('/chat', methods=['POST', 'OPTIONS'])
-@limiter.limit("15 per minute", exempt_when=lambda: request.method == "OPTIONS")
 def chat():
     if request.method == 'OPTIONS':
         response = jsonify({"status": "ok"})
@@ -116,6 +126,10 @@ def chat():
         response.headers.add("Access-Control-Allow-Headers", "Content-Type")
         response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
         return response, 200
+
+    ip = get_client_ip()
+    if not check_rate_limit(ip, limit=15, window=60):
+        return jsonify({"error": "Du skickar meddelanden för snabbt. Vänta en minut."}), 429
 
     if not client:
         return jsonify({"error": "GROQ_API_KEY saknas."}), 500
@@ -164,10 +178,6 @@ def chat():
     }
 
     return Response(generate_stream(), headers=headers)
-
-@app.errorhandler(429)
-def ratelimit_handler(e):
-    return jsonify({"error": "Du skickar meddelanden för snabbt. Vänta en minut och försök igen."}), 429
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
