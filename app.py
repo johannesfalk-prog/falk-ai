@@ -1,5 +1,4 @@
 import os
-import uuid
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from groq import Groq
@@ -20,14 +19,12 @@ CORS(app, resources={r"/*": {
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
-MAX_SESSIONS = 100
-MAX_HISTORY_MESSAGES = 8
-sessions = {}
-
 SYSTEM_PROMPT = """Du är FALK, en digital mentor baserad på WAYJS-metodiken.
 Du hjälper användaren att sortera sina tankar genom icke-direktiv vägledning.
 Svara alltid på idiomatisk svenska. Max 2-3 meningar per svar. Ge aldrig direkta råd,
 utan ställ enstaka öppna frågor som leder till egen reflektion."""
+
+MAX_HISTORY_MESSAGES = 8
 
 @app.route('/chat', methods=['POST', 'OPTIONS'])
 def chat():
@@ -45,38 +42,33 @@ def chat():
 
     data = request.get_json() or {}
     user_message = data.get("message", "").strip()
-    session_id = data.get("session_id")
+    raw_history = data.get("history", [])
 
     if not user_message:
         return jsonify({"error": "Meddelande saknas."}), 400
 
-    if len(sessions) > MAX_SESSIONS:
-        oldest_key = next(iter(sessions))
-        del sessions[oldest_key]
+    # Hård validering & beskärning av klienthistorik (Säkerhetsspärr mot skräp/injection)
+    sanitized_history = []
+    if isinstance(raw_history, list):
+        for msg in raw_history[-MAX_HISTORY_MESSAGES:]:
+            if isinstance(msg, dict) and msg.get("role") in ["user", "assistant"] and isinstance(msg.get("content"), str):
+                sanitized_history.append({
+                    "role": msg["role"],
+                    "content": msg["content"][:1000] # Hårt tak på tecken per meddelande
+                })
 
-    if not session_id or session_id not in sessions:
-        session_id = str(uuid.uuid4())
-        sessions[session_id] = [{"role": "system", "content": SYSTEM_PROMPT}]
-
-    sessions[session_id].append({"role": "user", "content": user_message})
-
-    # Behåll alltid systemprompten + de senaste meddelandena för att förhindra token-overflow
-    context_messages = [sessions[session_id][0]] + sessions[session_id][-MAX_HISTORY_MESSAGES:]
+    messages_payload = [{"role": "system", "content": SYSTEM_PROMPT}] + sanitized_history + [{"role": "user", "content": user_message[:1000]}]
 
     try:
         response = client.chat.completions.create(
             model="openai/gpt-oss-120b",
-            messages=context_messages,
+            messages=messages_payload,
             temperature=0.7,
             max_tokens=500
         )
         bot_reply = response.choices[0].message.content.strip()
-        sessions[session_id].append({"role": "assistant", "content": bot_reply})
 
-        return jsonify({
-            "reply": bot_reply,
-            "session_id": session_id
-        }), 200
+        return jsonify({"reply": bot_reply}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

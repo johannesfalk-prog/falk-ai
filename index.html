@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FALK - Digital Mentor</title>
+  <title>FALK - Digital Mentor (Light)</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background: #f4f5f7; display: flex; justify-content: center; align-items: center; height: 100vh; padding: 10px; }
     .chat-card { background: #ffffff; width: 100%; max-width: 480px; height: 90vh; max-height: 680px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; }
     .chat-header { background: #1a1a1a; color: #ffffff; padding: 20px; font-weight: 600; font-size: 1.1rem; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
-    .chat-header span { font-size: 0.8rem; background: #333; padding: 4px 8px; border-radius: 4px; color: #aaa; }
+    .chat-header span { font-size: 0.75rem; background: #333; padding: 4px 8px; border-radius: 4px; color: #aaa; text-transform: uppercase; }
     .chat-body { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
     .msg { max-width: 82%; padding: 12px 16px; border-radius: 12px; font-size: 0.95rem; line-height: 1.45; word-wrap: break-word; }
     .msg.user { background: #0066ff; color: #ffffff; align-self: flex-end; border-bottom-right-radius: 2px; }
     .msg.bot { background: #f0f1f3; color: #1a1a1a; align-self: flex-start; border-bottom-left-radius: 2px; }
-    .msg.status { background: transparent; color: #888; font-size: 0.85rem; font-style: italic; align-self: center; }
+    .msg.status { background: transparent; color: #888; font-size: 0.85rem; font-style: italic; align-self: center; text-align: center; }
     .chat-footer { padding: 16px; border-top: 1px solid #eee; display: flex; gap: 8px; background: #fafafa; }
     input { flex: 1; padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; outline: none; }
     input:focus { border-color: #0066ff; }
@@ -27,7 +27,7 @@
 
 <div class="chat-card">
   <div class="chat-header">
-    FALK <span>WAYJS</span>
+    FALK <span>Light (Flyktig)</span>
   </div>
   <div class="chat-body" id="chat">
     <div class="msg bot">Välkommen. Vad upptar dina tankar idag?</div>
@@ -40,7 +40,16 @@
 
 <script>
   const API_URL = "https://falk-ai.onrender.com/chat";
-  let sessionId = localStorage.getItem("falk_session_id") || null;
+  
+  // Hämta historik från sessionStorage (raderas helt när fliken stängs)
+  let history = JSON.parse(sessionStorage.getItem("falk_light_history") || "[]");
+
+  // Rendera befintlig session om sidan laddas om
+  window.onload = () => {
+    history.forEach(msg => {
+      appendMessage(msg.content, msg.role === "user" ? "user" : "bot");
+    });
+  };
 
   async function send() {
     const input = document.getElementById("input");
@@ -50,6 +59,7 @@
 
     if (!text) return;
 
+    // Rendera användarmeddelande & inaktivera input
     appendMessage(text, "user");
     input.value = "";
     input.disabled = true;
@@ -58,28 +68,38 @@
     const loadingElem = appendMessage("Falk tänker...", "status");
     chat.scrollTop = chat.scrollHeight;
 
+    // Timer för att hantera Renders kallstart
+    const coldStartTimer = setTimeout(() => {
+      loadingElem.innerText = "Väcker servern (detta kan ta ~30 sekunder vid första anropet)...";
+    }, 3500);
+
     try {
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, session_id: sessionId })
+        body: JSON.stringify({ message: text, history: history })
       });
 
+      clearTimeout(coldStartTimer);
       const data = await res.json();
       loadingElem.remove();
 
       if (data.reply) {
         appendMessage(data.reply, "bot");
-        if (data.session_id) {
-          sessionId = data.session_id;
-          localStorage.setItem("falk_session_id", sessionId);
-        }
+        
+        // Uppdatera lokal historik i sessionStorage
+        history.push({ role: "user", content: text });
+        history.push({ role: "assistant", content: data.reply });
+        if (history.length > 16) history = history.slice(-16); // Spara max 8 dialogpar lokalt
+        sessionStorage.setItem("falk_light_history", JSON.stringify(history));
+
       } else {
         appendMessage("Ett fel uppstod. Försök igen.", "bot");
       }
     } catch (err) {
+      clearTimeout(coldStartTimer);
       loadingElem.remove();
-      appendMessage("Kunde inte ansluta till Falk. Servern startar upp, var god försök igen om ett ögonblick.", "bot");
+      appendMessage("Kunde inte ansluta till Falk. Kontrollera anslutningen och försök igen.", "bot");
     } finally {
       input.disabled = false;
       btn.disabled = false;
@@ -92,7 +112,7 @@
     const chat = document.getElementById("chat");
     const msg = document.createElement("div");
     msg.className = `msg ${role}`;
-    msg.innerText = text;
+    msg.innerText = text; // Säkerhet: XSS-skyddat via innerText
     chat.appendChild(msg);
     chat.scrollTop = chat.scrollHeight;
     return msg;
