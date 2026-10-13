@@ -6,12 +6,23 @@ from groq import Groq
 
 app = Flask(__name__)
 
-# Allow requests from all origins including GitHub Pages
-CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type"]}})
+# Strict CORS: Tillåt enbart din GitHub Pages-domän och lokal utveckling
+ALLOWED_ORIGINS = [
+    "https://johannesfalk-prog.github.io",
+    "http://localhost:8000"
+]
+
+CORS(app, resources={r"/*": {
+    "origins": ALLOWED_ORIGINS,
+    "methods": ["GET", "POST", "OPTIONS"],
+    "allow_headers": ["Content-Type"]
+}})
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
+# Begränsa max antal sessioner i RAM för att förhindra OOM-krascher
+MAX_SESSIONS = 100
 sessions = {}
 
 SYSTEM_PROMPT = """Du är FALK, en digital mentor baserad på WAYJS-metodiken.
@@ -21,10 +32,11 @@ utan ställ enstaka öppna frågor som leder till egen reflektion."""
 
 @app.route('/chat', methods=['POST', 'OPTIONS'])
 def chat():
-    # Instantly return HTTP 200 for browser preflight checks
     if request.method == 'OPTIONS':
         response = jsonify({"status": "ok"})
-        response.headers.add("Access-Control-Allow-Origin", "*")
+        origin = request.headers.get('Origin')
+        if origin in ALLOWED_ORIGINS:
+            response.headers.add("Access-Control-Allow-Origin", origin)
         response.headers.add("Access-Control-Allow-Headers", "Content-Type")
         response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
         return response, 200
@@ -38,6 +50,11 @@ def chat():
 
     if not user_message:
         return jsonify({"error": "Meddelande saknas."}), 400
+
+    # Om RAM-minnet fylls, ta bort den äldsta sessionen
+    if len(sessions) > MAX_SESSIONS:
+        oldest_key = next(iter(sessions))
+        del sessions[oldest_key]
 
     if not session_id or session_id not in sessions:
         session_id = str(uuid.uuid4())
