@@ -27,7 +27,7 @@
 
 <div class="chat-card">
   <div class="chat-header">
-    FALK <span>Light (Flyktig)</span>
+    FALK-Light <span>powered by WAYJS</span>
   </div>
   <div class="chat-body" id="chat">
     <div class="msg bot">Välkommen. Vad upptar dina tankar idag?</div>
@@ -40,11 +40,8 @@
 
 <script>
   const API_URL = "https://falk-ai.onrender.com/chat";
-  
-  // Hämta historik från sessionStorage (raderas helt när fliken stängs)
   let history = JSON.parse(sessionStorage.getItem("falk_light_history") || "[]");
 
-  // Rendera befintlig session om sidan laddas om
   window.onload = () => {
     history.forEach(msg => {
       appendMessage(msg.content, msg.role === "user" ? "user" : "bot");
@@ -59,7 +56,6 @@
 
     if (!text) return;
 
-    // Rendera användarmeddelande & inaktivera input
     appendMessage(text, "user");
     input.value = "";
     input.disabled = true;
@@ -68,7 +64,6 @@
     const loadingElem = appendMessage("Falk tänker...", "status");
     chat.scrollTop = chat.scrollHeight;
 
-    // Timer för att hantera Renders kallstart
     const coldStartTimer = setTimeout(() => {
       loadingElem.innerText = "Väcker servern (detta kan ta ~30 sekunder vid första anropet)...";
     }, 3500);
@@ -86,13 +81,10 @@
 
       if (data.reply) {
         appendMessage(data.reply, "bot");
-        
-        // Uppdatera lokal historik i sessionStorage
         history.push({ role: "user", content: text });
         history.push({ role: "assistant", content: data.reply });
-        if (history.length > 16) history = history.slice(-16); // Spara max 8 dialogpar lokalt
+        if (history.length > 16) history = history.slice(-16);
         sessionStorage.setItem("falk_light_history", JSON.stringify(history));
-
       } else {
         appendMessage("Ett fel uppstod. Försök igen.", "bot");
       }
@@ -112,7 +104,7 @@
     const chat = document.getElementById("chat");
     const msg = document.createElement("div");
     msg.className = `msg ${role}`;
-    msg.innerText = text; // Säkerhet: XSS-skyddat via innerText
+    msg.innerText = text;
     chat.appendChild(msg);
     chat.scrollTop = chat.scrollHeight;
     return msg;
