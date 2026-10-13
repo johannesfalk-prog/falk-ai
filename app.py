@@ -11,12 +11,11 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
 # --- BEROENDEFRI IN-MEMORY RATE LIMITER ---
-RATE_LIMIT_STORE = {} # {ip: [timestamps]}
+RATE_LIMIT_STORE = {}
 
 def check_rate_limit(ip, limit=15, window=60):
     now = time.time()
     timestamps = RATE_LIMIT_STORE.get(ip, [])
-    # Rejsa gamla tidsstämplar utanför fönstret
     valid_timestamps = [t for t in timestamps if now - t < window]
     if len(valid_timestamps) >= limit:
         return False
@@ -180,4 +179,6 @@ def chat():
     return Response(generate_stream(), headers=headers)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    # Dynamisk portinläsning för Render
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
