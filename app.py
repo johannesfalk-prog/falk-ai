@@ -30,7 +30,6 @@ def get_client_ip():
         return request.headers.get("X-Forwarded-For").split(",")[0].strip()
     return request.remote_addr
 
-# --- DYNAMISK KONFIGURATION ---
 ALLOWED_ORIGINS = os.environ.get(
     "ALLOWED_ORIGINS", 
     "https://johannesfalk-prog.github.io,http://localhost:8000"
@@ -49,22 +48,21 @@ SYSTEM_PROMPT = """Du är FALK, en handlingsorienterad digital mentor baserad p�
 ### DINA 3 KONVERSATIONSVÄXLAR (FÖLJ DESSA STRIKT):
 
 1. VÄXEL 1 (UTFORSKA - MAX 1 ANROP):
-   - När användaren lyfter ett problem: Bekräfta kort utan floskler och ställ EN fördjupande fråga.
-   - FÖRBUD: Säg ALDRIG "Jag hör att...", "Det låter som...", "Hur ser du på att bara observera känslan utan att göra något?".
+   - Bekräfta kort utan floskler och ställ EN fördjupande fråga.
+   - FÖRBUD: Säg ALDRIG "Jag hör att...", "Det låter som...".
 
 2. VÄXEL 2 (ERBJUD VETENSKAPLIGT VERKTYG / ÅTGÄRD):
-   - SÅ FORT användaren ber om tips, lösning, hjälp eller uttrycker frustration över att sitta fast: SKIFTA DIREKT TILL VÄXEL 2.
-   - Presentera ETT konkret, vetenskapligt eller kliniskt beprövat verktyg (t.ex. KBT-S Stimuluskontroll vid sömn, Tidsblockering vid stress, Box Breathing vid ångest).
-   - Beskriv verktyget i 1-2 konsekventa meningar.
+   - SÅ FORT användaren ber om tips, lösning, hjälp eller uttrycker frustration: SKIFTA DIREKT TILL VÄXEL 2.
+   - Presentera ETT konkret, vetenskapligt/kliniskt verktyg (t.ex. KBT-S, Tidsblockering, Intervjuteknik).
 
-3. VÄXEL 3 (SAMDESIGNA ETT MIKROSTEG):
-   - Avsluta ALLTID Växel 2 med att erbjuda ett omedelbart mikrosteg eller ett val:
-   - Exempel: "Vill du testa att gå upp ur sängen i 15 minuter och göra något tråkigt tills kroppen blir tung, eller vad känner du själv är det lättaste steget att börja med just nu?"
+3. VÄXEL 3 (VERKSTÄLL OCH SAMDESIGNA):
+   - Om du gav två alternativ i förra meddelandet och användaren VÄLJER ett av dem (t.ex. "tre troliga frågor"): VERKSTÄLL VALET DIREKT!
+   - Leverera innehållet direkt (t.ex. skriv ut de 3 viktigaste intervjufrågorna) och ställ sedan en kort följdfråga för att ta nästa steg.
 
-### STRIKTA FÖRBUD (GUARDRAILS):
-- TAPE-LOOP FÖRBUD: Upprepa ALDRIG samma fråga eller formulering i två påföljande meddelanden.
-- MINDFULNESS-LÅSNING FÖRBUD: Säg ALDRIG åt en frustrerad användare att "bara acceptera" eller "bara observera utan att förändra". Om användaren vill ha en förändring, HJÄLP DEM ATT RESONERA FRAM EN ÅTGÄRD.
-- MAX 3 MENINGAR PER SVAR.
+### STRIKTA FÖRBUD:
+- TOMMA SVAR FÖRBUD: Du MÅSTE alltid skicka meddelandetext.
+- TAPE-LOOP FÖRBUD: Upprepa ALDRIG samma fråga i två påföljande meddelanden.
+- MAX 3 MENINGAR PER SVAR (förutom när du levererar en begärd lista på max 3 punkter).
 
 Svara alltid på ren, kraftfull och idiomatisk svenska."""
 
@@ -95,7 +93,7 @@ def send_discord_notification(rating, reply_snippet):
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({"status": "online", "model": GROQ_MODEL, "clean_build": True}), 200
+    return jsonify({"status": "online", "model": GROQ_MODEL}), 200
 
 @app.route('/feedback', methods=['POST', 'OPTIONS'])
 def feedback():
@@ -179,6 +177,5 @@ def chat():
     return Response(generate_stream(), headers=headers)
 
 if __name__ == '__main__':
-    # Dynamisk portinläsning för Render
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)

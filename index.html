@@ -124,13 +124,17 @@
         }
       }
 
-      if (fullReply.trim()) {
-        attachFeedbackButtons(wrapperElem, fullReply);
-        history.push({ role: "user", content: text });
-        history.push({ role: "assistant", content: fullReply });
-        if (history.length > 16) history = history.slice(-16);
-        sessionStorage.setItem("falk_light_history", JSON.stringify(history));
+      // FALLBACK OM STREAMEN RETURNERADE 0 TOKENS
+      if (!fullReply.trim()) {
+        fullReply = "Kunde inte generera ett svar. Vad vill du att vi utforskar kring detta?";
+        msgElem.innerText = fullReply;
       }
+
+      attachFeedbackButtons(wrapperElem, fullReply);
+      history.push({ role: "user", content: text });
+      history.push({ role: "assistant", content: fullReply });
+      if (history.length > 16) history = history.slice(-16);
+      sessionStorage.setItem("falk_light_history", JSON.stringify(history));
 
     } catch (err) {
       clearTimeout(coldStartTimer);
