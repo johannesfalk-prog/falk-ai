@@ -6,7 +6,6 @@ from groq import Groq
 
 app = Flask(__name__)
 
-# Strict CORS: Tillåt enbart din GitHub Pages-domän och lokal utveckling
 ALLOWED_ORIGINS = [
     "https://johannesfalk-prog.github.io",
     "http://localhost:8000"
@@ -21,8 +20,8 @@ CORS(app, resources={r"/*": {
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
-# Begränsa max antal sessioner i RAM för att förhindra OOM-krascher
 MAX_SESSIONS = 100
+MAX_HISTORY_MESSAGES = 8
 sessions = {}
 
 SYSTEM_PROMPT = """Du är FALK, en digital mentor baserad på WAYJS-metodiken.
@@ -51,7 +50,6 @@ def chat():
     if not user_message:
         return jsonify({"error": "Meddelande saknas."}), 400
 
-    # Om RAM-minnet fylls, ta bort den äldsta sessionen
     if len(sessions) > MAX_SESSIONS:
         oldest_key = next(iter(sessions))
         del sessions[oldest_key]
@@ -62,12 +60,15 @@ def chat():
 
     sessions[session_id].append({"role": "user", "content": user_message})
 
+    # Behåll alltid systemprompten + de senaste meddelandena för att förhindra token-overflow
+    context_messages = [sessions[session_id][0]] + sessions[session_id][-MAX_HISTORY_MESSAGES:]
+
     try:
         response = client.chat.completions.create(
             model="openai/gpt-oss-120b",
-            messages=sessions[session_id],
+            messages=context_messages,
             temperature=0.7,
-            max_tokens=250
+            max_tokens=500
         )
         bot_reply = response.choices[0].message.content.strip()
         sessions[session_id].append({"role": "assistant", "content": bot_reply})
