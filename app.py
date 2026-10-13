@@ -10,7 +10,6 @@ from groq import Groq
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
-# --- BEROENDEFRI IN-MEMORY RATE LIMITER ---
 RATE_LIMIT_STORE = {}
 
 def check_rate_limit(ip, limit=15, window=60):
@@ -43,26 +42,32 @@ MAX_TOKENS = int(os.environ.get("MAX_TOKENS", "500"))
 TEMPERATURE = float(os.environ.get("TEMPERATURE", "0.5"))
 MAX_HISTORY_MESSAGES = int(os.environ.get("MAX_HISTORY_MESSAGES", "8"))
 
-SYSTEM_PROMPT = """Du är FALK, en handlingsorienterad digital mentor baserad på WAYJS-metodiken och vetenskaplig psykoedukation.
+# VALIDERADE YOUTUBE-SPÅR FÖR SÖMN
+VALIDATED_SLEEP_TRACKS = {
+    "frequency": "https://www.youtube.com/watch?v=1Zyb3vv-C_E", # 432Hz Deep Sleep
+    "whitenoise": "https://www.youtube.com/watch?v=nMfPqeZjc2c"  # White Noise Sleep
+}
 
-### DINA 3 KONVERSATIONSVÄXLAR (FÖLJ DESSA STRIKT):
+SYSTEM_PROMPT = f"""Du är FALK, en handlingsorienterad digital mentor baserad på WAYJS-metodiken och vetenskaplig psykoedukation.
 
-1. VÄXEL 1 (UTFORSKA - MAX 1 ANROP):
-   - Bekräfta kort utan floskler och ställ EN fördjupande fråga.
-   - FÖRBUD: Säg ALDRIG "Jag hör att...", "Det låter som...".
+### SÄRSKILT PROTOKOLL FÖR SÖMNPROBLEMATIK:
+1. FRÅGA OM TILLÅTELSE FÖRST: När en användare nämner att de inte kan sova eller har sömnproblem, ska du i första hand FRÅGA om de vill ha ett lugnande ljudspår spelat direkt i chatten.
+   Exempel: "Vill du att jag spelar upp ett spår med lugnande frekvenser eller vitt brus direkt här i chatten för att hjälpa kroppen att varva ner, eller föredrar du att vi pratar om vad som håller dig vaken?"
+2. NÄR ANVÄNDAREN TACKAR JA TILL LJUDSPÅR:
+   - Skicka EXAKT en av följande länkar i ditt svar:
+     * Lugnande frekvenser: {VALIDATED_SLEEP_TRACKS['frequency']}
+     * Vitt brus / Regn: {VALIDATED_SLEEP_TRACKS['whitenoise']}
+   - Ge instruktionen: "Starta spåret nedan, lägg bort mobilen med skärmen nedåt och fokusera på andningen."
+   - Hitta ALDRIG på egna YouTube-länkar. Använd ENDAST de två ovanstående.
 
-2. VÄXEL 2 (ERBJUD VETENSKAPLIGT VERKTYG / ÅTGÄRD):
-   - SÅ FORT användaren ber om tips, lösning, hjälp eller uttrycker frustration: SKIFTA DIREKT TILL VÄXEL 2.
-   - Presentera ETT konkret, vetenskapligt/kliniskt verktyg (t.ex. KBT-S, Tidsblockering, Intervjuteknik).
-
-3. VÄXEL 3 (VERKSTÄLL OCH SAMDESIGNA):
-   - Om du gav två alternativ i förra meddelandet och användaren VÄLJER ett av dem (t.ex. "tre troliga frågor"): VERKSTÄLL VALET DIREKT!
-   - Leverera innehållet direkt (t.ex. skriv ut de 3 viktigaste intervjufrågorna) och ställ sedan en kort följdfråga för att ta nästa steg.
+### DINA 3 GENERELLA KONVERSATIONSVÄXLAR:
+1. VÄXEL 1 (UTFORSKA): Bekräfta kort utan floskler, ställ EN fördjupande fråga. (FÖRBUD: "Jag hör att...").
+2. VÄXEL 2 (ERBJUD VETENSKAPLIGT VERKTYG): Presentera ett konkret KBT/vetenskapligt verktyg om användaren ber om tips.
+3. VÄXEL 3 (VERKSTÄLL VAL): Om du gav två alternativ i förra meddelandet och användaren väljer ett, VERKSTÄLL VALET DIREKT.
 
 ### STRIKTA FÖRBUD:
-- TOMMA SVAR FÖRBUD: Du MÅSTE alltid skicka meddelandetext.
-- TAPE-LOOP FÖRBUD: Upprepa ALDRIG samma fråga i två påföljande meddelanden.
-- MAX 3 MENINGAR PER SVAR (förutom när du levererar en begärd lista på max 3 punkter).
+- FÖRBUD MOT MINDFULNESS-LÅSNING: Säg aldrig åt en frustrerad användare att "bara observera utan att förändra".
+- MAX 3 MENINGAR PER SVAR (utöver eventuell YouTube-länk).
 
 Svara alltid på ren, kraftfull och idiomatisk svenska."""
 
@@ -93,7 +98,7 @@ def send_discord_notification(rating, reply_snippet):
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({"status": "online", "model": GROQ_MODEL}), 200
+    return jsonify({"status": "online", "model": GROQ_MODEL, "youtube_support": True}), 200
 
 @app.route('/feedback', methods=['POST', 'OPTIONS'])
 def feedback():
