@@ -24,7 +24,6 @@
     .msg ul { margin-left: 20px; margin-top: 8px; margin-bottom: 8px; }
     .msg li { margin-bottom: 4px; }
     
-    /* STARTKORT / ACTION CHIPS STYLING */
     .start-chips-container { display: flex; flex-direction: column; gap: 10px; max-width: 720px; width: 100%; margin-top: 4px; }
     .start-chip { background: #ffffff; border: 1px solid #dcdfe6; border-radius: 12px; padding: 12px 16px; cursor: pointer; text-align: left; transition: all 0.2s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
     .start-chip:hover { border-color: #0066ff; background: #f4f8ff; transform: translateY(-1px); }
@@ -42,7 +41,6 @@
     .feedback-btn { background: none; border: none; cursor: pointer; opacity: 0.6; transition: opacity 0.2s; font-size: 0.9rem; padding: 2px 4px; }
     .feedback-btn:hover { opacity: 1.0; }
 
-    /* FOOTER & TOOL POPOVER STYLING */
     .chat-footer { padding: 14px 24px; border-top: 1px solid #e9ecef; display: flex; gap: 12px; background: #ffffff; flex-shrink: 0; justify-content: center; align-items: flex-end; position: relative; }
     .footer-inner { width: 100%; max-width: 720px; display: flex; gap: 8px; align-items: flex-end; position: relative; }
     
@@ -77,7 +75,6 @@
     </div>
   </div>
   <div class="chat-body" id="chat">
-    <!-- BYTS UT DYNAMISKT I JS -->
   </div>
   <div class="chat-footer">
     <div class="footer-inner">
@@ -175,7 +172,7 @@
     const welcomeWrapper = document.createElement("div");
     welcomeWrapper.className = "msg-wrapper bot";
     welcomeWrapper.innerHTML = `
-      <div class="msg">Jag är FALK – en digital mentor, inte en sökmotor. Jag ger inte färdiga råd eller 10-stegslistor. Min uppgift är att hjälpa dig förstå vad som faktiskt ligger bakom det som skaver, så att du kan fatta dina egna beslut.<br><br>Vad vill du utforska idag?</div>
+      <div class="msg">Jag är FALK - Min uppgift är att hjälpa dig på din väg!<br><br>Vad vill du utforska idag?</div>
     `;
     chat.appendChild(welcomeWrapper);
 
