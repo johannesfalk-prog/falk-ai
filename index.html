@@ -34,21 +34,21 @@
     .feedback-btn { background: none; border: none; cursor: pointer; opacity: 0.6; transition: opacity 0.2s; font-size: 0.9rem; padding: 2px 4px; }
     .feedback-btn:hover { opacity: 1.0; }
 
-    /* FOOTER & TOOL MENU STYLING */
+    /* FOOTER & TOOL POPOVER STYLING */
     .chat-footer { padding: 14px 24px; border-top: 1px solid #e9ecef; display: flex; gap: 12px; background: #ffffff; flex-shrink: 0; justify-content: center; align-items: flex-end; position: relative; }
     .footer-inner { width: 100%; max-width: 720px; display: flex; gap: 8px; align-items: flex-end; position: relative; }
     
-    .tool-popover { position: absolute; bottom: 60px; left: 0; background: #ffffff; border: 1px solid #e9ecef; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 280px; display: none; flex-direction: column; z-index: 100; overflow: hidden; }
-    .tool-popover.active { display: flex; }
+    .tool-popover { position: absolute; bottom: 58px; left: 0; background: #ffffff; border: 1px solid #ced4da; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); width: 280px; display: none; flex-direction: column; z-index: 1000; overflow: hidden; }
+    .tool-popover.active { display: flex !important; }
     .popover-header { font-size: 0.75rem; font-weight: 700; color: #888; text-transform: uppercase; padding: 10px 14px 6px 14px; background: #fafafa; border-bottom: 1px solid #f0f0f0; }
     .popover-option { padding: 10px 14px; font-size: 0.9rem; color: #333; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.15s; border-bottom: 1px solid #f8f9fa; }
     .popover-option:last-child { border-bottom: none; }
     .popover-option:hover { background: #f0f4ff; color: #0066ff; }
     .popover-option.selected { font-weight: 600; color: #0066ff; background: #f0f4ff; }
 
-    .plus-btn { background: #f0f1f3; color: #333; border: 1px solid #ced4da; width: 44px; height: 44px; border-radius: 10px; font-size: 1.3rem; font-weight: 400; cursor: pointer; display: flex; justify-content: center; align-items: center; flex-shrink: 0; transition: background 0.2s; }
+    .plus-btn { background: #f0f1f3; color: #333; border: 1px solid #ced4da; width: 44px; height: 44px; border-radius: 10px; font-size: 1.4rem; font-weight: 400; cursor: pointer; display: flex; justify-content: center; align-items: center; flex-shrink: 0; transition: all 0.2s; user-select: none; }
     .plus-btn:hover { background: #e2e4e8; }
-    .plus-btn.active { background: #0066ff; color: #ffffff; border-color: #0066ff; }
+    .plus-btn.active { background: #0066ff; color: #ffffff; border-color: #0066ff; transform: rotate(45deg); }
 
     textarea { flex: 1; padding: 12px 16px; border: 1px solid #ced4da; border-radius: 10px; font-size: 1rem; outline: none; transition: border-color 0.2s; resize: none; min-height: 44px; max-height: 130px; line-height: 1.4; overflow-y: auto; }
     textarea:focus { border-color: #0066ff; }
@@ -75,24 +75,24 @@
   </div>
   <div class="chat-footer">
     <div class="footer-inner">
-      <!-- DROPDOWN POPOVER FOR COACHING PERSPECTIVE -->
+      <!-- DROPDOWN POPOVER -->
       <div class="tool-popover" id="toolPopover">
         <div class="popover-header">Välj Coaching-Perspektiv</div>
-        <div class="popover-option selected" onclick="selectMode('wayjs', '🎯 WAYJS Standard')">
+        <div class="popover-option selected" onclick="selectMode('wayjs', '🎯 WAYJS Standard', this)">
           <span>🎯</span> WAYJS Standard (Helhet)
         </div>
-        <div class="popover-option" onclick="selectMode('kbt', '🧠 KBT (Tankar & Mönster)')">
+        <div class="popover-option" onclick="selectMode('kbt', '🧠 KBT (Tankar & Mönster)', this)">
           <span>🧠</span> KBT (Tankar & Mönster)
         </div>
-        <div class="popover-option" onclick="selectMode('act', '🧭 ACT (Värderingar & Mening)')">
+        <div class="popover-option" onclick="selectMode('act', '🧭 ACT (Värderingar & Mening)', this)">
           <span>🧭</span> ACT (Värderingar & Mening)
         </div>
-        <div class="popover-option" onclick="selectMode('sol', '⚡ Lösningsfokuserat')">
+        <div class="popover-option" onclick="selectMode('sol', '⚡ Lösningsfokuserat', this)">
           <span>⚡</span> Lösningsfokuserat
         </div>
       </div>
 
-      <button class="plus-btn" id="plusBtn" onclick="togglePopover()" title="Välj verktyg/perspektiv">+</button>
+      <button class="plus-btn" id="plusBtn" onclick="togglePopover(event)" title="Välj verktyg/perspektiv">+</button>
       <div style="flex: 1; display: flex; flex-direction: column;">
         <div id="modeIndicator" style="display:none;"><span class="active-mode-badge" id="modeBadge"></span></div>
         <textarea id="input" rows="1" placeholder="Skriv ditt meddelande..."></textarea>
@@ -112,15 +112,16 @@
   const plusBtn = document.getElementById("plusBtn");
   const popover = document.getElementById("toolPopover");
 
-  function togglePopover() {
+  function togglePopover(e) {
+    if (e) e.stopPropagation();
     popover.classList.toggle("active");
     plusBtn.classList.toggle("active");
   }
 
-  function selectMode(modeKey, modeLabel) {
+  function selectMode(modeKey, modeLabel, elem) {
     currentMode = modeKey;
     document.querySelectorAll('.popover-option').forEach(el => el.classList.remove('selected'));
-    event.currentTarget.classList.add('selected');
+    if (elem) elem.classList.add('selected');
     
     const indicator = document.getElementById("modeIndicator");
     const badge = document.getElementById("modeBadge");
@@ -132,7 +133,8 @@
       badge.innerText = "Perspektiv: " + modeLabel;
     }
     
-    togglePopover();
+    popover.classList.remove("active");
+    plusBtn.classList.remove("active");
     inputEl.focus();
   }
 
