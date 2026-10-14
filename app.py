@@ -47,7 +47,6 @@ VALIDATED_SLEEP_TRACKS = {
     "rain": "https://www.youtube.com/watch?v=mPZkdNFkNps"
 }
 
-# GRUNDLAGAR FÖR FALK (Gäller oavsett valt perspektiv)
 BASE_SYSTEM_PROMPT = f"""Du är FALK, en digital mentor baserad på WAYJS-metodiken och vetenskaplig psykoedukation.
 
 ### GRUNDLAGAR (KÄRNPRINCIPER - FÅR ALDRIG BRYTAS):
@@ -67,10 +66,9 @@ BASE_SYSTEM_PROMPT = f"""Du är FALK, en digital mentor baserad på WAYJS-metodi
    - Vid sömnproblem, fråga om tillåtelse att dela ljudspår. Inkludera {VALIDATED_SLEEP_TRACKS['lofi']} eller {VALIDATED_SLEEP_TRACKS['rain']}.
 """
 
-# PERSPEKTIV-ANPASSNINGAR
 MODE_DIRECTIVES = {
     "wayjs": "\n### PERSPEKTIV: WAYJS HELHET (STANDARD)\nFokusera på helhetsbilden, användarens egna reflektioner och att binda samman tankar, känsla och handling.",
-    "kbt": "\n### PERSPEKTIV: KBT (KOGNITIVA MÖNSTER & BETEENDE)\nInrikta dina frågor på att hjälpa användaren identifiera samspelt mellan automatiska tankar, kroppsliga reaktioner, känslor och beteendemönster.",
+    "kbt": "\n### PERSPEKTIV: KBT (KOGNITIVA MÖNSTER & BETEENDE)\nInrikta dina frågor på att hjälpa användaren identifiera samspelet mellan automatiska tankar, kroppsliga reaktioner, känslor och beteendemönster.",
     "act": "\n### PERSPEKTIV: ACT (ACCEPTANS & VÄRDERINGAR)\nInrikta dina frågor på vad som är genuint viktigt för användaren (kärnvärderingar), psykologisk flexibilitet och att skapa utrymme för svåra känslor utan att fastna i dem.",
     "sol": "\n### PERSPEKTIV: LÖSNINGSFOKUSERAD COACHING\nInrikta dina frågor på användarens befintliga styrkor, tidigare tillfällen då problemet var mindre påtagligt (undantag) och hur en liten positiv förändring ser ut."
 }
@@ -116,8 +114,8 @@ def feedback():
         return response, 200
 
     data = request.get_json() or {}
-    rating = data.get("rating")
-    reply = data.get("reply", "")[:200]
+    rating = str(data.get("rating") or "").strip()
+    reply = str(data.get("reply") or "")[:200]
 
     send_discord_notification(rating, reply)
     return jsonify({"status": "received"}), 200
@@ -141,10 +139,12 @@ def chat():
         return jsonify({"error": "GROQ_API_KEY saknas."}), 500
 
     data = request.get_json() or {}
-    user_message = data.get("message", "").strip()
-    raw_history = data.get("history", [])
-    mode = data.get("mode", "wayjs")
-    directive = data.get("directive", "").strip()
+    
+    # NULL-SÄKER SANITISERING AV ALLA INKOMMANDE FÄLT
+    user_message = str(data.get("message") or "").strip()
+    raw_history = data.get("history") or []
+    mode = str(data.get("mode") or "wayjs").strip()
+    directive = str(data.get("directive") or "").strip()
 
     if not user_message and not directive:
         return jsonify({"error": "Meddelande saknas."}), 400
@@ -158,7 +158,6 @@ def chat():
                     "content": msg["content"][:1000]
                 })
 
-    # Bygg ihop System Prompt utifrån valt perspektiv
     mode_instruction = MODE_DIRECTIVES.get(mode, MODE_DIRECTIVES["wayjs"])
     effective_prompt = BASE_SYSTEM_PROMPT + mode_instruction
 
