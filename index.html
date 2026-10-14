@@ -9,21 +9,27 @@
     html, body { width: 100%; height: 100%; overflow: hidden; background: #ffffff; }
     body { display: flex; flex-direction: column; }
     .chat-card { width: 100%; height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: #ffffff; }
-    .chat-header { background: #1a1a1a; color: #ffffff; padding: 16px 24px; font-weight: 600; font-size: 1.1rem; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
-    .chat-header span { font-size: 0.75rem; background: #333; padding: 4px 8px; border-radius: 4px; color: #aaa; text-transform: uppercase; }
+    .chat-header { background: #1a1a1a; color: #ffffff; padding: 14px 24px; font-weight: 600; font-size: 1.05rem; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+    .new-chat-btn { background: #333; color: #fff; border: 1px solid #555; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; transition: background 0.2s; }
+    .new-chat-btn:hover { background: #444; }
     .chat-body { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; background: #f8f9fa; }
-    .msg-wrapper { display: flex; flex-direction: column; gap: 6px; max-width: 680px; width: 100%; }
+    .msg-wrapper { display: flex; flex-direction: column; gap: 6px; max-width: 720px; width: 100%; }
     .msg-wrapper.user { align-self: flex-end; align-items: flex-end; }
     .msg-wrapper.bot { align-self: flex-start; align-items: flex-start; }
-    .msg { padding: 14px 18px; border-radius: 14px; font-size: 1rem; line-height: 1.5; word-wrap: break-word; max-width: 100%; }
+    .msg { padding: 14px 18px; border-radius: 14px; font-size: 1rem; line-height: 1.55; word-wrap: break-word; max-width: 100%; }
     .msg-wrapper.user .msg { background: #0066ff; color: #ffffff; border-bottom-right-radius: 2px; }
     .msg-wrapper.bot .msg { background: #ffffff; color: #1a1a1a; border-bottom-left-radius: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #e9ecef; }
     .msg.status { background: transparent; color: #888; font-size: 0.85rem; font-style: italic; text-align: center; align-self: center; border: none; box-shadow: none; }
+    .msg ul { margin-left: 20px; margin-top: 8px; margin-bottom: 8px; }
+    .msg li { margin-bottom: 4px; }
     .yt-container { width: 100%; max-width: 560px; margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
     .yt-player { width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     .yt-fallback-link { font-size: 0.8rem; color: #0066ff; text-decoration: none; font-weight: 500; margin-left: 2px; }
     .yt-fallback-link:hover { text-decoration: underline; }
-    .feedback-actions { display: flex; gap: 8px; font-size: 0.8rem; color: #888; margin-top: 2px; margin-left: 4px; }
+    .action-toolbar { display: flex; gap: 8px; font-size: 0.78rem; color: #666; margin-top: 4px; margin-left: 2px; flex-wrap: wrap; }
+    .action-chip { background: #e9ecef; border: none; padding: 4px 10px; border-radius: 12px; cursor: pointer; color: #333; font-weight: 500; transition: background 0.2s; }
+    .action-chip:hover { background: #dee2e6; }
     .feedback-btn { background: none; border: none; cursor: pointer; opacity: 0.6; transition: opacity 0.2s; font-size: 0.9rem; padding: 2px 4px; }
     .feedback-btn:hover { opacity: 1.0; }
     .chat-footer { padding: 16px 24px; border-top: 1px solid #e9ecef; display: flex; gap: 12px; background: #ffffff; flex-shrink: 0; justify-content: center; }
@@ -39,7 +45,10 @@
 
 <div class="chat-card">
   <div class="chat-header">
-    FALK-Light <span>powered by WAYJS</span>
+    <div>FALK-Light</div>
+    <div class="header-actions">
+      <button class="new-chat-btn" onclick="startNewChat()">+ Ny chatt</button>
+    </div>
   </div>
   <div class="chat-body" id="chat">
     <div class="msg-wrapper bot">
@@ -60,39 +69,86 @@
   let history = JSON.parse(sessionStorage.getItem("falk_light_history") || "[]");
 
   window.onload = () => {
-    history.forEach(msg => {
-      appendMessage(msg.content, msg.role === "user" ? "user" : "bot", true);
-    });
+    if (history.length > 0) {
+      document.getElementById("chat").innerHTML = "";
+      appendMessage("Välkommen, hur kan jag hjälpa dig eller vad funderar du på?", "bot", false);
+      history.forEach((msg, idx) => {
+        const isLast = (idx === history.length - 1) && msg.role === "assistant";
+        appendMessage(msg.content, msg.role === "user" ? "user" : "bot", true, isLast);
+      });
+    }
   };
 
-  async function send() {
+  function startNewChat() {
+    sessionStorage.removeItem("falk_light_history");
+    history = [];
+    const chat = document.getElementById("chat");
+    chat.innerHTML = `
+      <div class="msg-wrapper bot">
+        <div class="msg">Välkommen, hur kan jag hjälpa dig eller vad funderar du på?</div>
+      </div>
+    `;
+  }
+
+  function formatTextWithBullets(text) {
+    let escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    let lines = escaped.split('\n');
+    let html = '';
+    let inList = false;
+
+    lines.forEach(line => {
+      let trimmed = line.trim();
+      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+        if (!inList) { html += '<ul>'; inList = true; }
+        html += `<li>${trimmed.substring(2)}</li>`;
+      } else {
+        if (inList) { html += '</ul>'; inList = false; }
+        if (trimmed.length > 0) {
+          html += (html.length > 0 ? '<br>' : '') + trimmed;
+        } else {
+          html += '<br>';
+        }
+      }
+    });
+    if (inList) html += '</ul>';
+    return html;
+  }
+
+  async function send(directive = null) {
     const input = document.getElementById("input");
     const btn = document.getElementById("send-btn");
     const chat = document.getElementById("chat");
-    const text = input.value.trim();
+    let text = input.value.trim();
 
-    if (!text) return;
+    if (directive === "regenerate") {
+      if (history.length === 0) return;
+      if (history[history.length - 1].role === "assistant") {
+        history.pop();
+      }
+      const lastUser = history.filter(m => m.role === "user").pop();
+      text = lastUser ? lastUser.content : "";
+    } else if (directive === "shorter" || directive === "longer") {
+      const lastUser = history.filter(m => m.role === "user").pop();
+      text = lastUser ? lastUser.content : "";
+    } else {
+      if (!text) return;
+      appendMessage(text, "user", false);
+      input.value = "";
+    }
 
-    appendMessage(text, "user", false);
-    input.value = "";
     input.disabled = true;
     btn.disabled = true;
 
     const loadingElem = appendStatusMessage("Falk tänker...");
     chat.scrollTop = chat.scrollHeight;
 
-    const coldStartTimer = setTimeout(() => {
-      loadingElem.innerText = "Väcker servern (detta kan ta ~30 sekunder vid första anropet)...";
-    }, 3500);
-
     try {
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history: history })
+        body: JSON.stringify({ message: text, history: history, directive: directive })
       });
 
-      clearTimeout(coldStartTimer);
       loadingElem.remove();
 
       if (!res.ok) {
@@ -124,7 +180,7 @@
               const data = JSON.parse(dataStr);
               if (data.token) {
                 fullReply += data.token;
-                msgElem.innerText = fullReply;
+                msgElem.innerHTML = formatTextWithBullets(fullReply);
                 chat.scrollTop = chat.scrollHeight;
               }
             } catch (e) {}
@@ -134,19 +190,20 @@
 
       if (!fullReply.trim()) {
         fullReply = "Kunde inte generera ett svar. Vad vill du att vi utforskar kring detta?";
-        msgElem.innerText = fullReply;
+        msgElem.innerHTML = formatTextWithBullets(fullReply);
       }
 
       parseAndEmbedMedia(wrapperElem, msgElem, fullReply);
-      attachFeedbackButtons(wrapperElem, fullReply);
+      attachActionToolbar(wrapperElem, fullReply);
 
-      history.push({ role: "user", content: text });
+      if (directive !== "regenerate" && directive !== "shorter" && directive !== "longer") {
+        history.push({ role: "user", content: text });
+      }
       history.push({ role: "assistant", content: fullReply });
       if (history.length > 16) history = history.slice(-16);
       sessionStorage.setItem("falk_light_history", JSON.stringify(history));
 
     } catch (err) {
-      clearTimeout(coldStartTimer);
       loadingElem.remove();
       appendMessage("Kunde inte ansluta till Falk.", "bot", false);
     } finally {
@@ -162,9 +219,8 @@
     if (match && match[1]) {
       const videoId = match[1];
       const rawUrl = `https://www.youtube.com/watch?v=${videoId}`;
-      
       const cleanText = text.replace(/https?:\/\/[^\s]+/g, '').trim();
-      msgElem.innerText = cleanText || "Här är ditt lugnande spår:";
+      msgElem.innerHTML = formatTextWithBullets(cleanText) || "Här är ditt lugnande spår:";
 
       if (!wrapperElem.querySelector(".yt-container")) {
         const container = document.createElement("div");
@@ -189,21 +245,19 @@
     }
   }
 
-  function appendMessage(text, role, renderMedia = false) {
+  function appendMessage(text, role, renderMedia = false, showActions = false) {
     const chat = document.getElementById("chat");
     const wrapper = document.createElement("div");
     wrapper.className = `msg-wrapper ${role}`;
     
     const msg = document.createElement("div");
     msg.className = "msg";
-    msg.innerText = text;
+    msg.innerHTML = formatTextWithBullets(text);
     wrapper.appendChild(msg);
 
     if (role === "bot") {
-      if (renderMedia) {
-        parseAndEmbedMedia(wrapper, msg, text);
-      }
-      attachFeedbackButtons(wrapper, text);
+      if (renderMedia) parseAndEmbedMedia(wrapper, msg, text);
+      if (showActions) attachActionToolbar(wrapper, text);
     }
 
     chat.appendChild(wrapper);
@@ -231,15 +285,19 @@
     return msg;
   }
 
-  function attachFeedbackButtons(wrapperElem, replyText) {
-    if (wrapperElem.querySelector(".feedback-actions")) return;
-    const actions = document.createElement("div");
-    actions.className = "feedback-actions";
-    actions.innerHTML = `
+  function attachActionToolbar(wrapperElem, replyText) {
+    document.querySelectorAll(".action-toolbar").forEach(el => el.remove());
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "action-toolbar";
+    toolbar.innerHTML = `
       <button class="feedback-btn" onclick="sendFeedback(this, 'up', \`${escapeQuotes(replyText)}\`)">👍</button>
       <button class="feedback-btn" onclick="sendFeedback(this, 'down', \`${escapeQuotes(replyText)}\`)">👎</button>
+      <button class="action-chip" onclick="send('regenerate')">🔄 Gör om</button>
+      <button class="action-chip" onclick="send('shorter')">📉 Kortare</button>
+      <button class="action-chip" onclick="send('longer')">📈 Längre</button>
     `;
-    wrapperElem.appendChild(actions);
+    wrapperElem.appendChild(toolbar);
   }
 
   function escapeQuotes(str) {

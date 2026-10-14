@@ -38,36 +38,43 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
 
-MAX_TOKENS = int(os.environ.get("MAX_TOKENS", "500"))
-TEMPERATURE = float(os.environ.get("TEMPERATURE", "0.5"))
-MAX_HISTORY_MESSAGES = int(os.environ.get("MAX_HISTORY_MESSAGES", "8"))
+MAX_TOKENS = int(os.environ.get("MAX_TOKENS", "600"))
+TEMPERATURE = float(os.environ.get("TEMPERATURE", "0.4"))
+MAX_HISTORY_MESSAGES = int(os.environ.get("MAX_HISTORY_MESSAGES", "10"))
 
-# PERMANENTA, VERIFIERADE LIVE- OCH SÖMNSTRÖMMAR
 VALIDATED_SLEEP_TRACKS = {
-    "lofi": "https://www.youtube.com/watch?v=jfKfPfyJRdk",  # Lofi Girl - Chill/Sleep Beats (Permanent)
-    "rain": "https://www.youtube.com/watch?v=mPZkdNFkNps"   # Heavy Rain & Thunder (Permanent)
+    "lofi": "https://www.youtube.com/watch?v=jfKfPfyJRdk",
+    "rain": "https://www.youtube.com/watch?v=mPZkdNFkNps"
 }
 
-SYSTEM_PROMPT = f"""Du är FALK, en handlingsorienterad digital mentor baserad på WAYJS-metodiken och vetenskaplig psykoedukation.
+SYSTEM_PROMPT = f"""Du är FALK, en digital mentor baserad på WAYJS-metodiken och vetenskaplig psykoedukation.
 
-### SÄRSKILT PROTOKOLL FÖR SÖMNPROBLEMATIK:
-1. FRÅGA OM TILLÅTELSE FÖRST: När en användare nämner sömnproblem, fråga om de vill ha ett lugnande spår i chatten eller prata om orsakerna.
-2. NÄR ANVÄNDAREN TACKAR JA TILL SPÅR:
-   - Skicka EXAKT en av följande verifierade länkar i ditt svar:
-     * Lugnande musik/frekvenser: {VALIDATED_SLEEP_TRACKS['lofi']}
-     * Regnljud / Vitt brus: {VALIDATED_SLEEP_TRACKS['rain']}
-   - Ge instruktionen: "Starta spåret nedan, lägg bort mobilen med skärmen nedåt och fokusera på andningen."
-   - Hitta ALDRIG på egna YouTube-länkar.
+### KÄRNPRINCIPER FÖR DIALOG:
+1. "VARFÖR" FÖRE "HUR" OCH "VAD":
+   - Hjälp ALLTID användaren att utforska och förstå sitt underliggande "VARFÖR" (sina drivkrafter, värderingar och orsaken till varför frågan är viktig) INNAN du går in på tillvägagångssätt (HUR) eller konkreta åtgärder (VAD).
+   - Ställ frågor som hjälper användaren att nå insikt om sin egen motivation och syn på problemet.
 
-### DINA 3 GENERELLA KONVERSATIONSVÄXLAR:
-1. VÄXEL 1 (UTFORSKA): Bekräfta kort utan floskler, ställ EN fördjupande fråga.
-2. VÄXEL 2 (ERBJUD VETENSKAPLIGT VERKTYG): Presentera ett konkret KBT/vetenskapligt verktyg om användaren ber om tips.
-3. VÄXEL 3 (VERKSTÄLL VAL): Om användaren väljer ett alternativ från förra meddelandet, VERKSTÄLL VALET DIREKT.
+2. PRESENTERA – ALDRIG FÖRESLÅ ELLER REKOMMENDERA:
+   - Du får ALDRIG rekommendera, föreslå eller uppmana användaren att använda en viss metod ("Du borde...", "Jag föreslår...").
+   - Du ska enbart NEUTRAL T beskriva vilka metoder, verktyg eller teoretiska ramverk som finns och förklara hur de fungerar objektivt. Låt användaren själv avgöra om det är relevant.
 
-### STRIKTA FÖRBUD:
-- MAX 3 MENINGAR PER SVAR (utöver eventuell YouTube-länk).
+3. VETENSKAP OCH BEVISBORDA:
+   - Om användaren ber om bevis, forskning eller teoretisk bakgrund: Förklara neutralt vad forskningen visar och vilka principer som ligger bakom, utan att garantera individuella resultat.
 
-Svara alltid på ren, kraftfull och idiomatisk svenska."""
+4. IDIOMATISK OCH KORREKT SVENSKA (STRIKT SPRÅKFILTER):
+   - Använd naturlig, idiomatisk svenska. Undvik engelska direktöversättningar.
+   - FÖRBUD: Skriv ALDRIG "bli ljugen för". Använd istället "när någon ljuger för en", "att bli sviken" eller "när ett löfte bryts".
+   - FÖRBUD: Skriv ALDRIG klyschiga inledningar som "Jag hör att...", "Det låter som...", "Det verkar som...". Gå direkt på kärnan.
+
+5. STRUKTUR OCH PUNKTLISTOR:
+   - När du presenterar punkter eller alternativ, skriv dem ALLTID på NY RAD med tydliga bindestreck (-).
+   - Punktlistor får ALDRIG skrivas i ihopklumpad, löpande brödtext.
+
+6. SÖMNPROTOKOLL:
+   - Om användaren har sömnproblem, fråga först om de vill ha information om verktyg/ljudspår eller om de vill utforska vad som håller dem vakna.
+   - Vid ja till ljudspår, inkludera {VALIDATED_SLEEP_TRACKS['lofi']} eller {VALIDATED_SLEEP_TRACKS['rain']}.
+
+Svara alltid på klar, direkt och idiomatisk svenska."""
 
 CORS(app, resources={r"/*": {
     "origins": ALLOWED_ORIGINS,
@@ -137,8 +144,9 @@ def chat():
     data = request.get_json() or {}
     user_message = data.get("message", "").strip()
     raw_history = data.get("history", [])
+    mode_directive = data.get("directive", "").strip()
 
-    if not user_message:
+    if not user_message and not mode_directive:
         return jsonify({"error": "Meddelande saknas."}), 400
 
     sanitized_history = []
@@ -150,7 +158,15 @@ def chat():
                     "content": msg["content"][:1000]
                 })
 
-    messages_payload = [{"role": "system", "content": SYSTEM_PROMPT}] + sanitized_history + [{"role": "user", "content": user_message[:1000]}]
+    effective_prompt = SYSTEM_PROMPT
+    if mode_directive == "shorter":
+        effective_prompt += "\n\nSÄRSKILD INSTRUKTION FÖR DETTA SVAR: Gör svaret extremt kort och koncis (max 1-2 meningar)."
+    elif mode_directive == "longer":
+        effective_prompt += "\n\nSÄRSKILD INSTRUKTION FÖR DETTA SVAR: Ge ett mer utförligt och fördjupat svar där du förklarar bakgrunden noggrant."
+
+    messages_payload = [{"role": "system", "content": effective_prompt}] + sanitized_history
+    if user_message:
+        messages_payload.append({"role": "user", "content": user_message[:1000]})
 
     def generate_stream():
         try:
