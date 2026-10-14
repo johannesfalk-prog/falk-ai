@@ -33,13 +33,30 @@
     .action-chip:hover { background: #dee2e6; }
     .feedback-btn { background: none; border: none; cursor: pointer; opacity: 0.6; transition: opacity 0.2s; font-size: 0.9rem; padding: 2px 4px; }
     .feedback-btn:hover { opacity: 1.0; }
-    .chat-footer { padding: 16px 24px; border-top: 1px solid #e9ecef; display: flex; gap: 12px; background: #ffffff; flex-shrink: 0; justify-content: center; align-items: flex-end; }
-    .footer-inner { width: 100%; max-width: 720px; display: flex; gap: 10px; align-items: flex-end; }
-    textarea { flex: 1; padding: 12px 16px; border: 1px solid #ced4da; border-radius: 10px; font-size: 1rem; outline: none; transition: border-color 0.2s; resize: none; min-height: 48px; max-height: 130px; line-height: 1.4; overflow-y: auto; }
+
+    /* FOOTER & TOOL MENU STYLING */
+    .chat-footer { padding: 14px 24px; border-top: 1px solid #e9ecef; display: flex; gap: 12px; background: #ffffff; flex-shrink: 0; justify-content: center; align-items: flex-end; position: relative; }
+    .footer-inner { width: 100%; max-width: 720px; display: flex; gap: 8px; align-items: flex-end; position: relative; }
+    
+    .tool-popover { position: absolute; bottom: 60px; left: 0; background: #ffffff; border: 1px solid #e9ecef; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 280px; display: none; flex-direction: column; z-index: 100; overflow: hidden; }
+    .tool-popover.active { display: flex; }
+    .popover-header { font-size: 0.75rem; font-weight: 700; color: #888; text-transform: uppercase; padding: 10px 14px 6px 14px; background: #fafafa; border-bottom: 1px solid #f0f0f0; }
+    .popover-option { padding: 10px 14px; font-size: 0.9rem; color: #333; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.15s; border-bottom: 1px solid #f8f9fa; }
+    .popover-option:last-child { border-bottom: none; }
+    .popover-option:hover { background: #f0f4ff; color: #0066ff; }
+    .popover-option.selected { font-weight: 600; color: #0066ff; background: #f0f4ff; }
+
+    .plus-btn { background: #f0f1f3; color: #333; border: 1px solid #ced4da; width: 44px; height: 44px; border-radius: 10px; font-size: 1.3rem; font-weight: 400; cursor: pointer; display: flex; justify-content: center; align-items: center; flex-shrink: 0; transition: background 0.2s; }
+    .plus-btn:hover { background: #e2e4e8; }
+    .plus-btn.active { background: #0066ff; color: #ffffff; border-color: #0066ff; }
+
+    textarea { flex: 1; padding: 12px 16px; border: 1px solid #ced4da; border-radius: 10px; font-size: 1rem; outline: none; transition: border-color 0.2s; resize: none; min-height: 44px; max-height: 130px; line-height: 1.4; overflow-y: auto; }
     textarea:focus { border-color: #0066ff; }
-    button.send-btn { background: #1a1a1a; color: #fff; border: none; padding: 12px 22px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: background 0.2s; font-size: 0.95rem; height: 48px; flex-shrink: 0; }
+    button.send-btn { background: #1a1a1a; color: #fff; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: background 0.2s; font-size: 0.95rem; height: 44px; flex-shrink: 0; }
     button.send-btn:hover { background: #333; }
     button:disabled { background: #ccc; cursor: not-allowed; }
+    
+    .active-mode-badge { font-size: 0.72rem; color: #0066ff; background: #e6f0ff; padding: 2px 8px; border-radius: 10px; margin-bottom: 4px; display: inline-block; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -58,7 +75,28 @@
   </div>
   <div class="chat-footer">
     <div class="footer-inner">
-      <textarea id="input" rows="1" placeholder="Skriv ditt meddelande... (Enter skickar, Shift+Enter för ny rad)"></textarea>
+      <!-- DROPDOWN POPOVER FOR COACHING PERSPECTIVE -->
+      <div class="tool-popover" id="toolPopover">
+        <div class="popover-header">Välj Coaching-Perspektiv</div>
+        <div class="popover-option selected" onclick="selectMode('wayjs', '🎯 WAYJS Standard')">
+          <span>🎯</span> WAYJS Standard (Helhet)
+        </div>
+        <div class="popover-option" onclick="selectMode('kbt', '🧠 KBT (Tankar & Mönster)')">
+          <span>🧠</span> KBT (Tankar & Mönster)
+        </div>
+        <div class="popover-option" onclick="selectMode('act', '🧭 ACT (Värderingar & Mening)')">
+          <span>🧭</span> ACT (Värderingar & Mening)
+        </div>
+        <div class="popover-option" onclick="selectMode('sol', '⚡ Lösningsfokuserat')">
+          <span>⚡</span> Lösningsfokuserat
+        </div>
+      </div>
+
+      <button class="plus-btn" id="plusBtn" onclick="togglePopover()" title="Välj verktyg/perspektiv">+</button>
+      <div style="flex: 1; display: flex; flex-direction: column;">
+        <div id="modeIndicator" style="display:none;"><span class="active-mode-badge" id="modeBadge"></span></div>
+        <textarea id="input" rows="1" placeholder="Skriv ditt meddelande..."></textarea>
+      </div>
       <button class="send-btn" id="send-btn" onclick="send()">Skicka</button>
     </div>
   </div>
@@ -68,16 +106,49 @@
   const API_URL = "https://falk-ai.onrender.com/chat";
   const FEEDBACK_URL = "https://falk-ai.onrender.com/feedback";
   let history = JSON.parse(sessionStorage.getItem("falk_light_history") || "[]");
+  let currentMode = "wayjs";
 
   const inputEl = document.getElementById("input");
+  const plusBtn = document.getElementById("plusBtn");
+  const popover = document.getElementById("toolPopover");
 
-  // Dynamisk höjdanpassning för textarea (upp till 5 rader / ~130px)
+  function togglePopover() {
+    popover.classList.toggle("active");
+    plusBtn.classList.toggle("active");
+  }
+
+  function selectMode(modeKey, modeLabel) {
+    currentMode = modeKey;
+    document.querySelectorAll('.popover-option').forEach(el => el.classList.remove('selected'));
+    event.currentTarget.classList.add('selected');
+    
+    const indicator = document.getElementById("modeIndicator");
+    const badge = document.getElementById("modeBadge");
+    
+    if (modeKey === 'wayjs') {
+      indicator.style.display = "none";
+    } else {
+      indicator.style.display = "block";
+      badge.innerText = "Perspektiv: " + modeLabel;
+    }
+    
+    togglePopover();
+    inputEl.focus();
+  }
+
+  // Stäng popover vid klick utanför
+  document.addEventListener('click', function(e) {
+    if (!plusBtn.contains(e.target) && !popover.contains(e.target)) {
+      popover.classList.remove("active");
+      plusBtn.classList.remove("active");
+    }
+  });
+
   inputEl.addEventListener("input", function() {
     this.style.height = "auto";
     this.style.height = Math.min(this.scrollHeight, 130) + "px";
   });
 
-  // Enter skickar, Shift+Enter skapar ny rad
   inputEl.addEventListener("keydown", function(e) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -111,18 +182,10 @@
 
   function editUserMessage(historyIndex) {
     if (historyIndex < 0 || historyIndex >= history.length) return;
-    
-    // 1. Hämta texten som ska redigeras
     const targetText = history[historyIndex].content;
-    
-    // 2. Beskär historiken så att allt från och med detta meddelande raderas
     history = history.slice(0, historyIndex);
     sessionStorage.setItem("falk_light_history", JSON.stringify(history));
-    
-    // 3. Rendera om chatten med den trimmade historiken
     renderChatFromHistory();
-    
-    // 4. Läs in texten i textarean, anpassa höjden och fokusera
     inputEl.value = targetText;
     inputEl.style.height = "auto";
     inputEl.style.height = Math.min(inputEl.scrollHeight, 130) + "px";
@@ -165,9 +228,7 @@
 
     if (directive === "regenerate") {
       if (history.length === 0) return;
-      if (history[history.length - 1].role === "assistant") {
-        history.pop();
-      }
+      if (history[history.length - 1].role === "assistant") history.pop();
       const lastUser = history.filter(m => m.role === "user").pop();
       text = lastUser ? lastUser.content : "";
     } else if (directive === "shorter" || directive === "longer") {
@@ -189,7 +250,7 @@
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history: history, directive: directive })
+        body: JSON.stringify({ message: text, history: history, mode: currentMode, directive: directive })
       });
 
       loadingElem.remove();
