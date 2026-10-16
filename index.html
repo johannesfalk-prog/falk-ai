@@ -70,6 +70,8 @@
         .message-bubble { padding: 12px 16px; border-radius: 18px; font-size: 0.95rem; line-height: 1.5; word-break: break-word; }
         .message-bubble.user { align-self: flex-end; max-width: 85%; background-color: var(--user-msg); color: #fff; border-bottom-right-radius: 4px; }
         .message-bubble.bot { background-color: var(--bot-msg); color: var(--text-main); border-bottom-left-radius: 4px; width: 100%; transition: opacity 0.2s; }
+        .message-bubble.bot em { font-style: italic; font-weight: normal; }
+        .message-bubble.bot strong { font-weight: 700; }
         .message-bubble.bot strong em, .message-bubble.bot em strong { font-weight: 700; font-style: italic; }
         .message-bubble.bot.error-msg { background-color: #fff0f1; border: 1px solid #ffccd1; color: var(--danger-color); }
         .message-bubble.loading { background-color: var(--bot-msg); color: var(--text-muted); font-style: italic; animation: pulse-bg 1.2s infinite ease-in-out; }
@@ -285,16 +287,16 @@
         localStorage.setItem('falk_session_id', crypto.randomUUID());
     }
 
+    // RENODLAD MARKDOWN PARSER (*word* blir enbart kursiv <em>)
     function formatText(text) {
         if (!text) return '';
         let formatted = text;
         formatted = formatted.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
         formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        formatted = formatted.replace(/\*(.*?)\*/g, '<strong><em>$1</em></strong>');
+        formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
         return formatted.replace(/\n/g, '<br>');
     }
 
-    // --- TALIGENKÄNNING (STT) ---
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (SpeechRecognition) {
@@ -350,21 +352,18 @@
 
     micBtn.addEventListener('click', toggleRecording);
 
-    // --- PER-MEDDELANDE TALSYNTES (TTS 🔊) ---
     window.toggleSpeakMessage = function(btnElement) {
         if (!('speechSynthesis' in window)) {
             alert('Talsyntes stöds inte i din webbläsare.');
             return;
         }
 
-        // Om samma högtalarknapp klickas medan ljudet spelas: stoppa ljudet
         if (window.speechSynthesis.speaking && btnElement.classList.contains('speaking')) {
             window.speechSynthesis.cancel();
             btnElement.classList.remove('speaking');
             return;
         }
 
-        // Stoppa eventuellt pågående ljud från andra meddelanden
         window.speechSynthesis.cancel();
         document.querySelectorAll('.action-btn').forEach(b => b.classList.remove('speaking'));
 
