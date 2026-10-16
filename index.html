@@ -141,6 +141,10 @@
 
         .footer-credit { font-size: 0.72rem; color: var(--text-muted); text-align: center; font-weight: 500; letter-spacing: 0.3px; }
 
+        /* Memory Panel & Backdrop Overlay */
+        .memory-backdrop { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: rgba(0, 0, 0, 0.4); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 999; }
+        .memory-backdrop.open { opacity: 1; pointer-events: auto; }
+
         .memory-panel { position: fixed; top: 0; right: -360px; width: 320px; height: 100vh; height: 100dvh; background: #fafbfc; border-left: 1px solid var(--border-color); box-shadow: -5px 0 25px rgba(0,0,0,0.08); transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1); z-index: 1000; display: flex; flex-direction: column; }
         .memory-panel.open { right: 0; }
 
@@ -164,6 +168,8 @@
     </style>
 </head>
 <body>
+
+<div id="memory-backdrop" class="memory-backdrop"></div>
 
 <div class="app-layout">
     <div class="main-chat">
@@ -271,6 +277,7 @@
     const clearBtn = document.getElementById('clear-btn');
     const onboardingContainer = document.getElementById('onboarding-container');
     const memoryPanel = document.getElementById('memory-panel');
+    const memoryBackdrop = document.getElementById('memory-backdrop');
     const toggleMemoryBtn = document.getElementById('toggle-memory-btn');
     const closeMemoryBtn = document.getElementById('close-memory-btn');
     const memoryBadge = document.getElementById('memory-badge');
@@ -442,7 +449,6 @@
         }
     }
 
-    // IKONBASERAD ACTION BUTTONS: 🔄 är nu en ren ikonknapp med title
     function appendActionButtons(wrapper) {
         let actionsContainer = wrapper.querySelector('.message-actions');
         if (!actionsContainer) {
@@ -743,14 +749,20 @@ END:VCALENDAR`;
         }
     });
 
-    toggleMemoryBtn.addEventListener('click', () => {
-        memoryPanel.classList.toggle('open');
+    function openMemoryPanel() {
+        memoryPanel.classList.add('open');
+        memoryBackdrop.classList.add('open');
         memoryBadge.classList.remove('pulse');
-    });
+    }
 
-    closeMemoryBtn.addEventListener('click', () => {
+    function closeMemoryPanel() {
         memoryPanel.classList.remove('open');
-    });
+        memoryBackdrop.classList.remove('open');
+    }
+
+    toggleMemoryBtn.addEventListener('click', openMemoryPanel);
+    closeMemoryBtn.addEventListener('click', closeMemoryPanel);
+    memoryBackdrop.addEventListener('click', closeMemoryPanel);
 
     clearMemoryBtn.addEventListener('click', () => {
         if (confirm('Vill du helt rensa din kognitiva minnesprofil och session?')) {
