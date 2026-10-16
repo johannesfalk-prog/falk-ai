@@ -4,9 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="FALK">
+    <meta name="theme-color" content="#0066ff">
     <title>FALK - Digital Mentor</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%230066ff%22/><text y=%22.85em%22 x=%2250%22 text-anchor=%22middle%22 font-size=%2270%22>🧠</text></svg>">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
+    
     <style>
         :root {
             --bg-color: #f4f6f8;
@@ -19,7 +25,6 @@
             --accent-color: #0066ff;
             --accent-light: #eef5ff;
             --danger-color: #dc3545;
-            --success-color: #28a745;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -50,7 +55,7 @@
         .main-chat { flex: 1; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 
         .header { padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fff; z-index: 10; }
-        .header-brand { font-size: 1.1rem; font-weight: 700; color: #111; }
+        .header-brand { font-size: 1.1rem; font-weight: 700; color: #111; display: flex; align-items: center; gap: 6px; }
         
         .btn-new-chat { padding: 6px 14px; background-color: #fff; border: 2px solid var(--accent-color); color: var(--accent-color); border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
         .btn-new-chat:hover { background-color: var(--accent-light); }
@@ -137,7 +142,6 @@
         .tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; }
         .tag { background: var(--accent-light); color: var(--accent-color); padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
 
-        /* Action Engine Knappar i Minnespanelen */
         .action-engine-box { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border-color); }
         .btn-action-engine { padding: 10px 12px; background: #ffffff; border: 1px solid var(--accent-color); color: var(--accent-color); border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; }
         .btn-action-engine:hover { background: var(--accent-light); }
@@ -151,7 +155,7 @@
 <div class="app-layout">
     <div class="main-chat">
         <div class="header">
-            <div class="header-brand">FALK-Light</div>
+            <div class="header-brand"><span>🧠</span> FALK-Light</div>
             <button id="clear-btn" class="btn-new-chat">+ Ny chatt</button>
             <button id="toggle-memory-btn" class="memory-toggle-btn">
                 <span>🧠 Minne</span>
@@ -225,7 +229,6 @@
                 </div>
             </div>
 
-            <!-- V1.2 Action Engine Section -->
             <div class="action-engine-box">
                 <h4>Exekvering & Export</h4>
                 <button id="export-md-btn" class="btn-action-engine">📋 Exportera Insikt (Markdown)</button>
@@ -238,6 +241,17 @@
 </div>
 
 <script>
+    // Registrera PWA Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').then(reg => {
+                console.log('FALK PWA Service Worker registrerad:', reg.scope);
+            }).catch(err => {
+                console.error('Service Worker registrering misslyckades:', err);
+            });
+        });
+    }
+
     const API_URL = 'https://falk-ai.onrender.com/chat';
     const chatWindow = document.getElementById('chat-window');
     const userInput = document.getElementById('user-input');
@@ -278,7 +292,6 @@
         }
     }
 
-    // Återställer historiken visuellt i DOM vid F5/Sidomladdning
     function restoreChatHistory() {
         try {
             const raw = sessionStorage.getItem('falk_chat_history');
@@ -527,7 +540,6 @@
         }
     }
 
-    // ACTION ENGINE V1.2: EXPORT MARKDOWN (NOTION/OBSIDIAN)
     exportMDBtn.addEventListener('click', () => {
         const profile = getStoredProfile();
         const dateStr = new Date().toLocaleDateString('sv-SE');
@@ -560,7 +572,6 @@
         });
     });
 
-    // ACTION ENGINE V1.2: EXPORT ICS (KALENDERBOKNING)
     exportICSBtn.addEventListener('click', () => {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
