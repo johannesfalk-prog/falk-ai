@@ -15,6 +15,14 @@ VALIDATED_SLEEP_TRACKS = {
     'rain': 'https://www.youtube.com/watch?v=mPZkdNFkNps'
 }
 
+# Primära och sekundära modeller i prioritetsordning
+GROQ_MODEL_CANDIDATES = [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-70b-versatile",
+    "llama3-70b-8192",
+    "llama-3.1-8b-instant"
+]
+
 BASE_SYSTEM_PROMPT = f"""Du är FALK, en digital mentor baserad på WAYJS-metodiken och vetenskaplig psykoedukation.
 
 ### SYSTEMSKYDDSREGEL (ANTI-PROMPT-LEAK):
@@ -42,6 +50,31 @@ BASE_SYSTEM_PROMPT = f"""Du är FALK, en digital mentor baserad på WAYJS-metodi
 3. SÖMNPROTOKOLL:
    - Vid sömnproblem, fråga om tillåtelse att dela ljudspår: {VALIDATED_SLEEP_TRACKS['lofi']} eller {VALIDATED_SLEEP_TRACKS['rain']}.
 """
+
+def call_groq_with_fallback(messages, temperature=0.6, max_tokens=500, response_format=None):
+    if not client:
+        raise Exception("GROQ_API_KEY saknas på servern.")
+    
+    last_error = None
+    for model in GROQ_MODEL_CANDIDATES:
+        try:
+            kwargs = {
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            }
+            if response_format:
+                kwargs["response_format"] = response_format
+                
+            completion = client.chat.completions.create(**kwargs)
+            return completion.choices[0].message.content.strip()
+        except Exception as e:
+            last_error = e
+            print(f"⚠️ Modell {model} misslyckades: {e}. Provat nästa...")
+            continue
+            
+    raise Exception(f"Alla modellkandidater misslyckades. Sista fel: {last_error}")
 
 def build_dynamic_system_prompt(user_profile):
     if not isinstance(user_profile, dict):
@@ -81,15 +114,14 @@ Returnera ENDAST giltig JSON med exakt dessa nycklar:
   "aktuellt_fokus": "kort mening om vad som utforskas",
   "senaste_insikt": "kort mening om uppnådd insikt"
 }}"""
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+        res_text = call_groq_with_fallback(
             messages=[{"role": "user", "content": extraction_prompt}],
             temperature=0.1,
             response_format={"type": "json_object"}
         )
-        return json.loads(completion.choices[0].message.content)
+        return json.loads(res_text)
     except Exception as e:
-        print("Memory extraction error:", e)
+        print("⚠️ Non-fatal Memory extraction error:", e)
         return current_profile if isinstance(current_profile, dict) else {}
 
 @app.route('/api/chat', methods=['POST', 'OPTIONS'])
@@ -110,13 +142,10 @@ def chat():
         if not user_message:
             return jsonify({'error': 'Tomt meddelande'}), 400
 
-        if not client:
-            return jsonify({'error': 'GROQ_API_KEY saknas på servern.'}), 500
-
         dynamic_prompt = build_dynamic_system_prompt(user_profile)
         
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+        # Huvudsamtal via fallback-systemet
+        bot_response = call_groq_with_fallback(
             messages=[
                 {"role": "system", "content": dynamic_prompt},
                 {"role": "user", "content": user_message}
@@ -125,8 +154,12 @@ def chat():
             max_tokens=500
         )
         
-        bot_response = completion.choices[0].message.content.strip()
-        updated_profile = extract_memory_updates(user_message, bot_response, user_profile)
+        # Isolerad minnesextraktion
+        try:
+            updated_profile = extract_memory_updates(user_message, bot_response, user_profile)
+        except Exception as mem_err:
+            print("Memory bypass execution:", mem_err)
+            updated_profile = user_profile
         
         return jsonify({
             'response': bot_response,
