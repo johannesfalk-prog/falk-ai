@@ -208,3 +208,50 @@ def chat():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+
+
+
+def build_dynamic_system_prompt(user_profile):
+    varderingar = ", ".join(user_profile.get("varderingar", [])) if user_profile.get("varderingar") else "Inga identifierade ännu"
+    monster = ", ".join(user_profile.get("identifierade_monster", [])) if user_profile.get("identifierade_monster") else "Inga identifierade ännu"
+    fokus = user_profile.get("aktuellt_fokus", "Odefinierat")
+    insikt = user_profile.get("senaste_insikt", "Ingen ännu")
+
+    memory_block = f"""
+### ANVÄNDARENS KOGNITIVA PROFIL (LÅNGSIKTIGT MINNE):
+- Identifierade värderingar: {varderingar}
+- Återkommande spänningsfält/mönster: {monster}
+- Aktuellt fokus: {fokus}
+- Senaste insikt: {insikt}
+
+INSTRUKTION FÖR MINNESNYTTJANDE:
+- Använd profilen för att skapa kontinuitet utan att tvinga in fakta.
+- Referera till tidigare insikter eller värderingar ENDAST när det ger kognitiv hävstång i den aktuella frågan.
+"""
+    return BASE_SYSTEM_PROMPT + "\n" + memory_block
+
+def extract_memory_updates(user_msg, bot_msg, current_profile):
+    try:
+        extraction_prompt = f"""Du är en kognitiv datastrukturerare. Analysera dialogen och uppdatera användarens profil i JSON.
+Nuvarande profil: {current_profile}
+Användarens meddelande: "{user_msg}"
+Mentorns svar: "{bot_msg}"
+
+Returnera ENDAST ett giltigt JSON-objekt med exakt dessa nycklar utan markdown:
+{{
+  "varderingar": ["lista med 1-3 kärnvärderingar"],
+  "identifierade_monster": ["lista med 1-3 återkommande reaktionsmönster"],
+  "aktuellt_fokus": "kort mening om vad som utforskas nu",
+  "senaste_insikt": "kort mening om senast uppnådd insikt"
+}}"""
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": extraction_prompt}],
+            temperature=0.1,
+            response_format={"type": "json_object"}
+        )
+        import json
+        return json.loads(completion.choices[0].message.content)
+    except Exception as e:
+        print("Memory extraction error:", e)
+        return current_profile
