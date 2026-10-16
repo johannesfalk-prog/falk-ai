@@ -6,6 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#ffffff">
     <title>FALK - Digital Mentor</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
     <style>
         :root {
             --bg-color: #f4f6f8;
@@ -21,23 +22,40 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; height: 100vh; overflow: hidden; }
-
-        .app-layout { width: 100%; max-width: 900px; display: flex; flex-direction: column; height: 100vh; background: var(--chat-bg); box-shadow: 0 0 20px rgba(0,0,0,0.05); position: relative; }
-
-        /* Main Chat Area */
-        .main-chat { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-
-        /* Header Layout */
-        .header { padding: 14px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fff; z-index: 10; }
-        .header-brand { font-size: 1.15rem; font-weight: 700; color: #111; }
         
-        /* Blå ram på + Ny chatt */
-        .btn-new-chat { padding: 7px 16px; background-color: #fff; border: 2px solid var(--accent-color); color: var(--accent-color); border-radius: 20px; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+        /* 100dvh fixar den mobila avhuggningen i Chrome/Safari */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            display: flex; 
+            justify-content: center; 
+            height: 100vh; 
+            height: 100dvh; 
+            overflow: hidden; 
+        }
+
+        .app-layout { 
+            width: 100%; 
+            max-width: 900px; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            height: 100dvh; 
+            background: var(--chat-bg); 
+            box-shadow: 0 0 20px rgba(0,0,0,0.05); 
+            position: relative; 
+        }
+
+        .main-chat { flex: 1; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+
+        .header { padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fff; z-index: 10; }
+        .header-brand { font-size: 1.1rem; font-weight: 700; color: #111; }
+        
+        .btn-new-chat { padding: 6px 14px; background-color: #fff; border: 2px solid var(--accent-color); color: var(--accent-color); border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
         .btn-new-chat:hover { background-color: var(--accent-light); }
 
-        /* Minne-knapp med notis-prick */
-        .memory-toggle-btn { padding: 7px 14px; background: var(--accent-light); border: 1px solid var(--accent-color); color: var(--accent-color); border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; position: relative; }
+        .memory-toggle-btn { padding: 6px 12px; background: var(--accent-light); border: 1px solid var(--accent-color); color: var(--accent-color); border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; position: relative; }
         .memory-badge { width: 8px; height: 8px; background-color: #ff3b30; border-radius: 50%; display: none; }
         .memory-badge.pulse { display: inline-block; animation: pulse-anim 1.5s infinite; }
 
@@ -47,29 +65,34 @@
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
         }
 
-        /* Chat Window */
-        .chat-window { flex: 1; overflow-y: auto; padding: 24px 20px; display: flex; flex-direction: column; gap: 16px; }
-        .message-bubble { max-width: 82%; padding: 14px 18px; border-radius: 18px; font-size: 0.95rem; line-height: 1.5; word-break: break-word; }
+        .chat-window { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+        .message-bubble { max-width: 85%; padding: 12px 16px; border-radius: 18px; font-size: 0.95rem; line-height: 1.5; word-break: break-word; }
         .message-bubble.user { align-self: flex-end; background-color: var(--user-msg); color: #fff; border-bottom-right-radius: 4px; }
         .message-bubble.bot { align-self: flex-start; background-color: var(--bot-msg); color: var(--text-main); border-bottom-left-radius: 4px; }
+        .message-bubble.loading { align-self: flex-start; background-color: var(--bot-msg); color: var(--text-muted); font-style: italic; }
 
-        /* Onboarding Cards */
-        .onboarding-container { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; width: 100%; max-width: 550px; }
-        .onboarding-card { padding: 12px 16px; background: #fff; border: 1px solid var(--border-color); border-radius: 12px; font-size: 0.9rem; color: var(--text-main); text-align: left; cursor: pointer; transition: all 0.2s; }
+        .onboarding-container { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; width: 100%; max-width: 550px; }
+        .onboarding-card { padding: 12px 14px; background: #fff; border: 1px solid var(--border-color); border-radius: 12px; font-size: 0.88rem; color: var(--text-main); text-align: left; cursor: pointer; transition: all 0.2s; }
         .onboarding-card:hover { border-color: var(--accent-color); background: var(--accent-light); color: var(--accent-color); }
 
-        /* Input Container med Powered by WAYJS under */
-        .input-container { padding: 12px 20px 16px 20px; border-top: 1px solid var(--border-color); background: #fff; display: flex; flex-direction: column; gap: 8px; }
-        .input-area { display: flex; gap: 10px; }
-        .input-area input { flex: 1; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 24px; outline: none; font-size: 0.95rem; }
+        /* Säkrad input-container med padding för mobila systemknappar */
+        .input-container { 
+            padding: 10px 16px calc(12px + env(safe-area-inset-bottom)) 16px; 
+            border-top: 1px solid var(--border-color); 
+            background: #fff; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 6px; 
+        }
+        .input-area { display: flex; gap: 8px; }
+        .input-area input { flex: 1; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 24px; outline: none; font-size: 0.95rem; }
         .input-area input:focus { border-color: var(--user-msg); }
-        .input-area button { padding: 12px 22px; background-color: var(--user-msg); color: #fff; border: none; border-radius: 24px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+        .input-area button { padding: 10px 20px; background-color: var(--user-msg); color: #fff; border: none; border-radius: 24px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
         .input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .footer-credit { font-size: 0.75rem; color: var(--text-muted); text-align: center; font-weight: 500; letter-spacing: 0.3px; }
+        .footer-credit { font-size: 0.72rem; color: var(--text-muted); text-align: center; font-weight: 500; letter-spacing: 0.3px; }
 
-        /* Memory Panel (Dold som standard på ALLA skärmar, glider in från höger) */
-        .memory-panel { position: fixed; top: 0; right: -360px; width: 340px; height: 100vh; background: #fafbfc; border-left: 1px solid var(--border-color); box-shadow: -5px 0 25px rgba(0,0,0,0.08); transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1); z-index: 1000; display: flex; flex-direction: column; }
+        .memory-panel { position: fixed; top: 0; right: -360px; width: 320px; height: 100vh; height: 100dvh; background: #fafbfc; border-left: 1px solid var(--border-color); box-shadow: -5px 0 25px rgba(0,0,0,0.08); transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1); z-index: 1000; display: flex; flex-direction: column; }
         .memory-panel.open { right: 0; }
 
         .memory-header { padding: 16px 20px; border-bottom: 1px solid var(--border-color); font-weight: 700; font-size: 0.95rem; display: flex; justify-content: space-between; align-items: center; background: #fff; }
@@ -90,7 +113,6 @@
 <body>
 
 <div class="app-layout">
-    <!-- Main Chat Area -->
     <div class="main-chat">
         <div class="header">
             <div class="header-brand">FALK-Light</div>
@@ -128,7 +150,6 @@
         </div>
     </div>
 
-    <!-- Expanderbar Minnespanel (Slide-in över alla skärmstoorlekar) -->
     <div class="memory-panel" id="memory-panel">
         <div class="memory-header">
             <span>🧠 Kognitiv Profil</span>
@@ -185,12 +206,26 @@
         localStorage.setItem('falk_session_id', crypto.randomUUID());
     }
 
-    function appendMessage(sender, text) {
+    function formatText(text) {
+        let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        return formatted.replace(/\n/g, '<br>');
+    }
+
+    function appendMessage(sender, text, isLoading = false) {
         const bubble = document.createElement('div');
-        bubble.className = `message-bubble ${sender}`;
-        bubble.innerHTML = text.replace(/\n/g, '<br>');
+        bubble.className = `message-bubble ${sender} ${isLoading ? 'loading' : ''}`;
+        if (isLoading) {
+            bubble.id = 'loading-bubble';
+        }
+        bubble.innerHTML = formatText(text);
         chatWindow.appendChild(bubble);
         chatWindow.scrollTop = chatWindow.scrollHeight;
+        return bubble;
+    }
+
+    function removeLoadingBubble() {
+        const loadingBubble = document.getElementById('loading-bubble');
+        if (loadingBubble) loadingBubble.remove();
     }
 
     function getStoredProfile() {
@@ -206,7 +241,6 @@
     function renderMemoryPanel() {
         const profile = getStoredProfile();
 
-        // Värderingar
         const varderingarEl = document.getElementById('mem-varderingar');
         if (profile.varderingar && profile.varderingar.length > 0) {
             varderingarEl.innerHTML = profile.varderingar.map(v => `<span class="tag">${v}</span>`).join('');
@@ -214,7 +248,6 @@
             varderingarEl.innerHTML = '<span style="font-size:0.8rem; color:var(--text-muted);">Inga ännu</span>';
         }
 
-        // Mönster
         const monsterEl = document.getElementById('mem-monster');
         if (profile.identifierade_monster && profile.identifierade_monster.length > 0) {
             monsterEl.innerHTML = '<ul style="padding-left:16px;">' + profile.identifierade_monster.map(m => `<li>${m}</li>`).join('') + '</ul>';
@@ -222,10 +255,7 @@
             monsterEl.innerHTML = '<span style="color:var(--text-muted);">Inga reaktionsmönster registrerade.</span>';
         }
 
-        // Fokus
         document.getElementById('mem-fokus').textContent = profile.aktuellt_fokus || 'Odefinierat';
-
-        // Insikt
         document.getElementById('mem-insikt').textContent = profile.senaste_insikt || 'Ingen ännu';
     }
 
@@ -239,8 +269,16 @@
 
         appendMessage('user', text);
         if (!textToSend) userInput.value = '';
+        
         userInput.disabled = true;
         sendBtn.disabled = true;
+
+        const loadingBubble = appendMessage('bot', 'FALK analyserar och tänker...', true);
+        const coldStartTimer = setTimeout(() => {
+            if (document.getElementById('loading-bubble')) {
+                loadingBubble.textContent = 'Väcker FALK-motorn (Cold Start)...';
+            }
+        }, 5000);
 
         const currentProfile = getStoredProfile();
 
@@ -254,6 +292,9 @@
                 })
             });
 
+            clearTimeout(coldStartTimer);
+            removeLoadingBubble();
+
             if (!response.ok) throw new Error(`HTTP status ${response.status}`);
 
             const data = await response.json();
@@ -265,7 +306,6 @@
                     localStorage.setItem('falk_user_profile', JSON.stringify(data.user_profile));
                     renderMemoryPanel();
                     
-                    // Om panelen inte är öppen, visa en pulserande notis-prick på Minne-knappen
                     if (!memoryPanel.classList.contains('open')) {
                         memoryBadge.classList.add('pulse');
                     }
@@ -274,6 +314,8 @@
                 throw new Error('Inget giltigt response-fält i JSON');
             }
         } catch (error) {
+            clearTimeout(coldStartTimer);
+            removeLoadingBubble();
             console.error('Chat error:', error);
             appendMessage('bot', 'Kunde inte generera ett svar. Vad vill du att vi utforskar kring detta?');
         } finally {
@@ -283,7 +325,6 @@
         }
     }
 
-    // Event Listeners
     sendBtn.addEventListener('click', () => handleSend());
     userInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') handleSend();
@@ -308,10 +349,9 @@
         }
     });
 
-    // Toggle Minnespanel
     toggleMemoryBtn.addEventListener('click', () => {
         memoryPanel.classList.toggle('open');
-        memoryBadge.classList.remove('pulse'); // Ta bort notis när panelen öppnas
+        memoryBadge.classList.remove('pulse');
     });
 
     closeMemoryBtn.addEventListener('click', () => {
@@ -325,7 +365,6 @@
         }
     });
 
-    // Initial Rendering
     renderMemoryPanel();
 </script>
 
