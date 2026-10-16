@@ -8,20 +8,12 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
+client = Groq(api_key= GROQ_API_KEY) if GROQ_API_KEY else None
 
 VALIDATED_SLEEP_TRACKS = {
     'lofi': 'https://www.youtube.com/watch?v=jfKfPfyJRdk',
     'rain': 'https://www.youtube.com/watch?v=mPZkdNFkNps'
 }
-
-# Primära och sekundära modeller i prioritetsordning
-GROQ_MODEL_CANDIDATES = [
-    "llama-3.3-70b-versatile",
-    "llama-3.1-70b-versatile",
-    "llama3-70b-8192",
-    "llama-3.1-8b-instant"
-]
 
 BASE_SYSTEM_PROMPT = f"""Du är FALK, en digital mentor baserad på WAYJS-metodiken och vetenskaplig psykoedukation.
 
@@ -51,30 +43,20 @@ BASE_SYSTEM_PROMPT = f"""Du är FALK, en digital mentor baserad på WAYJS-metodi
    - Vid sömnproblem, fråga om tillåtelse att dela ljudspår: {VALIDATED_SLEEP_TRACKS['lofi']} eller {VALIDATED_SLEEP_TRACKS['rain']}.
 """
 
-def call_groq_with_fallback(messages, temperature=0.6, max_tokens=500, response_format=None):
+def get_active_groq_model():
     if not client:
         raise Exception("GROQ_API_KEY saknas på servern.")
-    
-    last_error = None
-    for model in GROQ_MODEL_CANDIDATES:
-        try:
-            kwargs = {
-                "model": model,
-                "messages": messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens
-            }
-            if response_format:
-                kwargs["response_format"] = response_format
-                
-            completion = client.chat.completions.create(**kwargs)
-            return completion.choices[0].message.content.strip()
-        except Exception as e:
-            last_error = e
-            print(f"⚠️ Modell {model} misslyckades: {e}. Provat nästa...")
-            continue
-            
-    raise Exception(f"Alla modellkandidater misslyckades. Sista fel: {last_error}")
+    try:
+        available_models = [m.id for m in client.models.list().data]
+        # Prefer 70b models, fall back to any available llama model
+        for preferred in ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "llama3-70b-8192", "llama-3.1-8b-instant"]:
+            if preferred in available_models:
+                return preferred
+        if available_models:
+            return available_models[0]
+        raise Exception("Inga aktiva modeller hittades på ditt Groq-konto.")
+    except Exception as e:
+        raise Exception(f"Gick inte att hämta modell-lista från Groq: {e}")
 
 def build_dynamic_system_prompt(user_profile):
     if not isinstance(user_profile, dict):
@@ -98,7 +80,7 @@ INSTRUKTION FÖR MINNESNYTTJANDE:
 """
     return BASE_SYSTEM_PROMPT + "\n" + memory_block
 
-def extract_memory_updates(user_msg, bot_msg, current_profile):
+def extract_memory_updates(user_msg, bot_msg, current_profile, active_model):
     if not client:
         return current_profile if isinstance(current_profile, dict) else {}
     try:
@@ -114,15 +96,24 @@ Returnera ENDAST giltig JSON med exakt dessa nycklar:
   "aktuellt_fokus": "kort mening om vad som utforskas",
   "senaste_insikt": "kort mening om uppnådd insikt"
 }}"""
-        res_text = call_groq_with_fallback(
+        completion = client.chat.completions.create(
+            model=active_model,
             messages=[{"role": "user", "content": extraction_prompt}],
             temperature=0.1,
             response_format={"type": "json_object"}
         )
-        return json.loads(res_text)
+        return json.loads(completion.choices[0].message.content.strip())
     except Exception as e:
         print("⚠️ Non-fatal Memory extraction error:", e)
         return current_profile if isinstance(current_profile, dict) else {}
+
+@app.route('/health', methods=['GET'])
+def health():
+    try:
+        model = get_active_groq_model()
+        return jsonify({'status': 'ok', 'active_model': model}), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/chat', methods=['POST', 'OPTIONS'])
 @app.route('/chat', methods=['POST', 'OPTIONS'])
@@ -142,10 +133,11 @@ def chat():
         if not user_message:
             return jsonify({'error': 'Tomt meddelande'}), 400
 
+        active_model = get_active_groq_model()
         dynamic_prompt = build_dynamic_system_prompt(user_profile)
         
-        # Huvudsamtal via fallback-systemet
-        bot_response = call_groq_with_fallback(
+        completion = client.chat.completions.create(
+            model=active_model,
             messages=[
                 {"role": "system", "content": dynamic_prompt},
                 {"role": "user", "content": user_message}
@@ -153,13 +145,9 @@ def chat():
             temperature=0.6,
             max_tokens=500
         )
+        bot_response = completion.choices[0].message.content.strip()
         
-        # Isolerad minnesextraktion
-        try:
-            updated_profile = extract_memory_updates(user_message, bot_response, user_profile)
-        except Exception as mem_err:
-            print("Memory bypass execution:", mem_err)
-            updated_profile = user_profile
+        updated_profile = extract_memory_updates(user_message, bot_response, user_profile, active_model)
         
         return jsonify({
             'response': bot_response,
