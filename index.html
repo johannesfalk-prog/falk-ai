@@ -13,43 +13,147 @@
             --text-main: #1c1e21;
             --text-muted: #65676b;
             --border-color: #e4e6eb;
+            --accent-color: #0066ff;
+            --accent-light: #eef5ff;
+            --danger-color: #dc3545;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; height: 100vh; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; height: 100vh; overflow: hidden; }
 
-        .app-container { width: 100%; max-width: 800px; background: var(--chat-bg); display: flex; flex-direction: column; height: 100vh; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
-        .header { padding: 16px 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fff; }
-        .header h1 { font-size: 1.2rem; font-weight: 700; color: #111; }
+        .app-layout { width: 100%; max-width: 1100px; display: flex; height: 100vh; background: var(--chat-bg); box-shadow: 0 0 20px rgba(0,0,0,0.05); }
 
-        .chat-window { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
-        .message-bubble { max-width: 80%; padding: 14px 18px; border-radius: 18px; font-size: 0.95rem; line-height: 1.5; word-break: break-word; }
+        /* Main Chat Area */
+        .main-chat { flex: 1; display: flex; flex-direction: column; height: 100vh; border-right: 1px solid var(--border-color); }
+
+        /* Header Layout */
+        .header { padding: 14px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fff; gap: 10px; }
+        .header-brand { font-size: 1.1rem; font-weight: 700; color: #111; white-space: nowrap; }
+        .header-center { flex: 1; display: flex; justify-content: center; }
+        .header-subbrand { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+
+        .nav-btn { padding: 6px 14px; background-color: #fff; border: 1px solid var(--border-color); border-radius: 16px; font-size: 0.85rem; font-weight: 600; color: var(--text-main); cursor: pointer; transition: all 0.2s; }
+        .nav-btn:hover { background-color: var(--bg-color); border-color: #ccc; }
+
+        .memory-toggle-btn { padding: 6px 12px; background: var(--accent-light); border: 1px solid var(--accent-color); color: var(--accent-color); border-radius: 16px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+
+        /* Chat Window */
+        .chat-window { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+        .message-bubble { max-width: 82%; padding: 14px 18px; border-radius: 18px; font-size: 0.95rem; line-height: 1.5; word-break: break-word; }
         .message-bubble.user { align-self: flex-end; background-color: var(--user-msg); color: #fff; border-bottom-right-radius: 4px; }
         .message-bubble.bot { align-self: flex-start; background-color: var(--bot-msg); color: var(--text-main); border-bottom-left-radius: 4px; }
 
-        .input-area { padding: 16px 24px; border-top: 1px solid var(--border-color); background: #fff; display: flex; gap: 12px; }
+        /* Onboarding Cards */
+        .onboarding-container { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; width: 100%; max-width: 500px; }
+        .onboarding-card { padding: 12px 16px; background: #fff; border: 1px solid var(--border-color); border-radius: 12px; font-size: 0.9rem; color: var(--text-main); text-align: left; cursor: pointer; transition: all 0.2s; }
+        .onboarding-card:hover { border-color: var(--accent-color); background: var(--accent-light); color: var(--accent-color); }
+
+        /* Input Area */
+        .input-area { padding: 16px 20px; border-top: 1px solid var(--border-color); background: #fff; display: flex; gap: 10px; }
         .input-area input { flex: 1; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 24px; outline: none; font-size: 0.95rem; }
         .input-area input:focus { border-color: var(--user-msg); }
         .input-area button { padding: 12px 20px; background-color: var(--user-msg); color: #fff; border: none; border-radius: 24px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
-        .input-area button:hover { opacity: 0.9; }
         .input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Memory Panel (Sidebar) */
+        .memory-panel { width: 320px; background: #fafbfc; display: flex; flex-direction: column; height: 100vh; border-left: 1px solid var(--border-color); transition: all 0.3s ease; }
+        .memory-header { padding: 16px 20px; border-bottom: 1px solid var(--border-color); font-weight: 700; font-size: 0.95rem; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+        .memory-content { padding: 20px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+
+        .memory-section { display: flex; flex-direction: column; gap: 8px; }
+        .memory-section h4 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+        .memory-card-box { background: #fff; border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; font-size: 0.88rem; line-height: 1.4; }
+
+        .tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; }
+        .tag { background: var(--accent-light); color: var(--accent-color); padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
+
+        .clear-memory-btn { width: 100%; padding: 10px; background: none; border: 1px solid var(--danger-color); color: var(--danger-color); border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; margin-top: auto; transition: background 0.2s; }
+        .clear-memory-btn:hover { background: #fff0f1; }
+
+        /* Responsive Layout */
+        @media (max-width: 850px) {
+            .memory-panel { position: fixed; right: -320px; top: 0; z-index: 100; box-shadow: -5px 0 15px rgba(0,0,0,0.1); }
+            .memory-panel.open { right: 0; }
+        }
     </style>
 </head>
 <body>
 
-<div class="app-container">
-    <div class="header">
-        <h1>FALK-Light</h1>
-        <button id="clear-btn" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.85rem;">+ Ny chatt</button>
+<div class="app-layout">
+    <!-- Main Chat Area -->
+    <div class="main-chat">
+        <div class="header">
+            <div class="header-brand">FALK-Light</div>
+            <div class="header-center">
+                <button id="clear-btn" class="nav-btn">+ Ny chatt</button>
+            </div>
+            <div class="header-subbrand">
+                <span>Powered by WAYJS</span>
+                <button id="toggle-memory-btn" class="memory-toggle-btn">🧠 Minne</button>
+            </div>
+        </div>
+
+        <div class="chat-window" id="chat-window">
+            <div class="message-bubble bot">
+                Jag är FALK - Min uppgift är att hjälpa dig på din väg!<br><br>Vad vill du utforska idag?
+            </div>
+            
+            <div class="onboarding-container" id="onboarding-container">
+                <button class="onboarding-card" data-prompt="Jag känner mig ostrukturerad på jobbet och det skapar stress.">
+                    📌 <strong>Struktur & Stress:</strong> "Jag känner mig ostrukturerad på jobbet..."
+                </button>
+                <button class="onboarding-card" data-prompt="Jag mår dåligt när mina kollegor ignorerar min struktur.">
+                    ⚖️ <strong>Rättvisa & Konflikt:</strong> "Jag mår dåligt när mina kollegor ignorerar min struktur..."
+                </button>
+                <button class="onboarding-card" data-prompt="Jag står inför ett svårt beslut och behöver sortera mina värderingar.">
+                    🧭 <strong>Beslut & Värderingar:</strong> "Jag står inför ett svårt beslut och vill sortera..."
+                </button>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <input type="text" id="user-input" placeholder="Skriv ett meddelande..." autocomplete="off">
+            <button id="send-btn">Skicka</button>
+        </div>
     </div>
 
-    <div class="chat-window" id="chat-window">
-        <div class="message-bubble bot">Jag är FALK - Min uppgift är att hjälpa dig på din väg!<br><br>Vad vill du utforska idag?</div>
-    </div>
+    <!-- Memory Panel (UI Dashboard) -->
+    <div class="memory-panel" id="memory-panel">
+        <div class="memory-header">
+            <span>🧠 Kognitiv Profil</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Beta Cykel 3</span>
+        </div>
+        <div class="memory-content">
+            <div class="memory-section">
+                <h4>Kärnvärderingar</h4>
+                <div class="tag-cloud" id="mem-varderingar">
+                    <span style="font-size:0.8rem; color:var(--text-muted);">Inga ännu</span>
+                </div>
+            </div>
 
-    <div class="input-area">
-        <input type="text" id="user-input" placeholder="Skriv ett meddelande..." autocomplete="off">
-        <button id="send-btn">Skicka</button>
+            <div class="memory-section">
+                <h4>Identifierade Mönster</h4>
+                <div class="memory-card-box" id="mem-monster">
+                    <span style="color:var(--text-muted);">Inga reaktionsmönster registrerade.</span>
+                </div>
+            </div>
+
+            <div class="memory-section">
+                <h4>Aktuellt Fokus</h4>
+                <div class="memory-card-box" id="mem-fokus">
+                    <span style="color:var(--text-muted);">Odefinierat</span>
+                </div>
+            </div>
+
+            <div class="memory-section">
+                <h4>Senaste Insikt</h4>
+                <div class="memory-card-box" id="mem-insikt">
+                    <span style="color:var(--text-muted);">Ingen ännu</span>
+                </div>
+            </div>
+
+            <button id="clear-memory-btn" class="clear-memory-btn">Rensa Kognitivt Minne</button>
+        </div>
     </div>
 </div>
 
@@ -59,8 +163,11 @@
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
     const clearBtn = document.getElementById('clear-btn');
+    const onboardingContainer = document.getElementById('onboarding-container');
+    const memoryPanel = document.getElementById('memory-panel');
+    const toggleMemoryBtn = document.getElementById('toggle-memory-btn');
+    const clearMemoryBtn = document.getElementById('clear-memory-btn');
 
-    // Initiera session-ID om det saknas
     if (!localStorage.getItem('falk_session_id')) {
         localStorage.setItem('falk_session_id', crypto.randomUUID());
     }
@@ -78,17 +185,48 @@
             const raw = localStorage.getItem('falk_user_profile');
             return raw ? JSON.parse(raw) : {};
         } catch (e) {
-            console.error('Kunde inte läsa falk_user_profile från LocalStorage:', e);
+            console.error('Fel vid läsning av falk_user_profile:', e);
             return {};
         }
     }
 
-    async function handleSend() {
-        const text = userInput.value.trim();
+    function renderMemoryPanel() {
+        const profile = getStoredProfile();
+
+        // Värderingar
+        const varderingarEl = document.getElementById('mem-varderingar');
+        if (profile.varderingar && profile.varderingar.length > 0) {
+            varderingarEl.innerHTML = profile.varderingar.map(v => `<span class="tag">${v}</span>`).join('');
+        } else {
+            varderingarEl.innerHTML = '<span style="font-size:0.8rem; color:var(--text-muted);">Inga ännu</span>';
+        }
+
+        // Mönster
+        const monsterEl = document.getElementById('mem-monster');
+        if (profile.identifierade_monster && profile.identifierade_monster.length > 0) {
+            monsterEl.innerHTML = '<ul style="padding-left:16px;">' + profile.identifierade_monster.map(m => `<li>${m}</li>`).join('') + '</ul>';
+        } else {
+            monsterEl.innerHTML = '<span style="color:var(--text-muted);">Inga reaktionsmönster registrerade.</span>';
+        }
+
+        // Fokus
+        document.getElementById('mem-fokus').textContent = profile.aktuellt_fokus || 'Odefinierat';
+
+        // Insikt
+        document.getElementById('mem-insikt').textContent = profile.senaste_insikt || 'Ingen ännu';
+    }
+
+    async function handleSend(textToSend) {
+        const text = textToSend || userInput.value.trim();
         if (!text) return;
 
+        // Dölj onboarding-kort vid första meddelandet
+        if (onboardingContainer) {
+            onboardingContainer.style.display = 'none';
+        }
+
         appendMessage('user', text);
-        userInput.value = '';
+        if (!textToSend) userInput.value = '';
         userInput.disabled = true;
         sendBtn.disabled = true;
 
@@ -104,9 +242,7 @@
                 })
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP status ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP status ${response.status}`);
 
             const data = await response.json();
 
@@ -115,12 +251,11 @@
 
                 if (data.user_profile && typeof data.user_profile === 'object') {
                     localStorage.setItem('falk_user_profile', JSON.stringify(data.user_profile));
-                    console.log('falk_user_profile uppdaterad i LocalStorage:', data.user_profile);
+                    renderMemoryPanel();
                 }
             } else {
-                throw new Error('Inget giltigt response-fält i JSON-payload');
+                throw new Error('Inget giltigt response-fält i JSON');
             }
-
         } catch (error) {
             console.error('Chat error:', error);
             appendMessage('bot', 'Kunde inte generera ett svar. Vad vill du att vi utforskar kring detta?');
@@ -131,14 +266,44 @@
         }
     }
 
-    sendBtn.addEventListener('click', handleSend);
+    // Event Listeners
+    sendBtn.addEventListener('click', () => handleSend());
     userInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') handleSend();
     });
 
-    clearBtn.addEventListener('click', () => {
-        chatWindow.innerHTML = '<div class="message-bubble bot">Jag är FALK - Min uppgift är att hjälpa dig på din väg!<br><br>Vad vill du utforska idag?</div>';
+    document.querySelectorAll('.onboarding-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const prompt = card.getAttribute('data-prompt');
+            handleSend(prompt);
+        });
     });
+
+    clearBtn.addEventListener('click', () => {
+        chatWindow.innerHTML = `
+            <div class="message-bubble bot">
+                Jag är FALK - Min uppgift är att hjälpa dig på din väg!<br><br>Vad vill du utforska idag?
+            </div>
+        `;
+        if (onboardingContainer) {
+            chatWindow.appendChild(onboardingContainer);
+            onboardingContainer.style.display = 'flex';
+        }
+    });
+
+    toggleMemoryBtn.addEventListener('click', () => {
+        memoryPanel.classList.toggle('open');
+    });
+
+    clearMemoryBtn.addEventListener('click', () => {
+        if (confirm('Vill du helt rensa din kognitiva minnesprofil?')) {
+            localStorage.removeItem('falk_user_profile');
+            renderMemoryPanel();
+        }
+    });
+
+    // Initial Rendering
+    renderMemoryPanel();
 </script>
 
 </body>
