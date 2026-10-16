@@ -1,50 +1,18 @@
 import os
 import json
-import time
-import logging
-import urllib.request
-from flask import Flask, request, Response, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 from groq import Groq
 
 app = Flask(__name__)
-logging.basicConfig(level=logging.INFO)
-
-RATE_LIMIT_STORE = {}
-
-def check_rate_limit(ip, limit=15, window=60):
-    now = time.time()
-    timestamps = RATE_LIMIT_STORE.get(ip, [])
-    valid_timestamps = [t for t in timestamps if now - t < window]
-    if len(valid_timestamps) >= limit:
-        return False
-    valid_timestamps.append(now)
-    RATE_LIMIT_STORE[ip] = valid_timestamps
-    return True
-
-def get_client_ip():
-    if request.headers.get("CF-Connecting-IP"):
-        return request.headers.get("CF-Connecting-IP")
-    if request.headers.get("X-Forwarded-For"):
-        return request.headers.get("X-Forwarded-For").split(",")[0].strip()
-    return request.remote_addr
-
-ALLOWED_ORIGINS = os.environ.get(
-    "ALLOWED_ORIGINS", 
-    "https://johannesfalk-prog.github.io,http://localhost:8000"
-).split(",")
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
-DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
-
-MAX_TOKENS = int(os.environ.get("MAX_TOKENS", "600"))
-TEMPERATURE = float(os.environ.get("TEMPERATURE", "0.3"))
-MAX_HISTORY_MESSAGES = int(os.environ.get("MAX_HISTORY_MESSAGES", "10"))
+client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 VALIDATED_SLEEP_TRACKS = {
-    "lofi": "https://www.youtube.com/watch?v=jfKfPfyJRdk",
-    "rain": "https://www.youtube.com/watch?v=mPZkdNFkNps"
+    'lofi': 'https://www.youtube.com/watch?v=jfKfPfyJRdk',
+    'rain': 'https://www.youtube.com/watch?v=mPZkdNFkNps'
 }
 
 BASE_SYSTEM_PROMPT = f"""Du är FALK, en digital mentor baserad på WAYJS-metodiken och vetenskaplig psykoedukation.
@@ -59,161 +27,28 @@ BASE_SYSTEM_PROMPT = f"""Du är FALK, en digital mentor baserad på WAYJS-metodi
 
 ### KOGNITIV DJUPMOTOR (ISBERGSPRINCIPEN):
 - Identifiera skillnaden mellan YTA (händelsen) och DJUP (reaktionen/känslan).
-- Spegla alltid DJUPET utan att hitta på eller projicera drastiska diagnoser (t.ex. påstå inte "personlig attack" om användaren inte uttryckt det).
+- Spegla alltid DJUPET utan att hitta på eller projicera drastiska diagnoser.
 
 ### GRUNDLAGAR FÖR DIALOG:
 1. ETT SAMMANHÄNGANDE STYCKE OCH VARIERAD FRÅGEDYNAMIK:
    - Varje svar ska vara ETT flytande stycke på totalt 2–3 meningar.
-   - Blanda frågetyper! Om du redan bett om en "konkret situation", ställ i nästa tur en fråga om *vad som står på spel*, *vad användaren vill skydda*, eller *hur användaren brukar reagera*.
+   - Blanda frågetyper! Om du redan bett om en "konkret situation", ställ i nästa tur en fråga om vad som står på spel eller vad användaren vill skydda.
 
 2. ABSOLUT FÖRBUD MOT KLYSCHOR OCH PAPEGOJ-REPETITION:
    - ABSOLUT FÖRBUD mot startfraserna: "Det låter som...", "Det verkar som...", "Jag hör att...", "Jag förstår...".
-   - Inled svar direkt på kärnan utan inledande hjälporter eller fyllnadsord.
+   - Inled svar direkt på kärnan utan fyllnadsord.
    - Upprepa ALDRIG användarens ord ord för ord.
 
 3. SÖMNPROTOKOLL:
    - Vid sömnproblem, fråga om tillåtelse att dela ljudspår: {VALIDATED_SLEEP_TRACKS['lofi']} eller {VALIDATED_SLEEP_TRACKS['rain']}.
 """
 
-MODE_DIRECTIVES = {
-    "wayjs": "\n### PERSPEKTIV: WAYJS HELHET (STANDARD)\nFokusera på helhetsbilden och användarens underliggande drivkraft.",
-    "kbt": "\n### PERSPEKTIV: KBT\nFokusera på samspelet mellan automatiska tankar, känslor och beteendemönster.",
-    "act": "\n### PERSPEKTIV: ACT\nFokusera på kärnvärderingar, acceptans och psykologisk flexibilitet.",
-    "sol": "\n### PERSPEKTIV: LÖSNINGSFOKUSERAT\nFokusera på användarens befintliga styrkor och tidigare undantag."
-}
-
-CORS(app, resources={r"/*": {
-    "origins": ALLOWED_ORIGINS,
-    "methods": ["GET", "POST", "OPTIONS"],
-    "allow_headers": ["Content-Type"]
-}})
-
-client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
-
-def send_discord_notification(rating, reply_snippet):
-    if not DISCORD_WEBHOOK_URL:
-        return
-    try:
-        emoji = "👍" if rating == "up" else "👎"
-        payload = {
-            "content": f"**Ny Feedback mottagen!** {emoji}\n**Rating:** `{rating}`\n**Svarssnippet:** *\"{reply_snippet}\"*"
-        }
-        req = urllib.request.Request(
-            DISCORD_WEBHOOK_URL,
-            data=json.dumps(payload).encode('utf-8'),
-            headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}
-        )
-        urllib.request.urlopen(req)
-    except Exception as e:
-        app.logger.error(f"Kunde inte skicka Discord-notis: {e}")
-
-@app.route('/health', methods=['GET'])
-def health():
-    return jsonify({"status": "online", "model": GROQ_MODEL}), 200
-
-@app.route('/feedback', methods=['POST', 'OPTIONS'])
-def feedback():
-    if request.method == 'OPTIONS':
-        response = jsonify({"status": "ok"})
-        origin = request.headers.get('Origin')
-        if origin in ALLOWED_ORIGINS:
-            response.headers.add("Access-Control-Allow-Origin", origin)
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
-        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
-        return response, 200
-
-    data = request.get_json() or {}
-    rating = str(data.get("rating") or "").strip()
-    reply = str(data.get("reply") or "")[:200]
-
-    send_discord_notification(rating, reply)
-    return jsonify({"status": "received"}), 200
-
-@app.route('/api/chat', methods=['POST'])
-def chat():
-    try:
-        data = request.get_json() or {}
-        user_message = data.get('message', '').strip()
-        user_profile = data.get('user_profile', {})
-        
-        if not user_message:
-            return jsonify({'error': 'Tomt meddelande'}), 400
-
-        # Build dynamic prompt with memory injection
-        dynamic_system_prompt = build_dynamic_system_prompt(user_profile)
-        
-        # Call Groq / LLM
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": dynamic_system_prompt},
-                {"role": "user", "content": user_message}
-            ],
-            temperature=0.6,
-            max_tokens=500
-        )
-        
-        bot_response = completion.choices[0].message.content.strip()
-        
-        # Extract and update cognitive profile
-        updated_profile = extract_memory_updates(user_message, bot_response, user_profile)
-        
-        return jsonify({
-            'response': bot_response,
-            'user_profile': updated_profile
-        })
-    except Exception as e:
-        print("Chat error:", e)
-        return jsonify({'error': 'Ett fel uppstod i motorn.'}), 500
-
-    mode_instruction = MODE_DIRECTIVES.get(mode, MODE_DIRECTIVES["wayjs"])
-    effective_prompt = BASE_SYSTEM_PROMPT + mode_instruction
-
-    if directive == "shorter":
-        effective_prompt += "\n\nSTRIKT SKRIVINSTRUKTION FÖR DETTA SVAR: Gör svaret extremt kortfattat. Maximalt 1 till 2 korta meningar. Inga punktlistor eller utläggningar."
-    elif directive == "longer":
-        effective_prompt += "\n\nSTRIKT SKRIVINSTRUKTION FÖR DETTA SVAR: Ge ett fördjupat, utförligt och mer detaljerat svar. Utveckla resonemanget noggrant."
-
-    messages_payload = [{"role": "system", "content": effective_prompt}] + sanitized_history
-    if user_message:
-        messages_payload.append({"role": "user", "content": user_message[:1000]})
-
-    def generate_stream():
-        try:
-            completion = client.chat.completions.create(
-                model=GROQ_MODEL,
-                messages=messages_payload,
-                temperature=TEMPERATURE,
-                max_tokens=MAX_TOKENS,
-                stream=True
-            )
-            for chunk in completion:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    token = chunk.choices[0].delta.content
-                    yield f"data: {json.dumps({'token': token})}\n\n"
-            yield "data: [DONE]\n\n"
-        except Exception as e:
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
-
-    origin = request.headers.get('Origin')
-    headers = {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "X-Accel-Buffering": "no",
-        "Access-Control-Allow-Origin": origin if origin in ALLOWED_ORIGINS else ALLOWED_ORIGINS[0]
-    }
-
-    return Response(generate_stream(), headers=headers)
-
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
-
-
-
 def build_dynamic_system_prompt(user_profile):
-    varderingar = ", ".join(user_profile.get("varderingar", [])) if user_profile.get("varderingar") else "Inga identifierade ännu"
-    monster = ", ".join(user_profile.get("identifierade_monster", [])) if user_profile.get("identifierade_monster") else "Inga identifierade ännu"
+    if not isinstance(user_profile, dict):
+        user_profile = {}
+    
+    varderingar = ", ".join(user_profile.get("varderingar", [])) if user_profile.get("varderingar") else "Inga ännu"
+    monster = ", ".join(user_profile.get("identifierade_monster", [])) if user_profile.get("identifierade_monster") else "Inga ännu"
     fokus = user_profile.get("aktuellt_fokus", "Odefinierat")
     insikt = user_profile.get("senaste_insikt", "Ingen ännu")
 
@@ -226,23 +61,25 @@ def build_dynamic_system_prompt(user_profile):
 
 INSTRUKTION FÖR MINNESNYTTJANDE:
 - Använd profilen för att skapa kontinuitet utan att tvinga in fakta.
-- Referera till tidigare insikter eller värderingar ENDAST när det ger kognitiv hävstång i den aktuella frågan.
+- Referera till tidigare insikter eller värderingar ENDAST när det ger kognitiv hävstång.
 """
     return BASE_SYSTEM_PROMPT + "\n" + memory_block
 
 def extract_memory_updates(user_msg, bot_msg, current_profile):
+    if not client:
+        return current_profile if isinstance(current_profile, dict) else {}
     try:
-        extraction_prompt = f"""Du är en kognitiv datastrukturerare. Analysera dialogen och uppdatera användarens profil i JSON.
-Nuvarande profil: {current_profile}
-Användarens meddelande: "{user_msg}"
-Mentorns svar: "{bot_msg}"
+        extraction_prompt = f"""Analysera dialogen och uppdatera användarens kognitiva profil i JSON.
+Nuvarande profil: {json.dumps(current_profile, ensure_ascii=False)}
+Användare: "{user_msg}"
+Mentor: "{bot_msg}"
 
-Returnera ENDAST ett giltigt JSON-objekt med exakt dessa nycklar utan markdown:
+Returnera ENDAST giltig JSON med exakt dessa nycklar:
 {{
-  "varderingar": ["lista med 1-3 kärnvärderingar"],
-  "identifierade_monster": ["lista med 1-3 återkommande reaktionsmönster"],
-  "aktuellt_fokus": "kort mening om vad som utforskas nu",
-  "senaste_insikt": "kort mening om senast uppnådd insikt"
+  "varderingar": ["1-3 kärnvärderingar"],
+  "identifierade_monster": ["1-3 reaktionsmönster"],
+  "aktuellt_fokus": "kort mening om vad som utforskas",
+  "senaste_insikt": "kort mening om uppnådd insikt"
 }}"""
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
@@ -250,8 +87,55 @@ Returnera ENDAST ett giltigt JSON-objekt med exakt dessa nycklar utan markdown:
             temperature=0.1,
             response_format={"type": "json_object"}
         )
-        import json
         return json.loads(completion.choices[0].message.content)
     except Exception as e:
         print("Memory extraction error:", e)
-        return current_profile
+        return current_profile if isinstance(current_profile, dict) else {}
+
+@app.route('/api/chat', methods=['POST', 'OPTIONS'])
+@app.route('/chat', methods=['POST', 'OPTIONS'])
+def chat():
+    if request.method == 'OPTIONS':
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
+        response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
+        return response, 200
+
+    try:
+        data = request.get_json() or {}
+        user_message = data.get('message', '').strip()
+        user_profile = data.get('user_profile', {})
+        
+        if not user_message:
+            return jsonify({'error': 'Tomt meddelande'}), 400
+
+        if not client:
+            return jsonify({'error': 'GROQ_API_KEY saknas på servern.'}), 500
+
+        dynamic_prompt = build_dynamic_system_prompt(user_profile)
+        
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": dynamic_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            temperature=0.6,
+            max_tokens=500
+        )
+        
+        bot_response = completion.choices[0].message.content.strip()
+        updated_profile = extract_memory_updates(user_message, bot_response, user_profile)
+        
+        return jsonify({
+            'response': bot_response,
+            'user_profile': updated_profile
+        })
+    except Exception as e:
+        print("Fatal Chat Error:", e)
+        return jsonify({'error': f'Serverfel: {str(e)}'}), 500
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
