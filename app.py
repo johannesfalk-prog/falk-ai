@@ -8,7 +8,7 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-client = Groq(api_key= GROQ_API_KEY) if GROQ_API_KEY else None
+client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 VALIDATED_SLEEP_TRACKS = {
     'lofi': 'https://www.youtube.com/watch?v=jfKfPfyJRdk',
@@ -47,14 +47,27 @@ def get_active_groq_model():
     if not client:
         raise Exception("GROQ_API_KEY saknas på servern.")
     try:
-        available_models = [m.id for m in client.models.list().data]
-        # Prefer 70b models, fall back to any available llama model
-        for preferred in ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "llama3-70b-8192", "llama-3.1-8b-instant"]:
-            if preferred in available_models:
-                return preferred
-        if available_models:
-            return available_models[0]
-        raise Exception("Inga aktiva modeller hittades på ditt Groq-konto.")
+        all_models = [m.id for m in client.models.list().data]
+        # Exkludera moderations-, safeguard- och ljudmodeller
+        chat_models = [
+            m for m in all_models 
+            if not any(x in m.lower() for x in ["safeguard", "guard", "whisper", "embed"])
+        ]
+        
+        preferred_order = [
+            "llama-3.3-70b-versatile",
+            "llama-3.1-70b-versatile",
+            "llama3-70b-8192",
+            "llama-3.1-8b-instant",
+            "mixtral-8x7b-32768"
+        ]
+        for pref in preferred_order:
+            if pref in chat_models:
+                return pref
+        
+        if chat_models:
+            return chat_models[0]
+        raise Exception(f"Inga giltiga chattmodeller hittades på kontot. Tillgängliga: {all_models}")
     except Exception as e:
         raise Exception(f"Gick inte att hämta modell-lista från Groq: {e}")
 
