@@ -38,17 +38,30 @@ JSON-strukturen SKALL exakt följa detta format:
 }
 """
 
-def generate_chat_response(user_message, current_profile):
+def generate_chat_response(user_message, current_profile, modifier=None):
     try:
+        system_prompt = BASE_SYSTEM_PROMPT
+        max_tokens = 250
+
+        # Dynamisk justering baserat på användarens knapptryck
+        if modifier == "shorter":
+            system_prompt += "\nEXTRA INSTRUKTION: Gör svaret extremt kortfattat och koncist (max 2 meningar)."
+            max_tokens = 120
+        elif modifier == "longer":
+            system_prompt += "\nEXTRA INSTRUKTION: Utveckla resonemanget något djupare med mer kontextuell reflektion."
+            max_tokens = 450
+        elif modifier == "regenerate":
+            system_prompt += "\nEXTRA INSTRUKTION: Formulera om ditt förra svar helt ur en ny vinkel."
+
         messages = [
-            {"role": "system", "content": f"{BASE_SYSTEM_PROMPT}\nBefintlig användarprofil: {json.dumps(current_profile, ensure_ascii=False)}"},
+            {"role": "system", "content": f"{system_prompt}\nBefintlig användarprofil: {json.dumps(current_profile, ensure_ascii=False)}"},
             {"role": "user", "content": user_message}
         ]
         completion = client.chat.completions.create(
             model=PRIMARY_MODEL,
             messages=messages,
             temperature=0.7,
-            max_tokens=250
+            max_tokens=max_tokens
         )
         return completion.choices[0].message.content.strip()
     except Exception as e:
@@ -83,12 +96,13 @@ def chat():
     data = request.get_json() or {}
     user_message = data.get("message", "").strip()
     current_profile = data.get("user_profile", {})
+    modifier = data.get("modifier", None)
 
     if not user_message:
         return jsonify({"error": "Meddelandet kan inte vara tomt"}), 400
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-        future_chat = executor.submit(generate_chat_response, user_message, current_profile)
+        future_chat = executor.submit(generate_chat_response, user_message, current_profile, modifier)
         future_memory = executor.submit(extract_memory_updates, user_message, current_profile)
 
         bot_response = future_chat.result()

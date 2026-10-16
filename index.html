@@ -6,7 +6,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#ffffff">
     <title>FALK - Digital Mentor</title>
-    <!-- Inline Data-URI för favicon (Rensar konsolens 404-fel helt) -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
     <style>
         :root {
@@ -65,11 +64,20 @@
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
         }
 
-        .chat-window { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
-        .message-bubble { max-width: 85%; padding: 12px 16px; border-radius: 18px; font-size: 0.95rem; line-height: 1.5; word-break: break-word; }
-        .message-bubble.user { align-self: flex-end; background-color: var(--user-msg); color: #fff; border-bottom-right-radius: 4px; }
-        .message-bubble.bot { align-self: flex-start; background-color: var(--bot-msg); color: var(--text-main); border-bottom-left-radius: 4px; }
-        .message-bubble.loading { align-self: flex-start; background-color: var(--bot-msg); color: var(--text-muted); font-style: italic; animation: pulse-bg 1.2s infinite ease-in-out; }
+        .chat-window { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+        
+        .bot-wrapper { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; max-width: 88%; }
+        
+        .message-bubble { padding: 12px 16px; border-radius: 18px; font-size: 0.95rem; line-height: 1.5; word-break: break-word; }
+        .message-bubble.user { align-self: flex-end; max-width: 85%; background-color: var(--user-msg); color: #fff; border-bottom-right-radius: 4px; }
+        .message-bubble.bot { background-color: var(--bot-msg); color: var(--text-main); border-bottom-left-radius: 4px; width: 100%; }
+        .message-bubble.loading { background-color: var(--bot-msg); color: var(--text-muted); font-style: italic; animation: pulse-bg 1.2s infinite ease-in-out; }
+
+        /* Svarskontroller under bot-meddelanden */
+        .message-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-left: 4px; }
+        .action-btn { background: #ffffff; border: 1px solid var(--border-color); color: var(--text-muted); border-radius: 14px; padding: 4px 10px; font-size: 0.75rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.15s ease; }
+        .action-btn:hover { background: var(--accent-light); color: var(--accent-color); border-color: var(--accent-color); }
+        .action-btn.active { background: var(--accent-light); color: var(--accent-color); border-color: var(--accent-color); font-weight: 700; }
 
         @keyframes pulse-bg {
             0% { opacity: 0.6; }
@@ -89,11 +97,27 @@
             flex-direction: column; 
             gap: 6px; 
         }
-        .input-area { display: flex; gap: 8px; }
-        .input-area input { flex: 1; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 24px; outline: none; font-size: 0.95rem; }
-        .input-area input:focus { border-color: var(--user-msg); }
-        .input-area input:disabled { background-color: #f8f9fa; cursor: not-allowed; }
-        .input-area button { padding: 10px 20px; background-color: var(--user-msg); color: #fff; border: none; border-radius: 24px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+        .input-area { display: flex; gap: 8px; align-items: flex-end; }
+        
+        /* Auto-expanding Textarea med max 8 raders synlighet (~180px) */
+        .input-area textarea { 
+            flex: 1; 
+            padding: 10px 14px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 18px; 
+            outline: none; 
+            font-size: 0.95rem; 
+            font-family: inherit; 
+            resize: none; 
+            min-height: 42px; 
+            max-height: 180px; 
+            line-height: 1.4; 
+            overflow-y: auto; 
+        }
+        .input-area textarea:focus { border-color: var(--user-msg); }
+        .input-area textarea:disabled { background-color: #f8f9fa; cursor: not-allowed; }
+        
+        .input-area button { padding: 10px 20px; height: 42px; background-color: var(--user-msg); color: #fff; border: none; border-radius: 24px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; flex-shrink: 0; }
         .input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .footer-credit { font-size: 0.72rem; color: var(--text-muted); text-align: center; font-weight: 500; letter-spacing: 0.3px; }
@@ -130,8 +154,10 @@
         </div>
 
         <div class="chat-window" id="chat-window">
-            <div class="message-bubble bot">
-                Jag är FALK - Min uppgift är att hjälpa dig på din väg!<br><br>Vad vill du utforska idag?
+            <div class="bot-wrapper">
+                <div class="message-bubble bot">
+                    Jag är FALK - Min uppgift är att hjälpa dig på din väg!<br><br>Vad vill du utforska idag?
+                </div>
             </div>
             
             <div class="onboarding-container" id="onboarding-container">
@@ -149,7 +175,7 @@
 
         <div class="input-container">
             <div class="input-area">
-                <input type="text" id="user-input" placeholder="Skriv ett meddelande..." autocomplete="off">
+                <textarea id="user-input" rows="1" placeholder="Skriv ett meddelande..."></textarea>
                 <button id="send-btn">Skicka</button>
             </div>
             <div class="footer-credit">Powered by WAYJS</div>
@@ -208,11 +234,18 @@
     const memoryBadge = document.getElementById('memory-badge');
     const clearMemoryBtn = document.getElementById('clear-memory-btn');
 
+    let lastUserMessage = "";
+
     if (!localStorage.getItem('falk_session_id')) {
         localStorage.setItem('falk_session_id', crypto.randomUUID());
     }
 
-    // Markdown-formatterare (Omvandlar **fetstil** och radbrytningar rent)
+    // Auto-expanding textarea (Sätts till höjd efter innehåll, max ~180px / 8 rader)
+    userInput.addEventListener('input', () => {
+        userInput.style.height = 'auto';
+        userInput.style.height = Math.min(userInput.scrollHeight, 180) + 'px';
+    });
+
     function formatText(text) {
         if (!text) return '';
         let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
@@ -220,20 +253,52 @@
     }
 
     function appendMessage(sender, text, isLoading = false) {
-        const bubble = document.createElement('div');
-        bubble.className = `message-bubble ${sender} ${isLoading ? 'loading' : ''}`;
-        if (isLoading) {
-            bubble.id = 'loading-bubble';
+        if (sender === 'user') {
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble user';
+            bubble.innerHTML = formatText(text);
+            chatWindow.appendChild(bubble);
+        } else {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'bot-wrapper';
+            
+            const bubble = document.createElement('div');
+            bubble.className = `message-bubble bot ${isLoading ? 'loading' : ''}`;
+            if (isLoading) bubble.id = 'loading-bubble';
+            bubble.innerHTML = formatText(text);
+            wrapper.appendChild(bubble);
+
+            if (!isLoading) {
+                const actionsContainer = document.createElement('div');
+                actionsContainer.className = 'message-actions';
+                actionsContainer.innerHTML = `
+                    <button class="action-btn" onclick="toggleFeedback(this, 'up')">👍</button>
+                    <button class="action-btn" onclick="toggleFeedback(this, 'down')">👎</button>
+                    <button class="action-btn" onclick="handleSend(lastUserMessage, 'regenerate')">🔄 Nytt svar</button>
+                    <button class="action-btn" onclick="handleSend(lastUserMessage, 'shorter')">➖ Kortare</button>
+                    <button class="action-btn" onclick="handleSend(lastUserMessage, 'longer')">➕ Längre</button>
+                `;
+                wrapper.appendChild(actionsContainer);
+            }
+            chatWindow.appendChild(wrapper);
         }
-        bubble.innerHTML = formatText(text);
-        chatWindow.appendChild(bubble);
+
         chatWindow.scrollTop = chatWindow.scrollHeight;
-        return bubble;
     }
+
+    window.toggleFeedback = function(btn, type) {
+        const parent = btn.parentElement;
+        parent.querySelectorAll('.action-btn').forEach(b => {
+            if (b.textContent.includes('👍') || b.textContent.includes('👎')) b.classList.remove('active');
+        });
+        btn.classList.add('active');
+    };
 
     function removeLoadingBubble() {
         const loadingBubble = document.getElementById('loading-bubble');
-        if (loadingBubble) loadingBubble.remove();
+        if (loadingBubble && loadingBubble.parentElement) {
+            loadingBubble.parentElement.remove();
+        }
     }
 
     function getStoredProfile() {
@@ -267,7 +332,7 @@
         document.getElementById('mem-insikt').textContent = profile.senaste_insikt || 'Ingen ännu';
     }
 
-    async function handleSend(textToSend) {
+    async function handleSend(textToSend, modifier = null) {
         const text = textToSend || userInput.value.trim();
         if (!text) return;
 
@@ -275,15 +340,17 @@
             onboardingContainer.style.display = 'none';
         }
 
-        appendMessage('user', text);
-        if (!textToSend) userInput.value = '';
-        
-        // Inaktivera gränssnittet direkt för att undvika dubbelklick och race-conditions
+        if (!modifier) {
+            appendMessage('user', text);
+            userInput.value = '';
+            userInput.style.height = 'auto'; // Återställ textarea efter skickat meddelande
+        }
+
+        lastUserMessage = text;
         userInput.disabled = true;
         sendBtn.disabled = true;
 
-        // Skapa laddningsbubbla och sätt 5s Cold Start Timer
-        const loadingBubble = appendMessage('bot', 'FALK analyserar och tänker...', true);
+        appendMessage('bot', 'FALK analyserar och tänker...', true);
         const coldStartTimer = setTimeout(() => {
             const currentBubble = document.getElementById('loading-bubble');
             if (currentBubble) {
@@ -299,13 +366,16 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: text,
-                    user_profile: currentProfile
+                    user_profile: currentProfile,
+                    modifier: modifier
                 })
             });
 
             if (!response.ok) throw new Error(`HTTP status ${response.status}`);
 
             const data = await response.json();
+
+            removeLoadingBubble();
 
             if (data && data.response) {
                 appendMessage('bot', data.response);
@@ -323,12 +393,11 @@
             }
         } catch (error) {
             console.error('Chat error:', error);
-            // Vid fel: ge tillbaka meddelandet till användaren i inputfältet så inget går förlorat
+            removeLoadingBubble();
             userInput.value = text;
             appendMessage('bot', 'Kunde inte ansluta till FALK-motorn. Kontrollera din anslutning och försök igen.');
         } finally {
             clearTimeout(coldStartTimer);
-            removeLoadingBubble();
             userInput.disabled = false;
             sendBtn.disabled = false;
             userInput.focus();
@@ -336,8 +405,13 @@
     }
 
     sendBtn.addEventListener('click', () => handleSend());
-    userInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleSend();
+    
+    // Enter skickar, Shift+Enter skapar ny rad i textarea
+    userInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
     });
 
     document.querySelectorAll('.onboarding-card').forEach(card => {
@@ -349,8 +423,10 @@
 
     clearBtn.addEventListener('click', () => {
         chatWindow.innerHTML = `
-            <div class="message-bubble bot">
-                Jag är FALK - Min uppgift är att hjälpa dig på din väg!<br><br>Vad vill du utforska idag?
+            <div class="bot-wrapper">
+                <div class="message-bubble bot">
+                    Jag är FALK - Min uppgift är att hjälpa dig på din väg!<br><br>Vad vill du utforska idag?
+                </div>
             </div>
         `;
         if (onboardingContainer) {
@@ -365,6 +441,7 @@
     });
 
     closeMemoryBtn.addEventListener('click', () => {
+        memoryPanel.classList.remove('remove');
         memoryPanel.classList.remove('open');
     });
 
