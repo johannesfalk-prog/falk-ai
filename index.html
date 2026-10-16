@@ -287,7 +287,6 @@
         localStorage.setItem('falk_session_id', crypto.randomUUID());
     }
 
-    // RENODLAD MARKDOWN PARSER (*word* blir enbart kursiv <em>)
     function formatText(text) {
         if (!text) return '';
         let formatted = text;
@@ -443,6 +442,7 @@
         }
     }
 
+    // IKONBASERAD ACTION BUTTONS: 🔄 är nu en ren ikonknapp med title
     function appendActionButtons(wrapper) {
         let actionsContainer = wrapper.querySelector('.message-actions');
         if (!actionsContainer) {
@@ -452,9 +452,9 @@
         }
         actionsContainer.innerHTML = `
             <button class="action-btn" onclick="toggleSpeakMessage(this)" title="Läs upp meddelandet">🔊</button>
-            <button class="action-btn" onclick="toggleFeedback(this, 'up')">👍</button>
-            <button class="action-btn" onclick="toggleFeedback(this, 'down')">👎</button>
-            <button class="action-btn" onclick="handleModifierClick(this, 'regenerate')">🔄 Nytt svar</button>
+            <button class="action-btn" onclick="toggleFeedback(this, 'up')" title="Bra svar">👍</button>
+            <button class="action-btn" onclick="toggleFeedback(this, 'down')" title="Mindre bra svar">👎</button>
+            <button class="action-btn" onclick="handleModifierClick(this, 'regenerate')" title="Generera nytt svar">🔄</button>
             <button class="action-btn" onclick="handleModifierClick(this, 'shorter')">➖ Kortare</button>
             <button class="action-btn" onclick="handleModifierClick(this, 'longer')">➕ Längre</button>
         `;
