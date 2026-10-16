@@ -13,20 +13,20 @@ app = Flask(__name__)
 CORS(app)
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-if not GROQ_API_KEY:
-    logger.warning("GROQ_API_KEY saknas i miljövariabler!")
-
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 PRIMARY_MODEL = "openai/gpt-oss-120b"
 
 BASE_SYSTEM_PROMPT = """
 Du är FALK – en digital mentor baserad på WAYJS-metodiken.
 Din uppgift är att ställa klargörande, reflekterande frågor och hjälpa användaren att sortera sina tankar, värderingar och mönster.
-Ge inte förhastade råd. Håll svaren koncisa, empatiska och utmanande.
+Ge inte förhastade råd. Håll svaren koncisa och empatiska.
+VIKTIG REGEL: Ställ ALDRIG mer än 1 till 2 frågor åt gången. Undvik långa punktlistor. Skapa en naturlig dialog.
 """
 
 MEMORY_EXTRACTION_PROMPT = """
-Du är en kognitiv minnesmotor för FALK. Din uppgift är att analysera användarens meddelande och den befintliga profilen, och returnera en UPPDATERAD JSON-profil.
+Du är en kognitiv minnesmotor för FALK. Analysera användarens meddelande och den befintliga profilen, och returnera en UPPDATERAD JSON-profil.
+
+STRIKT REGEL: Begränsa listorna 'varderingar' och 'identifierade_monster' till MAXIMALTVIS 5 objekt vardera. Prioritera de mest relevanta.
 
 Returnera ENBART ett giltigt JSON-objekt utan markdown, utan färgkodning och utan förklarande text.
 JSON-strukturen SKALL exakt följa detta format:
@@ -39,7 +39,6 @@ JSON-strukturen SKALL exakt följa detta format:
 """
 
 def generate_chat_response(user_message, current_profile):
-    """Tråd 1: Genererar mentorssvaret"""
     try:
         messages = [
             {"role": "system", "content": f"{BASE_SYSTEM_PROMPT}\nBefintlig användarprofil: {json.dumps(current_profile, ensure_ascii=False)}"},
@@ -49,7 +48,7 @@ def generate_chat_response(user_message, current_profile):
             model=PRIMARY_MODEL,
             messages=messages,
             temperature=0.7,
-            max_tokens=400
+            max_tokens=300
         )
         return completion.choices[0].message.content.strip()
     except Exception as e:
@@ -57,7 +56,6 @@ def generate_chat_response(user_message, current_profile):
         return "Kunde inte generera ett svar. Vad vill du att vi utforskar kring detta?"
 
 def extract_memory_updates(user_message, current_profile):
-    """Tråd 2: Extraherar minnesprofilen parallellt"""
     try:
         messages = [
             {"role": "system", "content": MEMORY_EXTRACTION_PROMPT},
@@ -74,7 +72,7 @@ def extract_memory_updates(user_message, current_profile):
         return json.loads(raw_json)
     except Exception as e:
         logger.error(f"Fel i extract_memory_updates: {e}")
-        return current_profile  # Returnera oförändrad profil vid fel
+        return current_profile
 
 @app.route("/health", methods=["GET"])
 def health():
@@ -89,12 +87,10 @@ def chat():
     if not user_message:
         return jsonify({"error": "Meddelandet kan inte vara tomt"}), 400
 
-    # PARALLELL EXEKVERING: Kör båda Groq-anropen samtidigt i separata trådar
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         future_chat = executor.submit(generate_chat_response, user_message, current_profile)
         future_memory = executor.submit(extract_memory_updates, user_message, current_profile)
 
-        # Vänta på båda (total tid blir max(tråd1, tråd2) istället för tråd1 + tråd2)
         bot_response = future_chat.result()
         updated_profile = future_memory.result()
 
