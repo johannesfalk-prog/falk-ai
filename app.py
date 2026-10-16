@@ -129,42 +129,42 @@ def feedback():
     send_discord_notification(rating, reply)
     return jsonify({"status": "received"}), 200
 
-@app.route('/chat', methods=['POST', 'OPTIONS'])
+@app.route('/api/chat', methods=['POST'])
 def chat():
-    if request.method == 'OPTIONS':
-        response = jsonify({"status": "ok"})
-        origin = request.headers.get('Origin')
-        if origin in ALLOWED_ORIGINS:
-            response.headers.add("Access-Control-Allow-Origin", origin)
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
-        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
-        return response, 200
+    try:
+        data = request.get_json() or {}
+        user_message = data.get('message', '').strip()
+        user_profile = data.get('user_profile', {})
+        
+        if not user_message:
+            return jsonify({'error': 'Tomt meddelande'}), 400
 
-    ip = get_client_ip()
-    if not check_rate_limit(ip, limit=15, window=60):
-        return jsonify({"error": "Du skickar meddelanden för snabbt. Vänta en minut."}), 429
-
-    if not client:
-        return jsonify({"error": "GROQ_API_KEY saknas."}), 500
-
-    data = request.get_json() or {}
-    
-    user_message = str(data.get("message") or "").strip()
-    raw_history = data.get("history") or []
-    mode = str(data.get("mode") or "wayjs").strip()
-    directive = str(data.get("directive") or "").strip()
-
-    if not user_message and not directive:
-        return jsonify({"error": "Meddelande saknas."}), 400
-
-    sanitized_history = []
-    if isinstance(raw_history, list):
-        for msg in raw_history[-MAX_HISTORY_MESSAGES:]:
-            if isinstance(msg, dict) and msg.get("role") in ["user", "assistant"] and isinstance(msg.get("content"), str):
-                sanitized_history.append({
-                    "role": msg["role"],
-                    "content": msg["content"][:1000]
-                })
+        # Build dynamic prompt with memory injection
+        dynamic_system_prompt = build_dynamic_system_prompt(user_profile)
+        
+        # Call Groq / LLM
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": dynamic_system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            temperature=0.6,
+            max_tokens=500
+        )
+        
+        bot_response = completion.choices[0].message.content.strip()
+        
+        # Extract and update cognitive profile
+        updated_profile = extract_memory_updates(user_message, bot_response, user_profile)
+        
+        return jsonify({
+            'response': bot_response,
+            'user_profile': updated_profile
+        })
+    except Exception as e:
+        print("Chat error:", e)
+        return jsonify({'error': 'Ett fel uppstod i motorn.'}), 500
 
     mode_instruction = MODE_DIRECTIVES.get(mode, MODE_DIRECTIVES["wayjs"])
     effective_prompt = BASE_SYSTEM_PROMPT + mode_instruction
