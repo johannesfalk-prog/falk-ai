@@ -238,6 +238,8 @@
     const clearMemoryBtn = document.getElementById('clear-memory-btn');
 
     let lastUserMessage = "";
+    // Korttidsminne: Glidande fönster för pågående konversation
+    let chatHistory = [];
 
     if (!localStorage.getItem('falk_session_id')) {
         localStorage.setItem('falk_session_id', crypto.randomUUID());
@@ -343,6 +345,7 @@
         document.getElementById('mem-insikt').textContent = profile.senaste_insikt || 'Ingen ännu';
     }
 
+    // MODIFIER (In-place edit med historik-uppdatering utan duplicering)
     window.handleModifierClick = async function(btnElement, modifier) {
         if (!lastUserMessage) return;
 
@@ -366,6 +369,7 @@
                 body: JSON.stringify({
                     message: lastUserMessage,
                     user_profile: currentProfile,
+                    history: chatHistory.slice(-6),
                     modifier: modifier
                 })
             });
@@ -378,6 +382,13 @@
 
             if (data && data.response) {
                 bubble.innerHTML = formatText(data.response);
+
+                // Uppdatera sista assistant-meddelandet i korttidsminnet istället för att pusha nytt
+                if (chatHistory.length > 0 && chatHistory[chatHistory.length - 1].role === 'assistant') {
+                    chatHistory[chatHistory.length - 1].content = data.response;
+                } else {
+                    chatHistory.push({ role: 'assistant', content: data.response });
+                }
 
                 if (data.user_profile && typeof data.user_profile === 'object') {
                     localStorage.setItem('falk_user_profile', JSON.stringify(data.user_profile));
@@ -399,6 +410,7 @@
         }
     };
 
+    // SKICKA NYTT MEDDELANDE
     async function handleSend(textToSend) {
         const text = textToSend || userInput.value.trim();
         if (!text) return;
@@ -431,7 +443,8 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: text,
-                    user_profile: currentProfile
+                    user_profile: currentProfile,
+                    history: chatHistory.slice(-6)
                 })
             });
 
@@ -443,6 +456,13 @@
 
             if (data && data.response) {
                 appendMessage('bot', data.response, false, false);
+
+                // Spara tur-paret i korttidsminnet (max 6 element sparas aktivt)
+                chatHistory.push({ role: 'user', content: text });
+                chatHistory.push({ role: 'assistant', content: data.response });
+                if (chatHistory.length > 6) {
+                    chatHistory = chatHistory.slice(-6);
+                }
 
                 if (data.user_profile && typeof data.user_profile === 'object') {
                     localStorage.setItem('falk_user_profile', JSON.stringify(data.user_profile));
@@ -485,6 +505,7 @@
     });
 
     clearBtn.addEventListener('click', () => {
+        chatHistory = []; // Töm korttidsminnet vid Ny chatt
         chatWindow.innerHTML = `
             <div class="bot-wrapper">
                 <div class="message-bubble bot">
@@ -510,6 +531,7 @@
     clearMemoryBtn.addEventListener('click', () => {
         if (confirm('Vill du helt rensa din kognitiva minnesprofil?')) {
             localStorage.removeItem('falk_user_profile');
+            chatHistory = [];
             renderMemoryPanel();
         }
     });

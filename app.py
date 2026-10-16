@@ -38,7 +38,7 @@ JSON-strukturen SKALL exakt följa detta format:
 }
 """
 
-def generate_chat_response(user_message, current_profile, modifier=None):
+def generate_chat_response(user_message, current_profile, history=None, modifier=None):
     try:
         system_prompt = BASE_SYSTEM_PROMPT
         max_tokens = 250
@@ -53,9 +53,20 @@ def generate_chat_response(user_message, current_profile, modifier=None):
             system_prompt += "\nEXTRA INSTRUKTION: Formulera om ditt förra svar helt ur en ny vinkel."
 
         messages = [
-            {"role": "system", "content": f"{system_prompt}\nBefintlig användarprofil: {json.dumps(current_profile, ensure_ascii=False)}"},
-            {"role": "user", "content": user_message}
+            {"role": "system", "content": f"{system_prompt}\nBefintlig kognitiv profil (Långtidsminne): {json.dumps(current_profile, ensure_ascii=False)}"}
         ]
+
+        # Inkludera upp till de senaste 6 meddelandena (3 dialogturer) för konversationstråd
+        if history and isinstance(history, list):
+            sanitized_history = history[-6:]
+            for msg in sanitized_history:
+                if isinstance(msg, dict) and "role" in msg and "content" in msg:
+                    messages.append({"role": msg["role"], "content": msg["content"]})
+
+        # Lägg till det aktuella meddelandet om det inte redan är sista elementet i history
+        if not history or (history and history[-1].get("content") != user_message):
+            messages.append({"role": "user", "content": user_message})
+
         completion = client.chat.completions.create(
             model=PRIMARY_MODEL,
             messages=messages,
@@ -96,13 +107,14 @@ def chat():
         data = request.get_json() or {}
         user_message = data.get("message", "").strip()
         current_profile = data.get("user_profile", {})
+        history = data.get("history", [])
         modifier = data.get("modifier", None)
 
         if not user_message:
             return jsonify({"error": "Meddelandet kan inte vara tomt"}), 400
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            future_chat = executor.submit(generate_chat_response, user_message, current_profile, modifier)
+            future_chat = executor.submit(generate_chat_response, user_message, current_profile, history, modifier)
             future_memory = executor.submit(extract_memory_updates, user_message, current_profile)
 
             bot_response = future_chat.result()
