@@ -43,7 +43,6 @@ def generate_chat_response(user_message, current_profile, modifier=None):
         system_prompt = BASE_SYSTEM_PROMPT
         max_tokens = 250
 
-        # Dynamisk justering baserat på användarens knapptryck
         if modifier == "shorter":
             system_prompt += "\nEXTRA INSTRUKTION: Gör svaret extremt kortfattat och koncist (max 2 meningar)."
             max_tokens = 120
@@ -66,7 +65,7 @@ def generate_chat_response(user_message, current_profile, modifier=None):
         return completion.choices[0].message.content.strip()
     except Exception as e:
         logger.error(f"Fel i generate_chat_response: {e}")
-        return "Kunde inte generera ett svar. Vad vill du att vi utforskar kring detta?"
+        return "Kunde inte generera ett svar just nu. Vad vill du utforska istället?"
 
 def extract_memory_updates(user_message, current_profile):
     try:
@@ -93,25 +92,32 @@ def health():
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    data = request.get_json() or {}
-    user_message = data.get("message", "").strip()
-    current_profile = data.get("user_profile", {})
-    modifier = data.get("modifier", None)
+    try:
+        data = request.get_json() or {}
+        user_message = data.get("message", "").strip()
+        current_profile = data.get("user_profile", {})
+        modifier = data.get("modifier", None)
 
-    if not user_message:
-        return jsonify({"error": "Meddelandet kan inte vara tomt"}), 400
+        if not user_message:
+            return jsonify({"error": "Meddelandet kan inte vara tomt"}), 400
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-        future_chat = executor.submit(generate_chat_response, user_message, current_profile, modifier)
-        future_memory = executor.submit(extract_memory_updates, user_message, current_profile)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            future_chat = executor.submit(generate_chat_response, user_message, current_profile, modifier)
+            future_memory = executor.submit(extract_memory_updates, user_message, current_profile)
 
-        bot_response = future_chat.result()
-        updated_profile = future_memory.result()
+            bot_response = future_chat.result()
+            updated_profile = future_memory.result()
 
-    return jsonify({
-        "response": bot_response,
-        "user_profile": updated_profile
-    }), 200
+        return jsonify({
+            "response": bot_response,
+            "user_profile": updated_profile
+        }), 200
+    except Exception as e:
+        logger.error(f"Kritiskt fel i /chat route: {e}")
+        return jsonify({
+            "response": "Ett internt fel uppstod i motorn. Försök igen om ett ögonblick.",
+            "user_profile": request.get_json().get("user_profile", {}) if request.get_json() else {}
+        }), 200
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

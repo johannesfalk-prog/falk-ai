@@ -71,9 +71,9 @@
         .message-bubble { padding: 12px 16px; border-radius: 18px; font-size: 0.95rem; line-height: 1.5; word-break: break-word; }
         .message-bubble.user { align-self: flex-end; max-width: 85%; background-color: var(--user-msg); color: #fff; border-bottom-right-radius: 4px; }
         .message-bubble.bot { background-color: var(--bot-msg); color: var(--text-main); border-bottom-left-radius: 4px; width: 100%; }
+        .message-bubble.bot.error-msg { background-color: #fff0f1; border: 1px solid #ffccd1; color: var(--danger-color); }
         .message-bubble.loading { background-color: var(--bot-msg); color: var(--text-muted); font-style: italic; animation: pulse-bg 1.2s infinite ease-in-out; }
 
-        /* Svarskontroller under bot-meddelanden */
         .message-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-left: 4px; }
         .action-btn { background: #ffffff; border: 1px solid var(--border-color); color: var(--text-muted); border-radius: 14px; padding: 4px 10px; font-size: 0.75rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.15s ease; }
         .action-btn:hover { background: var(--accent-light); color: var(--accent-color); border-color: var(--accent-color); }
@@ -99,7 +99,6 @@
         }
         .input-area { display: flex; gap: 8px; align-items: flex-end; }
         
-        /* Auto-expanding Textarea med max 8 raders synlighet (~180px) */
         .input-area textarea { 
             flex: 1; 
             padding: 10px 14px; 
@@ -240,7 +239,6 @@
         localStorage.setItem('falk_session_id', crypto.randomUUID());
     }
 
-    // Auto-expanding textarea (Sätts till höjd efter innehåll, max ~180px / 8 rader)
     userInput.addEventListener('input', () => {
         userInput.style.height = 'auto';
         userInput.style.height = Math.min(userInput.scrollHeight, 180) + 'px';
@@ -252,7 +250,8 @@
         return formatted.replace(/\n/g, '<br>');
     }
 
-    function appendMessage(sender, text, isLoading = false) {
+    // Isolerad appendMessage: Knappar läggs BARA till om isError och isLoading är FALSE
+    function appendMessage(sender, text, isLoading = false, isError = false) {
         if (sender === 'user') {
             const bubble = document.createElement('div');
             bubble.className = 'message-bubble user';
@@ -263,12 +262,13 @@
             wrapper.className = 'bot-wrapper';
             
             const bubble = document.createElement('div');
-            bubble.className = `message-bubble bot ${isLoading ? 'loading' : ''}`;
+            bubble.className = `message-bubble bot ${isLoading ? 'loading' : ''} ${isError ? 'error-msg' : ''}`;
             if (isLoading) bubble.id = 'loading-bubble';
             bubble.innerHTML = formatText(text);
             wrapper.appendChild(bubble);
 
-            if (!isLoading) {
+            // BARA GILTIGA BOT-SVAR FÅR KNAPPAR (Inga knappar på felmeddelanden eller laddning)
+            if (!isLoading && !isError) {
                 const actionsContainer = document.createElement('div');
                 actionsContainer.className = 'message-actions';
                 actionsContainer.innerHTML = `
@@ -343,7 +343,7 @@
         if (!modifier) {
             appendMessage('user', text);
             userInput.value = '';
-            userInput.style.height = 'auto'; // Återställ textarea efter skickat meddelande
+            userInput.style.height = 'auto';
         }
 
         lastUserMessage = text;
@@ -378,7 +378,7 @@
             removeLoadingBubble();
 
             if (data && data.response) {
-                appendMessage('bot', data.response);
+                appendMessage('bot', data.response, false, false);
 
                 if (data.user_profile && typeof data.user_profile === 'object') {
                     localStorage.setItem('falk_user_profile', JSON.stringify(data.user_profile));
@@ -395,7 +395,8 @@
             console.error('Chat error:', error);
             removeLoadingBubble();
             userInput.value = text;
-            appendMessage('bot', 'Kunde inte ansluta till FALK-motorn. Kontrollera din anslutning och försök igen.');
+            // Skicka isError = true så att INGA KNAPPAR genereras under felmeddelandet
+            appendMessage('bot', 'Kunde inte ansluta till FALK-motorn. Kontrollera din anslutning och försök igen.', false, true);
         } finally {
             clearTimeout(coldStartTimer);
             userInput.disabled = false;
@@ -406,7 +407,6 @@
 
     sendBtn.addEventListener('click', () => handleSend());
     
-    // Enter skickar, Shift+Enter skapar ny rad i textarea
     userInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -441,7 +441,6 @@
     });
 
     closeMemoryBtn.addEventListener('click', () => {
-        memoryPanel.classList.remove('remove');
         memoryPanel.classList.remove('open');
     });
 
