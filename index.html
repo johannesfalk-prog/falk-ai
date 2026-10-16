@@ -19,6 +19,7 @@
             --accent-color: #0066ff;
             --accent-light: #eef5ff;
             --danger-color: #dc3545;
+            --success-color: #28a745;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -128,13 +129,18 @@
         .memory-header { padding: 16px 20px; border-bottom: 1px solid var(--border-color); font-weight: 700; font-size: 0.95rem; display: flex; justify-content: space-between; align-items: center; background: #fff; }
         .close-memory-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted); }
 
-        .memory-content { padding: 20px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+        .memory-content { padding: 20px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
         .memory-section { display: flex; flex-direction: column; gap: 8px; }
         .memory-section h4 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
         .memory-card-box { background: #fff; border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; font-size: 0.88rem; line-height: 1.4; }
 
         .tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; }
         .tag { background: var(--accent-light); color: var(--accent-color); padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
+
+        /* Action Engine Knappar i Minnespanelen */
+        .action-engine-box { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border-color); }
+        .btn-action-engine { padding: 10px 12px; background: #ffffff; border: 1px solid var(--accent-color); color: var(--accent-color); border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; }
+        .btn-action-engine:hover { background: var(--accent-light); }
 
         .clear-memory-btn { width: 100%; padding: 10px; background: none; border: 1px solid var(--danger-color); color: var(--danger-color); border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; margin-top: auto; transition: background 0.2s; }
         .clear-memory-btn:hover { background: #fff0f1; }
@@ -219,6 +225,13 @@
                 </div>
             </div>
 
+            <!-- V1.2 Action Engine Section -->
+            <div class="action-engine-box">
+                <h4>Exekvering & Export</h4>
+                <button id="export-md-btn" class="btn-action-engine">📋 Exportera Insikt (Markdown)</button>
+                <button id="export-ics-btn" class="btn-action-engine">📅 Boka Reflektion (.ics)</button>
+            </div>
+
             <button id="clear-memory-btn" class="clear-memory-btn">Rensa Kognitivt Minne</button>
         </div>
     </div>
@@ -236,9 +249,10 @@
     const closeMemoryBtn = document.getElementById('close-memory-btn');
     const memoryBadge = document.getElementById('memory-badge');
     const clearMemoryBtn = document.getElementById('clear-memory-btn');
+    const exportMDBtn = document.getElementById('export-md-btn');
+    const exportICSBtn = document.getElementById('export-ics-btn');
 
     let lastUserMessage = "";
-    // Korttidsminne: Glidande fönster för pågående konversation
     let chatHistory = [];
 
     if (!localStorage.getItem('falk_session_id')) {
@@ -256,7 +270,34 @@
         return formatted.replace(/\n/g, '<br>');
     }
 
-    function appendMessage(sender, text, isLoading = false, isError = false) {
+    function saveChatHistory() {
+        try {
+            sessionStorage.setItem('falk_chat_history', JSON.stringify(chatHistory));
+        } catch(e) {
+            console.error('Kunde inte spara chatHistory till sessionStorage:', e);
+        }
+    }
+
+    // Återställer historiken visuellt i DOM vid F5/Sidomladdning
+    function restoreChatHistory() {
+        try {
+            const raw = sessionStorage.getItem('falk_chat_history');
+            if (raw) {
+                chatHistory = JSON.parse(raw);
+                if (chatHistory.length > 0 && onboardingContainer) {
+                    onboardingContainer.style.display = 'none';
+                }
+                chatHistory.forEach(msg => {
+                    appendMessage(msg.role === 'user' ? 'user' : 'bot', msg.content, false, false, false);
+                });
+            }
+        } catch (e) {
+            console.error('Kunde inte läsa chatHistory från sessionStorage:', e);
+            chatHistory = [];
+        }
+    }
+
+    function appendMessage(sender, text, isLoading = false, isError = false, shouldSave = true) {
         if (sender === 'user') {
             const bubble = document.createElement('div');
             bubble.className = 'message-bubble user';
@@ -345,7 +386,6 @@
         document.getElementById('mem-insikt').textContent = profile.senaste_insikt || 'Ingen ännu';
     }
 
-    // MODIFIER (In-place edit med historik-uppdatering utan duplicering)
     window.handleModifierClick = async function(btnElement, modifier) {
         if (!lastUserMessage) return;
 
@@ -383,12 +423,12 @@
             if (data && data.response) {
                 bubble.innerHTML = formatText(data.response);
 
-                // Uppdatera sista assistant-meddelandet i korttidsminnet istället för att pusha nytt
                 if (chatHistory.length > 0 && chatHistory[chatHistory.length - 1].role === 'assistant') {
                     chatHistory[chatHistory.length - 1].content = data.response;
                 } else {
                     chatHistory.push({ role: 'assistant', content: data.response });
                 }
+                saveChatHistory();
 
                 if (data.user_profile && typeof data.user_profile === 'object') {
                     localStorage.setItem('falk_user_profile', JSON.stringify(data.user_profile));
@@ -410,7 +450,6 @@
         }
     };
 
-    // SKICKA NYTT MEDDELANDE
     async function handleSend(textToSend) {
         const text = textToSend || userInput.value.trim();
         if (!text) return;
@@ -457,12 +496,12 @@
             if (data && data.response) {
                 appendMessage('bot', data.response, false, false);
 
-                // Spara tur-paret i korttidsminnet (max 6 element sparas aktivt)
                 chatHistory.push({ role: 'user', content: text });
                 chatHistory.push({ role: 'assistant', content: data.response });
                 if (chatHistory.length > 6) {
                     chatHistory = chatHistory.slice(-6);
                 }
+                saveChatHistory();
 
                 if (data.user_profile && typeof data.user_profile === 'object') {
                     localStorage.setItem('falk_user_profile', JSON.stringify(data.user_profile));
@@ -488,6 +527,72 @@
         }
     }
 
+    // ACTION ENGINE V1.2: EXPORT MARKDOWN (NOTION/OBSIDIAN)
+    exportMDBtn.addEventListener('click', () => {
+        const profile = getStoredProfile();
+        const dateStr = new Date().toLocaleDateString('sv-SE');
+        
+        let md = `# FALK Kognitiv Insikt - ${dateStr}\n\n`;
+        md += `## Kognitiv Profil\n`;
+        md += `- **Aktuellt Fokus:** ${profile.aktuellt_fokus || 'Ej definierat'}\n`;
+        md += `- **Senaste Insikt:** ${profile.senaste_insikt || 'Ingen registrerad'}\n`;
+        md += `- **Kärnvärderingar:** ${(profile.varderingar || []).join(', ') || 'Inga'}\n`;
+        md += `- **Identifierade Mönster:** ${(profile.identifierade_monster || []).join(', ') || 'Inga'}\n\n`;
+        
+        md += `## Senaste Dialogtråd\n`;
+        if (chatHistory.length === 0) {
+            md += `*Ingen aktiv dialogtråd i sessionen.*\n`;
+        } else {
+            chatHistory.forEach(msg => {
+                const role = msg.role === 'user' ? '**Användare**' : '**FALK**';
+                md += `${role}: ${msg.content}\n\n`;
+            });
+        }
+
+        navigator.clipboard.writeText(md).then(() => {
+            alert('📋 Insikten och dialogen har kopierats som Markdown till ditt urklipp!');
+        }).catch(() => {
+            const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `FALK-Insikt-${dateStr}.md`;
+            a.click();
+        });
+    });
+
+    // ACTION ENGINE V1.2: EXPORT ICS (KALENDERBOKNING)
+    exportICSBtn.addEventListener('click', () => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(9, 0, 0, 0);
+
+        const end = new Date(tomorrow.getTime() + 30 * 60000);
+
+        const formatICSDate = (date) => date.toISOString().replace(/-|:|\.\d\d\d/g, "").substring(0, 15) + "Z";
+
+        const profile = getStoredProfile();
+        const insiktText = profile.senaste_insikt || 'Följ upp dina reflektioner med FALK.';
+
+        const icsContent = 
+`BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//FALK AI//Digital Mentor//SV
+BEGIN:VEVENT
+SUMMARY:🧠 FALK - Kognitiv Reflektion
+DESCRIPTION:Dags för din uppföljning med FALK.\\n\\nSenaste insikt: ${insiktText}
+DTSTART:${formatICSDate(tomorrow)}
+DTEND:${formatICSDate(end)}
+STATUS:CONFIRMED
+END:VEVENT
+END:VCALENDAR`;
+
+        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'falk-reflektion.ics';
+        a.click();
+    });
+
     sendBtn.addEventListener('click', () => handleSend());
     
     userInput.addEventListener('keydown', (e) => {
@@ -505,7 +610,8 @@
     });
 
     clearBtn.addEventListener('click', () => {
-        chatHistory = []; // Töm korttidsminnet vid Ny chatt
+        chatHistory = [];
+        sessionStorage.removeItem('falk_chat_history');
         chatWindow.innerHTML = `
             <div class="bot-wrapper">
                 <div class="message-bubble bot">
@@ -529,14 +635,16 @@
     });
 
     clearMemoryBtn.addEventListener('click', () => {
-        if (confirm('Vill du helt rensa din kognitiva minnesprofil?')) {
+        if (confirm('Vill du helt rensa din kognitiva minnesprofil och session?')) {
             localStorage.removeItem('falk_user_profile');
+            sessionStorage.removeItem('falk_chat_history');
             chatHistory = [];
             renderMemoryPanel();
         }
     });
 
     renderMemoryPanel();
+    restoreChatHistory();
 </script>
 
 </body>
