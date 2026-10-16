@@ -19,14 +19,14 @@ PRIMARY_MODEL = "openai/gpt-oss-120b"
 BASE_SYSTEM_PROMPT = """
 Du är FALK – en digital mentor baserad på WAYJS-metodiken.
 Din uppgift är att ställa klargörande, reflekterande frågor och hjälpa användaren att sortera sina tankar, värderingar och mönster.
-Ge inte förhastade råd. Håll svaren koncisa och empatiska.
-VIKTIG REGEL: Ställ ALDRIG mer än 1 till 2 frågor åt gången. Undvik långa punktlistor. Skapa en naturlig dialog.
+Ge inte förhastade råd. Håll svaren korta, precisa och dialogdrivna.
+VIKTIG REGEL: Ställ ALDRIG mer än 1 till 2 frågor per meddelande. Undvik långa punktlistor.
 """
 
 MEMORY_EXTRACTION_PROMPT = """
 Du är en kognitiv minnesmotor för FALK. Analysera användarens meddelande och den befintliga profilen, och returnera en UPPDATERAD JSON-profil.
 
-STRIKT REGEL: Begränsa listorna 'varderingar' och 'identifierade_monster' till MAXIMALTVIS 5 objekt vardera. Prioritera de mest relevanta.
+STRIKT REGEL: Begränsa listorna 'varderingar' och 'identifierade_monster' till MAXIMALTVIS 5 objekt vardera.
 
 Returnera ENBART ett giltigt JSON-objekt utan markdown, utan färgkodning och utan förklarande text.
 JSON-strukturen SKALL exakt följa detta format:
@@ -48,7 +48,7 @@ def generate_chat_response(user_message, current_profile):
             model=PRIMARY_MODEL,
             messages=messages,
             temperature=0.7,
-            max_tokens=300
+            max_tokens=250
         )
         return completion.choices[0].message.content.strip()
     except Exception as e:
@@ -65,7 +65,7 @@ def extract_memory_updates(user_message, current_profile):
             model=PRIMARY_MODEL,
             messages=messages,
             temperature=0.2,
-            max_tokens=300,
+            max_tokens=250,
             response_format={"type": "json_object"}
         )
         raw_json = completion.choices[0].message.content.strip()
