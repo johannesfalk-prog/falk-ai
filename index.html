@@ -70,7 +70,7 @@
         
         .message-bubble { padding: 12px 16px; border-radius: 18px; font-size: 0.95rem; line-height: 1.5; word-break: break-word; }
         .message-bubble.user { align-self: flex-end; max-width: 85%; background-color: var(--user-msg); color: #fff; border-bottom-right-radius: 4px; }
-        .message-bubble.bot { background-color: var(--bot-msg); color: var(--text-main); border-bottom-left-radius: 4px; width: 100%; }
+        .message-bubble.bot { background-color: var(--bot-msg); color: var(--text-main); border-bottom-left-radius: 4px; width: 100%; transition: opacity 0.2s; }
         .message-bubble.bot.error-msg { background-color: #fff0f1; border: 1px solid #ffccd1; color: var(--danger-color); }
         .message-bubble.loading { background-color: var(--bot-msg); color: var(--text-muted); font-style: italic; animation: pulse-bg 1.2s infinite ease-in-out; }
 
@@ -78,6 +78,7 @@
         .action-btn { background: #ffffff; border: 1px solid var(--border-color); color: var(--text-muted); border-radius: 14px; padding: 4px 10px; font-size: 0.75rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.15s ease; }
         .action-btn:hover { background: var(--accent-light); color: var(--accent-color); border-color: var(--accent-color); }
         .action-btn.active { background: var(--accent-light); color: var(--accent-color); border-color: var(--accent-color); font-weight: 700; }
+        .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
         @keyframes pulse-bg {
             0% { opacity: 0.6; }
@@ -250,13 +251,14 @@
         return formatted.replace(/\n/g, '<br>');
     }
 
-    // Isolerad appendMessage: Knappar läggs BARA till om isError och isLoading är FALSE
     function appendMessage(sender, text, isLoading = false, isError = false) {
         if (sender === 'user') {
             const bubble = document.createElement('div');
             bubble.className = 'message-bubble user';
             bubble.innerHTML = formatText(text);
             chatWindow.appendChild(bubble);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            return null;
         } else {
             const wrapper = document.createElement('div');
             wrapper.className = 'bot-wrapper';
@@ -267,23 +269,29 @@
             bubble.innerHTML = formatText(text);
             wrapper.appendChild(bubble);
 
-            // BARA GILTIGA BOT-SVAR FÅR KNAPPAR (Inga knappar på felmeddelanden eller laddning)
             if (!isLoading && !isError) {
-                const actionsContainer = document.createElement('div');
-                actionsContainer.className = 'message-actions';
-                actionsContainer.innerHTML = `
-                    <button class="action-btn" onclick="toggleFeedback(this, 'up')">👍</button>
-                    <button class="action-btn" onclick="toggleFeedback(this, 'down')">👎</button>
-                    <button class="action-btn" onclick="handleSend(lastUserMessage, 'regenerate')">🔄 Nytt svar</button>
-                    <button class="action-btn" onclick="handleSend(lastUserMessage, 'shorter')">➖ Kortare</button>
-                    <button class="action-btn" onclick="handleSend(lastUserMessage, 'longer')">➕ Längre</button>
-                `;
-                wrapper.appendChild(actionsContainer);
+                appendActionButtons(wrapper);
             }
             chatWindow.appendChild(wrapper);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            return wrapper;
         }
+    }
 
-        chatWindow.scrollTop = chatWindow.scrollHeight;
+    function appendActionButtons(wrapper) {
+        let actionsContainer = wrapper.querySelector('.message-actions');
+        if (!actionsContainer) {
+            actionsContainer = document.createElement('div');
+            actionsContainer.className = 'message-actions';
+            wrapper.appendChild(actionsContainer);
+        }
+        actionsContainer.innerHTML = `
+            <button class="action-btn" onclick="toggleFeedback(this, 'up')">👍</button>
+            <button class="action-btn" onclick="toggleFeedback(this, 'down')">👎</button>
+            <button class="action-btn" onclick="handleModifierClick(this, 'regenerate')">🔄 Nytt svar</button>
+            <button class="action-btn" onclick="handleModifierClick(this, 'shorter')">➖ Kortare</button>
+            <button class="action-btn" onclick="handleModifierClick(this, 'longer')">➕ Längre</button>
+        `;
     }
 
     window.toggleFeedback = function(btn, type) {
@@ -332,7 +340,67 @@
         document.getElementById('mem-insikt').textContent = profile.senaste_insikt || 'Ingen ännu';
     }
 
-    async function handleSend(textToSend, modifier = null) {
+    // HANTERAR DYNAMISKA KNAPPAR PÅ BEFINTLIG BUBBLA (IN-PLACE REPLACEMENT)
+    window.handleModifierClick = async function(btnElement, modifier) {
+        if (!lastUserMessage) return;
+
+        const targetWrapper = btnElement.closest('.bot-wrapper');
+        const bubble = targetWrapper.querySelector('.message-bubble');
+        const originalContent = bubble.innerHTML;
+
+        // Inaktivera knapparna under laddning
+        targetWrapper.querySelectorAll('.action-btn').forEach(b => b.disabled = true);
+        bubble.classList.add('loading');
+        bubble.textContent = 'FALK analyserar och formulera om svaret...';
+
+        userInput.disabled = true;
+        sendBtn.disabled = true;
+
+        const currentProfile = getStoredProfile();
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: lastUserMessage,
+                    user_profile: currentProfile,
+                    modifier: modifier
+                })
+            });
+
+            if (!response.ok) throw new Error(`HTTP status ${response.status}`);
+
+            const data = await response.json();
+
+            bubble.classList.remove('loading');
+
+            if (data && data.response) {
+                // ERSÄTT INNEHÅLLET I SAMMA BUBBLA (In-Place Edit)
+                bubble.innerHTML = formatText(data.response);
+
+                if (data.user_profile && typeof data.user_profile === 'object') {
+                    localStorage.setItem('falk_user_profile', JSON.stringify(data.user_profile));
+                    renderMemoryPanel();
+                }
+            } else {
+                throw new Error('Inget giltigt response-fält i JSON');
+            }
+        } catch (error) {
+            console.error('Chat error:', error);
+            bubble.classList.remove('loading');
+            bubble.innerHTML = originalContent; // Återställ ursprungssvaret vid nätverksfel
+            alert('Kunde inte generera om svaret. Kontrollera din anslutning.');
+        } finally {
+            targetWrapper.querySelectorAll('.action-btn').forEach(b => b.disabled = false);
+            userInput.disabled = false;
+            sendBtn.disabled = false;
+            userInput.focus();
+        }
+    };
+
+    // NYTT MEDDELANDE (Append new bubble)
+    async function handleSend(textToSend) {
         const text = textToSend || userInput.value.trim();
         if (!text) return;
 
@@ -340,11 +408,9 @@
             onboardingContainer.style.display = 'none';
         }
 
-        if (!modifier) {
-            appendMessage('user', text);
-            userInput.value = '';
-            userInput.style.height = 'auto';
-        }
+        appendMessage('user', text);
+        userInput.value = '';
+        userInput.style.height = 'auto';
 
         lastUserMessage = text;
         userInput.disabled = true;
@@ -366,8 +432,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: text,
-                    user_profile: currentProfile,
-                    modifier: modifier
+                    user_profile: currentProfile
                 })
             });
 
@@ -395,7 +460,6 @@
             console.error('Chat error:', error);
             removeLoadingBubble();
             userInput.value = text;
-            // Skicka isError = true så att INGA KNAPPAR genereras under felmeddelandet
             appendMessage('bot', 'Kunde inte ansluta till FALK-motorn. Kontrollera din anslutning och försök igen.', false, true);
         } finally {
             clearTimeout(coldStartTimer);
