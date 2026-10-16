@@ -1,7 +1,9 @@
 import os
 import json
+import time
 import logging
 import concurrent.futures
+from collections import defaultdict
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from groq import Groq
@@ -15,6 +17,20 @@ CORS(app)
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 PRIMARY_MODEL = "openai/gpt-oss-120b"
+
+# --- RATE LIMITER CONFIG (Skottsäker Noll-Beroende In-Memory Limiter) ---
+RATE_LIMIT_REQUESTS = 20  # Max 20 anrop
+RATE_LIMIT_WINDOW = 60    # per 60 sekunder per IP
+ip_request_history = defaultdict(list)
+
+def is_rate_limited(ip_address):
+    now = time.time()
+    # Rensa historik äldre än fönstret
+    ip_request_history[ip_address] = [t for t in ip_request_history[ip_address] if now - t < RATE_LIMIT_WINDOW]
+    if len(ip_request_history[ip_address]) >= RATE_LIMIT_REQUESTS:
+        return True
+    ip_request_history[ip_address].append(now)
+    return False
 
 BASE_SYSTEM_PROMPT = """
 Du är FALK – en digital mentor baserad på WAYJS-metodiken.
@@ -56,14 +72,12 @@ def generate_chat_response(user_message, current_profile, history=None, modifier
             {"role": "system", "content": f"{system_prompt}\nBefintlig kognitiv profil (Långtidsminne): {json.dumps(current_profile, ensure_ascii=False)}"}
         ]
 
-        # Inkludera upp till de senaste 6 meddelandena (3 dialogturer) för konversationstråd
         if history and isinstance(history, list):
             sanitized_history = history[-6:]
             for msg in sanitized_history:
                 if isinstance(msg, dict) and "role" in msg and "content" in msg:
                     messages.append({"role": msg["role"], "content": msg["content"]})
 
-        # Lägg till det aktuella meddelandet om det inte redan är sista elementet i history
         if not history or (history and history[-1].get("content") != user_message):
             messages.append({"role": "user", "content": user_message})
 
@@ -103,6 +117,12 @@ def health():
 
 @app.route("/chat", methods=["POST"])
 def chat():
+    client_ip = request.headers.get('X-Forwarded-For', request.remote_addr or '127.0.0.1').split(',')[0].strip()
+    
+    if is_rate_limited(client_ip):
+        logger.warning(f"Rate limit överskriden för IP: {client_ip}")
+        return jsonify({"response": "Du skickar meddelanden för snabbt. Vänta en stund och försök igen."}), 429
+
     try:
         data = request.get_json() or {}
         user_message = data.get("message", "").strip()

@@ -141,7 +141,6 @@
 
         .footer-credit { font-size: 0.72rem; color: var(--text-muted); text-align: center; font-weight: 500; letter-spacing: 0.3px; }
 
-        /* Memory Panel & Backdrop Overlay */
         .memory-backdrop { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; background: rgba(0, 0, 0, 0.4); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 999; }
         .memory-backdrop.open { opacity: 1; pointer-events: auto; }
 
@@ -270,6 +269,8 @@
     }
 
     const API_URL = 'https://falk-ai.onrender.com/chat';
+    const CURRENT_SCHEMA_VERSION = "1.0";
+
     const chatWindow = document.getElementById('chat-window');
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
@@ -301,6 +302,38 @@
         formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
         return formatted.replace(/\n/g, '<br>');
+    }
+
+    // SCHEMA MIGRATION & LOCALSTORAGE ENGINE (Skottsäker strukturstämpling)
+    function getStoredProfile() {
+        const defaultProfile = {
+            schema_version: CURRENT_SCHEMA_VERSION,
+            varderingar: [],
+            identifierade_monster: [],
+            aktuellt_fokus: "Odefinierat",
+            senaste_insikt: "Ingen ännu"
+        };
+
+        try {
+            const raw = localStorage.getItem('falk_user_profile');
+            if (!raw) return defaultProfile;
+
+            let profile = JSON.parse(raw);
+
+            // Tyst migrering till v1.0
+            if (!profile.schema_version || profile.schema_version !== CURRENT_SCHEMA_VERSION) {
+                profile.schema_version = CURRENT_SCHEMA_VERSION;
+                profile.varderingar = Array.isArray(profile.varderingar) ? profile.varderingar : [];
+                profile.identifierade_monster = Array.isArray(profile.identifierade_monster) ? profile.identifierade_monster : [];
+                profile.aktuellt_fokus = profile.aktuellt_fokus || "Odefinierat";
+                profile.senaste_insikt = profile.senaste_insikt || "Ingen ännu";
+                localStorage.setItem('falk_user_profile', JSON.stringify(profile));
+            }
+            return profile;
+        } catch (e) {
+            console.error('Schema-migreringsfel:', e);
+            return defaultProfile;
+        }
     }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -481,15 +514,6 @@
         }
     }
 
-    function getStoredProfile() {
-        try {
-            const raw = localStorage.getItem('falk_user_profile');
-            return raw ? JSON.parse(raw) : {};
-        } catch (e) {
-            return {};
-        }
-    }
-
     function renderMemoryPanel() {
         const profile = getStoredProfile();
 
@@ -556,6 +580,7 @@
                 saveChatHistory();
 
                 if (data.user_profile && typeof data.user_profile === 'object') {
+                    data.user_profile.schema_version = CURRENT_SCHEMA_VERSION;
                     localStorage.setItem('falk_user_profile', JSON.stringify(data.user_profile));
                     renderMemoryPanel();
                 }
@@ -614,6 +639,14 @@
                 })
             });
 
+            if (response.status === 429) {
+                const errData = await response.json();
+                removeLoadingBubble();
+                userInput.value = text;
+                appendMessage('bot', errData.response || 'Du skickar meddelanden för snabbt.', false, true);
+                return;
+            }
+
             if (!response.ok) throw new Error(`HTTP status ${response.status}`);
 
             const data = await response.json();
@@ -631,6 +664,7 @@
                 saveChatHistory();
 
                 if (data.user_profile && typeof data.user_profile === 'object') {
+                    data.user_profile.schema_version = CURRENT_SCHEMA_VERSION;
                     localStorage.setItem('falk_user_profile', JSON.stringify(data.user_profile));
                     renderMemoryPanel();
                     
@@ -659,7 +693,7 @@
         const dateStr = new Date().toLocaleDateString('sv-SE');
         
         let md = `# FALK Kognitiv Insikt - ${dateStr}\n\n`;
-        md += `## Kognitiv Profil\n`;
+        md += `## Kognitiv Profil (v${profile.schema_version || '1.0'})\n`;
         md += `- **Aktuellt Fokus:** ${profile.aktuellt_fokus || 'Ej definierat'}\n`;
         md += `- **Senaste Insikt:** ${profile.senaste_insikt || 'Ingen registrerad'}\n`;
         md += `- **Kärnvärderingar:** ${(profile.varderingar || []).join(', ') || 'Inga'}\n`;
