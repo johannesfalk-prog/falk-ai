@@ -304,23 +304,27 @@
         return formatted.replace(/\n/g, '<br>');
     }
 
-    // SCHEMA MIGRATION & LOCALSTORAGE ENGINE (Skottsäker strukturstämpling)
-    function getStoredProfile() {
-        const defaultProfile = {
+    function getFreshDefaultProfile() {
+        return {
             schema_version: CURRENT_SCHEMA_VERSION,
             varderingar: [],
             identifierade_monster: [],
             aktuellt_fokus: "Odefinierat",
             senaste_insikt: "Ingen ännu"
         };
+    }
 
+    function getStoredProfile() {
         try {
             const raw = localStorage.getItem('falk_user_profile');
-            if (!raw) return defaultProfile;
+            if (!raw) {
+                const fresh = getFreshDefaultProfile();
+                localStorage.setItem('falk_user_profile', JSON.stringify(fresh));
+                return fresh;
+            }
 
             let profile = JSON.parse(raw);
 
-            // Tyst migrering till v1.0
             if (!profile.schema_version || profile.schema_version !== CURRENT_SCHEMA_VERSION) {
                 profile.schema_version = CURRENT_SCHEMA_VERSION;
                 profile.varderingar = Array.isArray(profile.varderingar) ? profile.varderingar : [];
@@ -332,7 +336,9 @@
             return profile;
         } catch (e) {
             console.error('Schema-migreringsfel:', e);
-            return defaultProfile;
+            const fresh = getFreshDefaultProfile();
+            localStorage.setItem('falk_user_profile', JSON.stringify(fresh));
+            return fresh;
         }
     }
 
@@ -714,7 +720,7 @@
         }).catch(() => {
             const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
+            a.href = URL.click();
             a.download = `FALK-Insikt-${dateStr}.md`;
             a.click();
         });
@@ -798,9 +804,11 @@ END:VCALENDAR`;
     closeMemoryBtn.addEventListener('click', closeMemoryPanel);
     memoryBackdrop.addEventListener('click', closeMemoryPanel);
 
+    // SKOTTSÄKER MINNESRENSNING: Initiera om med ren struktur istället för tom radering
     clearMemoryBtn.addEventListener('click', () => {
-        if (confirm('Vill du helt rensa din kognitiva minnesprofil och session?')) {
-            localStorage.removeItem('falk_user_profile');
+        if (confirm('Vill du helt rensa din kognitiva minnesprofil? Motorn kommer börja bygga upp ett nytt minne från och med nästa meddelande.')) {
+            const freshProfile = getFreshDefaultProfile();
+            localStorage.setItem('falk_user_profile', JSON.stringify(freshProfile));
             sessionStorage.removeItem('falk_chat_history');
             chatHistory = [];
             if (window.speechSynthesis) window.speechSynthesis.cancel();

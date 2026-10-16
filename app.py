@@ -18,14 +18,12 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 PRIMARY_MODEL = "openai/gpt-oss-120b"
 
-# --- RATE LIMITER CONFIG (Skottsäker Noll-Beroende In-Memory Limiter) ---
-RATE_LIMIT_REQUESTS = 20  # Max 20 anrop
-RATE_LIMIT_WINDOW = 60    # per 60 sekunder per IP
+RATE_LIMIT_REQUESTS = 20
+RATE_LIMIT_WINDOW = 60
 ip_request_history = defaultdict(list)
 
 def is_rate_limited(ip_address):
     now = time.time()
-    # Rensa historik äldre än fönstret
     ip_request_history[ip_address] = [t for t in ip_request_history[ip_address] if now - t < RATE_LIMIT_WINDOW]
     if len(ip_request_history[ip_address]) >= RATE_LIMIT_REQUESTS:
         return True
@@ -36,7 +34,10 @@ BASE_SYSTEM_PROMPT = """
 Du är FALK – en digital mentor baserad på WAYJS-metodiken.
 Din uppgift är att ställa klargörande, reflekterande frågor och hjälpa användaren att sortera sina tankar, värderingar och mönster.
 Ge inte förhastade råd. Håll svaren korta, precisa och dialogdrivna.
-VIKTIG REGEL: Ställ ALDRIG mer än 1 till 2 frågor per meddelande. Undvik långa punktlistor.
+
+VIKTIGA REGLER:
+1. Ställ ALDRIG mer än 1 till 2 frågor per meddelande. Undvik långa punktlistor.
+2. SYFTNINGSUPPLÖSNING: Om användaren svarar med en relativ syftning (t.ex. "det förstnämnda", "det sista", "alternativ A", "det tidigare", "ja", "nej"), MÅSTE du analysera ditt eget förra meddelande, identifiera vad användaren syftar på och driva dialogen vidare utifrån det faktiska sakinnehållet. Citera eller upprepa ALDRIG användarens syftningsord bokstavligen.
 """
 
 MEMORY_EXTRACTION_PROMPT = """
@@ -44,8 +45,7 @@ Du är en kognitiv minnesmotor för FALK. Analysera användarens meddelande och 
 
 STRIKT REGEL: Begränsa listorna 'varderingar' och 'identifierade_monster' till MAXIMALTVIS 5 objekt vardera.
 
-Returnera ENBART ett giltigt JSON-objekt utan markdown, utan färgkodning och utan förklarande text.
-JSON-strukturen SKALL exakt följa detta format:
+Returnera ENBART ett giltigt JSON-objekt utan markdown och utan förklarande text:
 {
   "aktuellt_fokus": "Sträng med användarens huvudsakliga fokus just nu",
   "identifierade_monster": ["mönster 1", "mönster 2"],
@@ -53,6 +53,23 @@ JSON-strukturen SKALL exakt följa detta format:
   "varderingar": ["värdering 1", "värdering 2"]
 }
 """
+
+DEFAULT_PROFILE_TEMPLATE = {
+    "schema_version": "1.0",
+    "aktuellt_fokus": "Odefinierat",
+    "identifierade_monster": [],
+    "senaste_insikt": "Ingen ännu",
+    "varderingar": []
+}
+
+def sanitize_profile(profile):
+    if not isinstance(profile, dict):
+        return dict(DEFAULT_PROFILE_TEMPLATE)
+    sanitized = dict(DEFAULT_PROFILE_TEMPLATE)
+    sanitized.update(profile)
+    sanitized["varderingar"] = list(sanitized.get("varderingar", []))[:5]
+    sanitized["identifierade_monster"] = list(sanitized.get("identifierade_monster", []))[:5]
+    return sanitized
 
 def generate_chat_response(user_message, current_profile, history=None, modifier=None):
     try:
@@ -94,9 +111,10 @@ def generate_chat_response(user_message, current_profile, history=None, modifier
 
 def extract_memory_updates(user_message, current_profile):
     try:
+        active_profile = sanitize_profile(current_profile)
         messages = [
             {"role": "system", "content": MEMORY_EXTRACTION_PROMPT},
-            {"role": "user", "content": f"Befintlig profil: {json.dumps(current_profile, ensure_ascii=False)}\nNytt meddelande: {user_message}"}
+            {"role": "user", "content": f"Befintlig profil: {json.dumps(active_profile, ensure_ascii=False)}\nNytt meddelande: {user_message}"}
         ]
         completion = client.chat.completions.create(
             model=PRIMARY_MODEL,
@@ -106,10 +124,11 @@ def extract_memory_updates(user_message, current_profile):
             response_format={"type": "json_object"}
         )
         raw_json = completion.choices[0].message.content.strip()
-        return json.loads(raw_json)
+        parsed = json.loads(raw_json)
+        return sanitize_profile(parsed)
     except Exception as e:
         logger.error(f"Fel i extract_memory_updates: {e}")
-        return current_profile
+        return sanitize_profile(current_profile)
 
 @app.route("/health", methods=["GET"])
 def health():
@@ -120,13 +139,12 @@ def chat():
     client_ip = request.headers.get('X-Forwarded-For', request.remote_addr or '127.0.0.1').split(',')[0].strip()
     
     if is_rate_limited(client_ip):
-        logger.warning(f"Rate limit överskriden för IP: {client_ip}")
         return jsonify({"response": "Du skickar meddelanden för snabbt. Vänta en stund och försök igen."}), 429
 
     try:
         data = request.get_json() or {}
         user_message = data.get("message", "").strip()
-        current_profile = data.get("user_profile", {})
+        current_profile = sanitize_profile(data.get("user_profile", {}))
         history = data.get("history", [])
         modifier = data.get("modifier", None)
 
@@ -148,7 +166,7 @@ def chat():
         logger.error(f"Kritiskt fel i /chat route: {e}")
         return jsonify({
             "response": "Ett internt fel uppstod i motorn. Försök igen om ett ögonblick.",
-            "user_profile": request.get_json().get("user_profile", {}) if request.get_json() else {}
+            "user_profile": sanitize_profile(request.get_json().get("user_profile", {}) if request.get_json() else {})
         }), 200
 
 if __name__ == "__main__":
