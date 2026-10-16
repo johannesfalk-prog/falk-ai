@@ -48,26 +48,24 @@ def get_active_groq_model():
         raise Exception("GROQ_API_KEY saknas på servern.")
     try:
         all_models = [m.id for m in client.models.list().data]
-        # Exkludera moderations-, safeguard- och ljudmodeller
-        chat_models = [
-            m for m in all_models 
-            if not any(x in m.lower() for x in ["safeguard", "guard", "whisper", "embed"])
-        ]
         
+        # Enbart validerade Llama-chattmodeller
         preferred_order = [
             "llama-3.3-70b-versatile",
-            "llama-3.1-70b-versatile",
-            "llama3-70b-8192",
             "llama-3.1-8b-instant",
-            "mixtral-8x7b-32768"
+            "llama-3.1-70b-versatile",
+            "llama3-70b-8192"
         ]
         for pref in preferred_order:
-            if pref in chat_models:
+            if pref in all_models:
                 return pref
         
+        # Fallback om ingen av ovanstående finns
+        chat_models = [m for m in all_models if "llama" in m.lower() and not any(x in m.lower() for x in ["guard", "safeguard"])]
         if chat_models:
             return chat_models[0]
-        raise Exception(f"Inga giltiga chattmodeller hittades på kontot. Tillgängliga: {all_models}")
+            
+        raise Exception(f"Inga giltiga Llama-chattmodeller hittades. Tillgängliga: {all_models}")
     except Exception as e:
         raise Exception(f"Gick inte att hämta modell-lista från Groq: {e}")
 
