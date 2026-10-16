@@ -86,8 +86,8 @@
             100% { opacity: 0.6; }
         }
 
-        .onboarding-container { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; width: 100%; max-width: 550px; }
-        .onboarding-card { padding: 12px 14px; background: #fff; border: 1px solid var(--border-color); border-radius: 12px; font-size: 0.88rem; color: var(--text-main); text-align: left; cursor: pointer; transition: all 0.2s; }
+        .onboarding-container { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; width: 100%; max-width: 600px; }
+        .onboarding-card { padding: 12px 14px; background: #fff; border: 1px solid var(--border-color); border-radius: 12px; font-size: 0.88rem; color: var(--text-main); text-align: left; cursor: pointer; transition: all 0.2s; line-height: 1.4; }
         .onboarding-card:hover { border-color: var(--accent-color); background: var(--accent-light); color: var(--accent-color); }
 
         .input-container { 
@@ -161,14 +161,17 @@
             </div>
             
             <div class="onboarding-container" id="onboarding-container">
-                <button class="onboarding-card" data-prompt="Jag känner mig ostrukturerad på jobbet och det skapar stress.">
-                    📌 <strong>Struktur & Stress:</strong> "Jag känner mig ostrukturerad på jobbet..."
+                <button class="onboarding-card" data-prompt="Jag har alldeles för mycket i huvudet och behöver sortera vad som är viktigast just nu.">
+                    🧠 <strong>Kognitiv Överbelastning:</strong> "Jag har för mycket i huvudet och behöver sortera..."
                 </button>
-                <button class="onboarding-card" data-prompt="Jag mår dåligt när mina kollegor ignorerar min struktur, eftersom rättvisa i arbetsfördelningen är mitt viktigaste värde.">
-                    ⚖️ <strong>Rättvisa & Konflikt:</strong> "Jag mår dåligt när mina kollegor ignorerar min struktur..."
+                <button class="onboarding-card" data-prompt="Jag står inför ett svårt beslut och behöver skilja på vad jag borde göra och vad jag faktiskt vill.">
+                    🧭 <strong>Beslutsångest & Val:</strong> "Jag står inför ett svårt beslut och vill sortera mina prioriteringar..."
                 </button>
-                <button class="onboarding-card" data-prompt="Jag står inför ett svårt beslut och behöver sortera mina värderingar.">
-                    🧭 <strong>Beslut & Värderingar:</strong> "Jag står inför ett svårt beslut och vill sortera..."
+                <button class="onboarding-card" data-prompt="Jag stör mig på en situation eller person och vill förstå vad i min reaktion som jag kan påverka.">
+                    💬 <strong>Friktion & Relationer:</strong> "Jag stör mig på en situation/person och vill förstå min egen reaktion..."
+                </button>
+                <button class="onboarding-card" data-prompt="Jag märker att jag upprepar ett beteende som inte tjänar mig, men jag vet inte hur jag bryter det.">
+                    ⚡ <strong>Mönster & Förändring:</strong> "Jag upprepar ett beteende som inte tjänar mig och vill bryta det..."
                 </button>
             </div>
         </div>
@@ -340,7 +343,6 @@
         document.getElementById('mem-insikt').textContent = profile.senaste_insikt || 'Ingen ännu';
     }
 
-    // HANTERAR DYNAMISKA KNAPPAR PÅ BEFINTLIG BUBBLA (IN-PLACE REPLACEMENT)
     window.handleModifierClick = async function(btnElement, modifier) {
         if (!lastUserMessage) return;
 
@@ -348,10 +350,9 @@
         const bubble = targetWrapper.querySelector('.message-bubble');
         const originalContent = bubble.innerHTML;
 
-        // Inaktivera knapparna under laddning
         targetWrapper.querySelectorAll('.action-btn').forEach(b => b.disabled = true);
         bubble.classList.add('loading');
-        bubble.textContent = 'FALK analyserar och formulera om svaret...';
+        bubble.textContent = 'FALK analyserar och formulerar om svaret...';
 
         userInput.disabled = true;
         sendBtn.disabled = true;
@@ -376,7 +377,6 @@
             bubble.classList.remove('loading');
 
             if (data && data.response) {
-                // ERSÄTT INNEHÅLLET I SAMMA BUBBLA (In-Place Edit)
                 bubble.innerHTML = formatText(data.response);
 
                 if (data.user_profile && typeof data.user_profile === 'object') {
@@ -389,7 +389,7 @@
         } catch (error) {
             console.error('Chat error:', error);
             bubble.classList.remove('loading');
-            bubble.innerHTML = originalContent; // Återställ ursprungssvaret vid nätverksfel
+            bubble.innerHTML = originalContent;
             alert('Kunde inte generera om svaret. Kontrollera din anslutning.');
         } finally {
             targetWrapper.querySelectorAll('.action-btn').forEach(b => b.disabled = false);
@@ -399,7 +399,6 @@
         }
     };
 
-    // NYTT MEDDELANDE (Append new bubble)
     async function handleSend(textToSend) {
         const text = textToSend || userInput.value.trim();
         if (!text) return;
