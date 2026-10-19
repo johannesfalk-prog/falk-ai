@@ -71,9 +71,23 @@ def chat():
         # Lägg till det nya meddelandet
         messages.append({"role": "user", "content": user_message})
 
-        # 3. Anropa Groq med låst/säkrad modell
+        # 3. Bestäm aktiv chattmodell dynamiskt
         groq_client = Groq(api_key=groq_api_key)
-        selected_model = os.environ.get("GROQ_MODEL", "llama3-8b-8192")
+        selected_model = os.environ.get("GROQ_MODEL")
+
+        if not selected_model:
+            try:
+                models_list = groq_client.models.list()
+                valid_chat_models = [
+                    m.id for m in models_list.data 
+                    if "whisper" not in m.id.lower()
+                ]
+                if valid_chat_models:
+                    selected_model = valid_chat_models[0]
+                else:
+                    selected_model = "llama-3.3-70b-versatile"
+            except Exception:
+                selected_model = "llama-3.3-70b-versatile"
 
         chat_completion = groq_client.chat.completions.create(
             messages=messages,
