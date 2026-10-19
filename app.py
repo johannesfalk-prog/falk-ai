@@ -15,7 +15,6 @@ def get_supabase_client(token=None) -> Client:
         raise RuntimeError("SUPABASE_ANON_KEY saknas i miljövariablerna på servern.")
     
     if token:
-        # Supabase SDK kräver ett ClientOptions-objekt, inte en dict
         opts = ClientOptions(headers={"Authorization": f"Bearer {token}"})
         return create_client(SUPABASE_URL, anon_key, options=opts)
     
@@ -48,6 +47,9 @@ def chat():
     if not groq_api_key:
         return jsonify({"error": "Serverfel", "details": "GROQ_API_KEY saknas i serverns miljövariabler"}), 500
 
+    # Läs modell från env var eller använd aktiv standardmodell på Groq
+    groq_model = os.environ.get("GROQ_MODEL", "llama-3.1-8b-instant")
+
     try:
         groq_client = Groq(api_key=groq_api_key)
         chat_completion = groq_client.chat.completions.create(
@@ -55,7 +57,7 @@ def chat():
                 {"role": "system", "content": "Du är FALK, en kognitiv samtalspartner och dagboksmotor. Svara insiktsfullt och kortfattat på svenska."},
                 {"role": "user", "content": user_message}
             ],
-            model="llama-3.3-70b-versatile",
+            model=groq_model,
         )
         ai_response = chat_completion.choices[0].message.content
 
