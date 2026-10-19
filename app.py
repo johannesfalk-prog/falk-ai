@@ -50,13 +50,17 @@ def chat():
     try:
         groq_client = Groq(api_key=groq_api_key)
 
-        # Bestäm modell dynamiskt baserat på vad API-nyckeln faktiskt har tillgång till
+        # Hämta enbart tillgängliga TEXT/CHATT-modeller (filtrera bort Whisper)
         selected_model = os.environ.get("GROQ_MODEL")
         if not selected_model:
             try:
                 models_list = groq_client.models.list()
-                if models_list and models_list.data:
-                    selected_model = models_list.data[0].id
+                valid_chat_models = [
+                    m.id for m in models_list.data 
+                    if "whisper" not in m.id.lower()
+                ]
+                if valid_chat_models:
+                    selected_model = valid_chat_models[0]
                 else:
                     selected_model = "llama3-8b-8192"
             except Exception:
