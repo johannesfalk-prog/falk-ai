@@ -1,162 +1,196 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FALK – Kognitiv Samtalspartner</title>
-  <link rel="manifest" href="/manifest.json">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --primary: #6366f1; --accent: #22c55e; }
-    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; justify-content: center; }
-    .container { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 15px; }
-    .card { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid #334155; }
-    input, button { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #fff; box-sizing: border-box; }
-    button { background: var(--primary); border: none; font-weight: bold; cursor: pointer; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .chat-box { height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 10px; background: #0f172a; border-radius: 8px; }
-    .msg { padding: 10px 14px; border-radius: 8px; max-width: 80%; word-break: break-word; }
-    .msg.user { background: var(--primary); align-self: flex-end; }
-    .msg.falk { background: #334155; align-self: flex-start; }
-    .status { font-size: 0.85em; color: #94a3b8; text-align: center; }
-    .hidden { display: none !important; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FALK - Kognitiv Dagbok</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .app-container { width: 100%; max-width: 600px; background: #1e293b; border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: flex; flex-direction: column; height: 85vh; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; border-bottom: 1px solid #334155; margin-bottom: 16px; }
+        .header h1 { font-size: 1.5rem; font-weight: 700; color: #38bdf8; }
+        .user-info { font-size: 0.85rem; color: #94a3b8; }
+        .chat-box { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 8px; margin-bottom: 16px; }
+        .message { padding: 12px 16px; border-radius: 12px; max-width: 85%; font-size: 0.95rem; line-height: 1.4; word-break: break-word; }
+        .user-message { background: #4f46e5; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .ai-message { background: #334155; color: #f1f5f9; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .input-group { display: flex; gap: 8px; }
+        input[type="text"] { flex: 1; background: #0f172a; border: 1px solid #334155; padding: 14px; border-radius: 8px; color: white; font-size: 1rem; outline: none; }
+        input[type="text"]:focus { border-color: #38bdf8; }
+        button { background: #38bdf8; color: #0f172a; border: none; padding: 14px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s, opacity 0.2s; }
+        button:hover:not(:disabled) { background: #7dd3fc; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .login-box { display: flex; flex-direction: column; gap: 12px; justify-content: center; height: 100%; text-align: center; }
+        .login-box input { margin-bottom: 8px; padding: 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: white; }
+        .hidden { display: none !important; }
+        .status-text { font-size: 0.8rem; color: #64748b; text-align: center; margin-top: 8px; }
+    </style>
 </head>
 <body>
 
-<div class="container">
-  <h2>FALK <small style="font-size: 0.5em; color: var(--accent);">[v2 Live]</small></h2>
-
-  <div id="auth-section" class="card">
-    <h3 id="auth-title">Logga in</h3>
-    <input type="email" id="email" placeholder="Din e-postadress">
-    <input type="password" id="password" placeholder="Ditt lösenord">
-    <button id="btn-auth" onclick="handleAuth()">Logga in</button>
-    <p class="status" onclick="toggleAuthMode()" style="cursor:pointer; text-decoration:underline;" id="toggle-auth-text">
-      Inget konto? Registrera dig här.
-    </p>
-  </div>
-
-  <div id="chat-section" class="card hidden">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <span id="user-display" class="status"></span>
-      <button onclick="handleLogout()" style="width:auto; padding:6px 12px; font-size:0.8em;">Logga ut</button>
+<div class="app-container">
+    <div id="auth-section" class="login-box">
+        <h2 style="color: #38bdf8; margin-bottom: 12px;">Logga in på FALK</h2>
+        <input type="email" id="email" placeholder="Din e-postadress">
+        <input type="password" id="password" placeholder="Ditt lösenord">
+        <button id="login-btn" onclick="handleLogin()">Logga in</button>
+        <div id="auth-error" class="status-text" style="color: #ef4444;"></div>
     </div>
-    <div id="chat-box" class="chat-box"></div>
-    <div style="display:flex; gap:8px;">
-      <input type="text" id="chat-input" placeholder="Skriv ditt meddelande till FALK..." onkeydown="if(event.key==='Enter') sendChat()">
-      <button id="btn-send" onclick="sendChat()" style="width:100px;">Skicka</button>
+
+    <div id="chat-section" class="hidden" style="display: flex; flex-direction: column; height: 100%;">
+        <div class="header">
+            <div>
+                <h1>FALK <span style="font-size: 0.8rem; color: #4ade80;">[v2 Live]</span></h1>
+                <div id="user-email" class="user-info"></div>
+            </div>
+            <button onclick="handleLogout()" style="background: #475569; color: white; padding: 8px 12px; font-size: 0.8rem;">Logga ut</button>
+        </div>
+
+        <div id="chat-box" class="chat-box"></div>
+
+        <div class="input-group">
+            <input type="text" id="message-input" placeholder="Skriv ditt meddelande till FALK..." onkeydown="if(event.key==='Enter') sendMessage()">
+            <button id="send-btn" onclick="sendMessage()">Skicka</button>
+        </div>
+        <div id="status-indicator" class="status-text"></div>
     </div>
-    <p id="chat-status" class="status"></p>
-  </div>
 </div>
 
 <script>
-  const SUPABASE_URL = 'https://dmerwpgvepkjirugnfzy.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZXJ3cGd2ZXBramlydWduZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MjM3NjksImV4cCI6MjEwNzk5OTc2OX0.UNX_fozGEsKKMrQpn-8VP3g3r1boegX5jl5B8oW69Ww'; 
-  const BACKEND_URL = 'https://falk-ai.onrender.com/chat';
+    const SUPABASE_URL = "https://dmerwpgvepkjirugnfzy.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZXJ3cGd2ZXBramlydWduZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzcyMjYxMzAsImV4cCI6MjA1MjgwMjEzMH0.S8aX5N8-r4I1W-y1k2D3u4v5w6x7y8z";
+    const BACKEND_URL = "https://falk-ai.onrender.com";
 
-  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  let isSignUpMode = false;
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    let currentSession = null;
 
-  supabaseClient.auth.onAuthStateChange((event, session) => {
-    if (session) {
-      document.getElementById('auth-section').classList.add('hidden');
-      document.getElementById('chat-section').classList.remove('hidden');
-      document.getElementById('user-display').innerText = session.user.email;
-    } else {
-      document.getElementById('auth-section').classList.remove('hidden');
-      document.getElementById('chat-section').classList.add('hidden');
+    async function checkSession() {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+            setupAuthenticatedUser(session);
+        }
     }
-  });
 
-  function toggleAuthMode() {
-    isSignUpMode = !isSignUpMode;
-    document.getElementById('auth-title').innerText = isSignUpMode ? 'Skapa Konto' : 'Logga in';
-    document.getElementById('btn-auth').innerText = isSignUpMode ? 'Registrera' : 'Logga in';
-    document.getElementById('toggle-auth-text').innerText = isSignUpMode ? 'Har du redan konto? Logga in.' : 'Inget konto? Registrera dig här.';
-  }
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+        if (session) {
+            setupAuthenticatedUser(session);
+        } else {
+            document.getElementById('auth-section').classList.remove('hidden');
+            document.getElementById('chat-section').classList.add('hidden');
+            currentSession = null;
+        }
+    });
 
-  async function handleAuth() {
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value.trim();
-    if (!email || !password) return alert('Fyll i både e-post och lösenord.');
+    async function handleLogin() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const errorDiv = document.getElementById('auth-error');
+        errorDiv.innerText = "";
 
-    if (isSignUpMode) {
-      const { data, error } = await supabaseClient.auth.signUp({ email, password });
-      if (error) alert('Registreringsfel: ' + error.message);
-      else alert('Konto skapat! Om e-postbekräftelse krävs, kolla din inkorg.');
-    } else {
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-      if (error) alert('Inloggningsfel: ' + error.message);
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) {
+            errorDiv.innerText = error.message;
+        }
     }
-  }
 
-  async function handleLogout() {
-    await supabaseClient.auth.signOut();
-  }
-
-  async function sendChat() {
-    const input = document.getElementById('chat-input');
-    const btnSend = document.getElementById('btn-send');
-    const statusText = document.getElementById('chat-status');
-    const messageText = input.value.trim();
-
-    if (!messageText) return;
-
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session) return alert('Sessionen har löpt ut. Logga in igen.');
-
-    appendMessage('user', messageText);
-    input.value = '';
-    btnSend.disabled = true;
-    statusText.innerText = 'FALK kognitiv motor vaknar...';
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
-
-    try {
-      const response = await fetch(BACKEND_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ message: messageText }),
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.details || `Serverfel (${response.status})`);
-      }
-
-      const data = await response.json();
-      appendMessage('falk', data.response);
-      statusText.innerText = '';
-
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        alert('Timeout: Render cold start timeout.');
-      } else {
-        alert('Fel: ' + err.message);
-      }
-      statusText.innerText = 'Kommunikationsfel.';
-    } finally {
-      btnSend.disabled = false;
+    async function handleLogout() {
+        await supabaseClient.auth.signOut();
+        document.getElementById('chat-box').innerHTML = "";
     }
-  }
 
-  function appendMessage(sender, text) {
-    const box = document.getElementById('chat-box');
-    const div = document.createElement('div');
-    div.className = `msg ${sender}`;
-    div.innerText = text;
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
-  }
+    async function setupAuthenticatedUser(session) {
+        currentSession = session;
+        document.getElementById('auth-section').classList.add('hidden');
+        document.getElementById('chat-section').classList.remove('hidden');
+        document.getElementById('user-email').innerText = session.user.email;
+        
+        await loadHistory();
+    }
+
+    async function loadHistory() {
+        if (!currentSession) return;
+        const status = document.getElementById('status-indicator');
+        status.innerText = "Hämtar dagbokshistorik...";
+
+        try {
+            const res = await fetch(`${BACKEND_URL}/history`, {
+                headers: { 'Authorization': `Bearer ${currentSession.access_token}` }
+            });
+            const data = await res.json();
+
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML = "";
+
+            if (data.history && data.history.length > 0) {
+                data.history.forEach(entry => {
+                    appendMessage(entry.user_message, 'user');
+                    appendMessage(entry.ai_response, 'ai');
+                });
+                status.innerText = "";
+            } else {
+                status.innerText = "Inga tidigare inlägg funna. Starta din dagbok nedan.";
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        } catch (err) {
+            status.innerText = "Kunde inte ladda historik.";
+        }
+    }
+
+    function appendMessage(text, sender) {
+        const chatBox = document.getElementById('chat-box');
+        const msg = document.createElement('div');
+        msg.className = `message ${sender === 'user' ? 'user-message' : 'ai-message'}`;
+        msg.innerText = text;
+        chatBox.appendChild(msg);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById('message-input');
+        const btn = document.getElementById('send-btn');
+        const status = document.getElementById('status-indicator');
+        const text = input.value.trim();
+
+        if (!text || !currentSession) return;
+
+        input.disabled = true;
+        btn.disabled = true;
+        status.innerText = "FALK tänker...";
+
+        appendMessage(text, 'user');
+        input.value = "";
+
+        try {
+            const res = await fetch(`${BACKEND_URL}/chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${currentSession.access_token}`
+                },
+                body: JSON.stringify({ message: text })
+            });
+
+            const data = await res.json();
+            if (res.ok && data.response) {
+                appendMessage(data.response, 'ai');
+                status.innerText = "";
+            } else {
+                alert(`Fel: ${data.details || data.error || 'Något gick fel'}`);
+                status.innerText = "Ett fel uppstod.";
+            }
+        } catch (err) {
+            alert("Nätverksfel eller serveruppkoppling misslyckades.");
+            status.innerText = "Kopplingsfel.";
+        } finally {
+            input.disabled = false;
+            btn.disabled = false;
+            input.focus();
+        }
+    }
+
+    checkSession();
 </script>
 </body>
 </html>
