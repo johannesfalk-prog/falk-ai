@@ -1,4 +1,5 @@
 import os
+import sys
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from supabase import create_client, Client
@@ -10,6 +11,9 @@ CORS(app)
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://dmerwpgvepkjirugnfzy.supabase.co")
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+
+if GROQ_API_KEY:
+    GROQ_API_KEY = GROQ_API_KEY.strip()
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) if SUPABASE_SERVICE_ROLE_KEY else None
 groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
@@ -24,12 +28,12 @@ Riktlinjer för dina svar:
 4. Avsluta ofta med en öppen, reflekterande fråga som hjälper användaren att gå djupare.
 5. Formatera ditt svar med ren Markdown (använd fetstil och punktlistor där det förtydligar)."""
 
-# Garanterade Groq-modellkandidater i fallande ordning
 CANDIDATE_MODELS = [
     "llama-3.3-70b-versatile",
-    "llama-3.1-70b-versatile",
     "llama-3.1-8b-instant",
-    "mixtral-8x7b-32768"
+    "llama3-70b-8192",
+    "llama3-8b-8192",
+    "gemma2-9b-it"
 ]
 
 def get_authenticated_user_id(req):
@@ -72,15 +76,15 @@ def chat():
         return jsonify({"error": err}), 401
 
     if not groq_client:
-        return jsonify({"error": "AI-motorn är inte initierad (GROQ_API_KEY saknas på servern)"}), 500
+        print("[ERROR] GROQ_API_KEY saknas eller är tom på servern.", file=sys.stderr)
+        return jsonify({"error": "AI-motorn är inte initierad på servern."}), 500
 
     data = request.get_json() or {}
     user_message = data.get("message", "").strip()
     if not user_message:
-        return jsonify({"error": "Meddelandet får inte vara tomt"}), 400
+        return jsonify({"error": "Meddelandet får inte vara tomt."}), 400
 
     try:
-        # Hämta de senaste 15 inläggen för ett utökat kognitivt kontextfönster
         recent_resp = supabase.table("journal_entries") \
             .select("user_message, ai_response") \
             .eq("user_id", user_id) \
@@ -101,9 +105,8 @@ def chat():
         messages_for_groq.append({"role": "user", "content": user_message})
 
         ai_response = None
-        last_exception = None
+        last_exception_details = ""
 
-        # Exekvera modellkedjan med tyst fallback
         for model_name in CANDIDATE_MODELS:
             try:
                 groq_response = groq_client.chat.completions.create(
@@ -114,16 +117,17 @@ def chat():
                 )
                 ai_response = groq_response.choices[0].message.content
                 if ai_response:
+                    print(f"[SUCCESS] Svar genererat med modell: {model_name}")
                     break
             except Exception as model_err:
-                last_exception = model_err
-                print(f"Modell {model_name} misslyckades: {model_err}")
+                last_exception_details = str(model_err)
+                print(f"[GROQ ERROR] Modell {model_name} misslyckades: {model_err}", file=sys.stderr)
                 continue
 
         if not ai_response:
             return jsonify({
-                "error": "AI-motorn kunde inte generera ett svar just nu.",
-                "details": "Alla modellkandidater misslyckades. Kontrollera API-status."
+                "error": "AI-motorn kunde inte nås för tillfället.",
+                "details": f"Groq felorsak: {last_exception_details}"
             }), 500
 
         supabase.table("journal_entries").insert({
@@ -135,6 +139,7 @@ def chat():
         return jsonify({"response": ai_response}), 200
 
     except Exception as e:
+        print(f"[CRITICAL ERROR] Oväntat fel i /chat: {e}", file=sys.stderr)
         return jsonify({"error": "Ett internt fel uppstod.", "details": str(e)}), 500
 
 if __name__ == "__main__":
