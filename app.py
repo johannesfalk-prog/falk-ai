@@ -8,11 +8,14 @@ app = Flask(__name__)
 CORS(app)
 
 SUPABASE_URL = "https://dmerwpgvepkjirugnfzy.supabase.co"
-SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
-groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
-supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+def get_supabase_client(token=None) -> Client:
+    anon_key = os.environ.get("SUPABASE_ANON_KEY")
+    if not anon_key:
+        raise RuntimeError("SUPABASE_ANON_KEY saknas i miljövariablerna på servern.")
+    
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    return create_client(SUPABASE_URL, anon_key, options={"headers": headers})
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -22,8 +25,9 @@ def chat():
 
     token = auth_header.split(' ')[1]
 
-    # Validera token direkt via Supabase Auth (oberoende av algoritm ES256/HS256)
+    # Validera token via Supabase Auth
     try:
+        supabase_admin = get_supabase_client()
         user_response = supabase_admin.auth.get_user(token)
         if not user_response or not user_response.user:
             return jsonify({"error": "Obehörig", "details": "Ogiltig eller utgången token"}), 401
@@ -36,8 +40,12 @@ def chat():
     if not user_message:
         return jsonify({"error": "Bad Request", "details": "Meddelande saknas"}), 400
 
+    groq_api_key = os.environ.get("GROQ_API_KEY")
+    if not groq_api_key:
+        return jsonify({"error": "Serverfel", "details": "GROQ_API_KEY saknas i serverns miljövariabler"}), 500
+
     try:
-        # Anrop till Groq AI
+        groq_client = Groq(api_key=groq_api_key)
         chat_completion = groq_client.chat.completions.create(
             messages=[
                 {"role": "system", "content": "Du är FALK, en kognitiv samtalspartner och dagboksmotor. Svara insiktsfullt och kortfattat på svenska."},
@@ -47,13 +55,8 @@ def chat():
         )
         ai_response = chat_completion.choices[0].message.content
 
-        # Skriv till Supabase med användarens kontext (RLS)
-        supabase_user_client: Client = create_client(
-            SUPABASE_URL, 
-            SUPABASE_ANON_KEY,
-            options={"headers": {"Authorization": f"Bearer {token}"}}
-        )
-        
+        # Skriv till Supabase med användarens token (RLS)
+        supabase_user_client = get_supabase_client(token=token)
         supabase_user_client.table("journal_entries").insert({
             "user_id": user_id,
             "user_message": user_message,
