@@ -2,72 +2,76 @@ import os
 import jwt
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from supabase import create_client, Client
+from groq import Groq
 
 app = Flask(__name__)
+CORS(app)
 
-ALLOWED_ORIGINS = [
-    "https://falk-frontend.onrender.com",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000"
-]
-
-CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS}}, supports_credentials=True)
-
+SUPABASE_URL = "https://dmerwpgvepkjirugnfzy.supabase.co"
 SUPABASE_JWT_SECRET = os.environ.get("SUPABASE_JWT_SECRET")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
-def verify_jwt(req):
-    auth_header = req.headers.get("Authorization")
-    if not auth_header:
-        return None, "Authorization header saknas."
+groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
-    try:
-        token = auth_header.split(" ")[1]
-    except IndexError:
-        return None, "Ogiltigt Authorization-headerformat. Använd 'Bearer <token>'."
-
+def verify_jwt(token):
     if not SUPABASE_JWT_SECRET:
-        return None, "SUPABASE_JWT_SECRET saknas i miljövariabler."
+        raise Exception("SUPABASE_JWT_SECRET saknas i serverns miljövariabler.")
+    # Tillåt flera algoritmer för att förhindra InvalidAlgorithmError
+    return jwt.decode(
+        token, 
+        SUPABASE_JWT_SECRET, 
+        algorithms=["HS256", "RS256", "ES256"], 
+        options={"verify_aud": False}
+    )
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"error": "Obehörig", "details": "Saknar Bearer-token"}), 401
+
+    token = auth_header.split(' ')[1]
 
     try:
-        payload = jwt.decode(
-            token,
-            SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            audience="authenticated"
-        )
-        return payload, None
-    except jwt.ExpiredSignatureError:
-        return None, "Token har löpt ut."
-    except jwt.InvalidTokenError as e:
-        return None, f"Ogiltig token: {str(e)}"
+        decoded = verify_jwt(token)
+        user_id = decoded.get('sub')
+    except Exception as e:
+        return jsonify({"error": "Obehorig", "details": f"Ogiltig token: {str(e)}"}), 401
 
-@app.route("/health", methods=["GET"])
-def health_check():
-    return jsonify({"status": "online", "service": "FALK-AI Backend"}), 200
-
-@app.route("/chat", methods=["POST", "OPTIONS"])
-def chat():
-    if request.method == "OPTIONS":
-        return jsonify({"status": "ok"}), 200
-
-    user_payload, error = verify_jwt(request)
-    if error:
-        return jsonify({"error": "Obehörig", "details": error}), 401
-
-    user_id = user_payload.get("sub")
     data = request.get_json() or {}
-    user_message = data.get("message")
-
+    user_message = data.get('message', '').strip()
     if not user_message:
-        return jsonify({"error": "Meddelande saknas."}), 400
+        return jsonify({"error": "Bad Request", "details": "Meddelande saknas"}), 400
 
-    system_response = f"FALK svarar: Mottog '{user_message}' från användare {user_id}."
+    try:
+        # Anrop till Groq API
+        chat_completion = groq_client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": "Du är FALK, en kognitiv samtalspartner och dagboksmotor. Svara insiktsfullt och kortfattat på svenska."},
+                {"role": "user", "content": user_message}
+            ],
+            model="llama-3.3-70b-versatile",
+        )
+        ai_response = chat_completion.choices[0].message.content
 
-    return jsonify({
-        "response": system_response,
-        "user_id": user_id
-    }), 200
+        # Skriv till Supabase-databasen med anpassad klient
+        supabase_user_client: Client = create_client(
+            SUPABASE_URL, 
+            os.environ.get("SUPABASE_ANON_KEY", ""),
+            options={"headers": {"Authorization": f"Bearer {token}"}}
+        )
+        
+        supabase_user_client.table("journal_entries").insert({
+            "user_id": user_id,
+            "user_message": user_message,
+            "ai_response": ai_response
+        }).execute()
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+        return jsonify({"response": ai_response})
+
+    except Exception as e:
+        return jsonify({"error": "Serverfel", "details": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
