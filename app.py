@@ -17,11 +17,11 @@ groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 def verify_jwt(token):
     if not SUPABASE_JWT_SECRET:
         raise Exception("SUPABASE_JWT_SECRET saknas i serverns miljövariabler.")
-    # Tillåt flera algoritmer för att förhindra InvalidAlgorithmError
+    # Supabase JWT Secret är en symmetrisk HMAC-nyckel (HS256)
     return jwt.decode(
         token, 
         SUPABASE_JWT_SECRET, 
-        algorithms=["HS256", "RS256", "ES256"], 
+        algorithms=["HS256"], 
         options={"verify_aud": False}
     )
 
@@ -37,7 +37,7 @@ def chat():
         decoded = verify_jwt(token)
         user_id = decoded.get('sub')
     except Exception as e:
-        return jsonify({"error": "Obehorig", "details": f"Ogiltig token: {str(e)}"}), 401
+        return jsonify({"error": "Obehörig", "details": f"Ogiltig token: {str(e)}"}), 401
 
     data = request.get_json() or {}
     user_message = data.get('message', '').strip()
@@ -45,7 +45,7 @@ def chat():
         return jsonify({"error": "Bad Request", "details": "Meddelande saknas"}), 400
 
     try:
-        # Anrop till Groq API
+        # Anrop till Groq AI
         chat_completion = groq_client.chat.completions.create(
             messages=[
                 {"role": "system", "content": "Du är FALK, en kognitiv samtalspartner och dagboksmotor. Svara insiktsfullt och kortfattat på svenska."},
@@ -55,7 +55,7 @@ def chat():
         )
         ai_response = chat_completion.choices[0].message.content
 
-        # Skriv till Supabase-databasen med anpassad klient
+        # Skriv till Supabase med användarens token
         supabase_user_client: Client = create_client(
             SUPABASE_URL, 
             os.environ.get("SUPABASE_ANON_KEY", ""),
