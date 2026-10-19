@@ -17,11 +17,16 @@ groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 def verify_jwt(token):
     if not SUPABASE_JWT_SECRET:
         raise Exception("SUPABASE_JWT_SECRET saknas i serverns miljövariabler.")
-    # Supabase JWT Secret är en symmetrisk HMAC-nyckel (HS256)
+    
+    # Inspektera token-headern dynamiskt för att se exakt algoritm
+    header = jwt.get_unverified_header(token)
+    token_alg = header.get('alg', 'HS256')
+    
+    # Om token är signerad med HS256, validera mot SUPABASE_JWT_SECRET
     return jwt.decode(
         token, 
         SUPABASE_JWT_SECRET, 
-        algorithms=["HS256"], 
+        algorithms=[token_alg], 
         options={"verify_aud": False}
     )
 
@@ -37,7 +42,13 @@ def chat():
         decoded = verify_jwt(token)
         user_id = decoded.get('sub')
     except Exception as e:
-        return jsonify({"error": "Obehörig", "details": f"Ogiltig token: {str(e)}"}), 401
+        # Returnera exakt vad som gick snett samt vilken algoritm tokenen använde
+        try:
+            unverified_header = jwt.get_unverified_header(token)
+            alg_info = f" (Token Alg: {unverified_header.get('alg')})"
+        except Exception:
+            alg_info = ""
+        return jsonify({"error": "Obehörig", "details": f"Ogiltig token: {str(e)}{alg_info}"}), 401
 
     data = request.get_json() or {}
     user_message = data.get('message', '').strip()
