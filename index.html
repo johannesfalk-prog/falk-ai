@@ -10,6 +10,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
@@ -52,7 +53,7 @@
     <div id="chat-section" class="hidden" style="display: flex; flex-direction: column; height: 100%;">
         <div class="header">
             <div>
-                <h1>FALK <span style="font-size: 0.8rem; color: #4ade80;">[PWA Ready]</span></h1>
+                <h1>FALK <span style="font-size: 0.8rem; color: #4ade80;">[Secure PWA]</span></h1>
                 <div id="user-email" class="user-info"></div>
             </div>
             <button onclick="handleLogout()" style="background: #475569; color: white; padding: 8px 12px; font-size: 0.8rem;">Logga ut</button>
@@ -162,7 +163,9 @@
         msg.className = `message ${sender === 'user' ? 'user-message' : 'ai-message'}`;
 
         if (sender === 'ai') {
-            msg.innerHTML = marked.parse(text);
+            const rawHtml = typeof marked !== 'undefined' ? marked.parse(text) : text;
+            const cleanHtml = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
+            msg.innerHTML = cleanHtml;
         } else {
             msg.innerText = text;
         }
