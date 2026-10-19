@@ -80,6 +80,7 @@
         .user-info {
             font-size: 0.85rem;
             color: var(--text-muted);
+            margin-right: 8px;
         }
 
         .auth-container {
@@ -206,21 +207,21 @@
         <h1>FALK <span class="badge">Production Ready</span></h1>
         <div id="user-header" class="hidden">
             <span id="user-email" class="user-info"></span>
-            <button class="btn btn-logout" onclick="handleLogout()">Logga ut</button>
+            <button id="logout-btn" class="btn btn-logout">Logga ut</button>
         </div>
     </div>
 
     <!-- Auth View -->
     <div id="auth-view" class="auth-container">
         <h2>Logga in på FALK</h2>
-        <form id="auth-form" onsubmit="handleAuth(event)">
+        <form id="auth-form">
             <div class="input-group">
                 <label for="email">Din e-postadress</label>
-                <input type="email" id="email" autocomplete="username" required placeholder="namn@exempel.se">
+                <input type="email" id="email" name="email" autocomplete="username" required placeholder="namn@exempel.se">
             </div>
             <div class="input-group" style="margin-top: 12px;">
                 <label for="password">Ditt lösenord</label>
-                <input type="password" id="password" autocomplete="current-password" required placeholder="••••••••">
+                <input type="password" id="password" name="password" autocomplete="current-password" required placeholder="••••••••">
             </div>
             <button type="submit" class="btn" style="width: 100%; margin-top: 20px;">Logga in</button>
         </form>
@@ -231,7 +232,7 @@
 
     <div id="input-view" class="chat-input-area hidden">
         <textarea id="chat-message" placeholder="Skriv ditt meddelande till FALK..."></textarea>
-        <button class="btn" onclick="sendMessage()">Skicka</button>
+        <button id="send-btn" class="btn">Skicka</button>
     </div>
 </div>
 
@@ -243,6 +244,10 @@
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     document.addEventListener("DOMContentLoaded", async () => {
+        document.getElementById("auth-form").addEventListener("submit", handleAuth);
+        document.getElementById("logout-btn").addEventListener("click", handleLogout);
+        document.getElementById("send-btn").addEventListener("click", sendMessage);
+
         const { data: { session } } = await supabaseClient.auth.getSession();
         if (session) {
             showChat(session);
