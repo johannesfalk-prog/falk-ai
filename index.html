@@ -25,7 +25,7 @@
 <body>
 
 <div class="container">
-  <h2>FALK <small style="font-size: 0.5em; color: var(--accent);">[AI Expert Version]</small></h2>
+  <h2>FALK <small style="font-size: 0.5em; color: var(--accent);">[v2 Live]</small></h2>
 
   <div id="auth-section" class="card">
     <h3 id="auth-title">Logga in</h3>
@@ -52,8 +52,8 @@
 </div>
 
 <script>
-  const SUPABASE_URL = 'https://drmwtxoseogldbrjifks.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRybXd0eG9zZW9nbGRicmpsZmtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MDk3MTYsImV4cCI6MjEwNzk4NTcxNn0.aP-Kl9p6b1-KyioD5nH1l7IZ6B3BVU-jx160pFk95tE'; 
+  const SUPABASE_URL = 'https://dmerwpgvepkjirugnfzy.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZXJ3cGd2ZXBramlydWduZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MjM3NjksImV4cCI6MjEwNzk5OTc2OX0.UNX_fozGEsKKMrQpn-8VP3g3r1boegX5jl5B8oW69Ww'; 
   const BACKEND_URL = 'https://falk-ai.onrender.com/chat';
 
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -85,7 +85,7 @@
     if (isSignUpMode) {
       const { data, error } = await supabaseClient.auth.signUp({ email, password });
       if (error) alert('Registreringsfel: ' + error.message);
-      else alert('Konto skapat!');
+      else alert('Konto skapat! Om e-postbekräftelse krävs, kolla din inkorg.');
     } else {
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
       if (error) alert('Inloggningsfel: ' + error.message);
@@ -139,7 +139,7 @@
 
     } catch (err) {
       if (err.name === 'AbortError') {
-        alert('Timeout: Renders server tog för lång tid på sig att starta.');
+        alert('Timeout: Render cold start timeout.');
       } else {
         alert('Fel: ' + err.message);
       }
@@ -156,12 +156,6 @@
     div.innerText = text;
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
-  }
-
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch(err => console.error('SW Error:', err));
-    });
   }
 </script>
 </body>
