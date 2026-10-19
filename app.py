@@ -1,5 +1,4 @@
 import os
-import jwt
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from supabase import create_client, Client
@@ -9,26 +8,11 @@ app = Flask(__name__)
 CORS(app)
 
 SUPABASE_URL = "https://dmerwpgvepkjirugnfzy.supabase.co"
-SUPABASE_JWT_SECRET = os.environ.get("SUPABASE_JWT_SECRET")
+SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
 groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
-
-def verify_jwt(token):
-    if not SUPABASE_JWT_SECRET:
-        raise Exception("SUPABASE_JWT_SECRET saknas i serverns miljövariabler.")
-    
-    # Inspektera token-headern dynamiskt för att se exakt algoritm
-    header = jwt.get_unverified_header(token)
-    token_alg = header.get('alg', 'HS256')
-    
-    # Om token är signerad med HS256, validera mot SUPABASE_JWT_SECRET
-    return jwt.decode(
-        token, 
-        SUPABASE_JWT_SECRET, 
-        algorithms=[token_alg], 
-        options={"verify_aud": False}
-    )
+supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -38,17 +22,14 @@ def chat():
 
     token = auth_header.split(' ')[1]
 
+    # Validera token direkt via Supabase Auth (oberoende av algoritm ES256/HS256)
     try:
-        decoded = verify_jwt(token)
-        user_id = decoded.get('sub')
+        user_response = supabase_admin.auth.get_user(token)
+        if not user_response or not user_response.user:
+            return jsonify({"error": "Obehörig", "details": "Ogiltig eller utgången token"}), 401
+        user_id = user_response.user.id
     except Exception as e:
-        # Returnera exakt vad som gick snett samt vilken algoritm tokenen använde
-        try:
-            unverified_header = jwt.get_unverified_header(token)
-            alg_info = f" (Token Alg: {unverified_header.get('alg')})"
-        except Exception:
-            alg_info = ""
-        return jsonify({"error": "Obehörig", "details": f"Ogiltig token: {str(e)}{alg_info}"}), 401
+        return jsonify({"error": "Obehörig", "details": f"Token-validering misslyckades: {str(e)}"}), 401
 
     data = request.get_json() or {}
     user_message = data.get('message', '').strip()
@@ -66,10 +47,10 @@ def chat():
         )
         ai_response = chat_completion.choices[0].message.content
 
-        # Skriv till Supabase med användarens token
+        # Skriv till Supabase med användarens kontext (RLS)
         supabase_user_client: Client = create_client(
             SUPABASE_URL, 
-            os.environ.get("SUPABASE_ANON_KEY", ""),
+            SUPABASE_ANON_KEY,
             options={"headers": {"Authorization": f"Bearer {token}"}}
         )
         
