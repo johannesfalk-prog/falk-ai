@@ -28,7 +28,7 @@ def chat():
 
     token = auth_header.split(' ')[1]
 
-    # Validera token via Supabase Auth
+    # 1. Validera token via Supabase Auth
     try:
         supabase_admin = get_supabase_client()
         user_response = supabase_admin.auth.get_user(token)
@@ -48,35 +48,40 @@ def chat():
         return jsonify({"error": "Serverfel", "details": "GROQ_API_KEY saknas i serverns miljövariabler"}), 500
 
     try:
-        groq_client = Groq(api_key=groq_api_key)
+        supabase_user_client = get_supabase_client(token=token)
 
-        # Hämta enbart tillgängliga TEXT/CHATT-modeller (filtrera bort Whisper)
-        selected_model = os.environ.get("GROQ_MODEL")
-        if not selected_model:
-            try:
-                models_list = groq_client.models.list()
-                valid_chat_models = [
-                    m.id for m in models_list.data 
-                    if "whisper" not in m.id.lower()
-                ]
-                if valid_chat_models:
-                    selected_model = valid_chat_models[0]
-                else:
-                    selected_model = "llama3-8b-8192"
-            except Exception:
-                selected_model = "llama3-8b-8192"
+        # 2. Hämta tidigare dagbokskontext (senaste 5 inläggen)
+        history_response = supabase_user_client.table("journal_entries")\
+            .select("user_message, ai_response")\
+            .eq("user_id", user_id)\
+            .order("created_at", desc=True)\
+            .limit(5)\
+            .execute()
+
+        messages = [
+            {"role": "system", "content": "Du är FALK, en kognitiv samtalspartner och dagboksmotor. Svara insiktsfullt, reflektivt och kortfattat på svenska. Använd tidigare kontext för att bygga en kontinuerlig förståelse för användaren."}
+        ]
+
+        # Bygg upp samtalshistorik i kronologisk ordning
+        if history_response.data:
+            for entry in reversed(history_response.data):
+                messages.append({"role": "user", "content": entry.get("user_message", "")})
+                messages.append({"role": "assistant", "content": entry.get("ai_response", "")})
+
+        # Lägg till det nya meddelandet
+        messages.append({"role": "user", "content": user_message})
+
+        # 3. Anropa Groq med låst/säkrad modell
+        groq_client = Groq(api_key=groq_api_key)
+        selected_model = os.environ.get("GROQ_MODEL", "llama3-8b-8192")
 
         chat_completion = groq_client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": "Du är FALK, en kognitiv samtalspartner och dagboksmotor. Svara insiktsfullt och kortfattat på svenska."},
-                {"role": "user", "content": user_message}
-            ],
+            messages=messages,
             model=selected_model,
         )
         ai_response = chat_completion.choices[0].message.content
 
-        # Skriv till Supabase med användarens token (RLS)
-        supabase_user_client = get_supabase_client(token=token)
+        # 4. Skriv nya inlägget till Supabase
         supabase_user_client.table("journal_entries").insert({
             "user_id": user_id,
             "user_message": user_message,
