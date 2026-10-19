@@ -1,4 +1,4 @@
-const CACHE_NAME = 'falk-v2';
+const CACHE_NAME = 'falk-v3';
 const ASSETS = [
   '/',
   '/index.html',

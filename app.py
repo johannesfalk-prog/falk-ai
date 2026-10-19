@@ -1,141 +1,115 @@
 import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from supabase import create_client, Client, ClientOptions
+from supabase import create_client, Client
 from groq import Groq
 
 app = Flask(__name__)
-# Explicit CORS-konfiguration för Bearer-tokens
-CORS(app, resources={r"/*": {"origins": "*", "allow_headers": ["Authorization", "Content-Type"]}})
+CORS(app)
 
-SUPABASE_URL = "https://dmerwpgvepkjirugnfzy.supabase.co"
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://dmerwpgvepkjirugnfzy.supabase.co")
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
-def get_supabase_client(token=None) -> Client:
-    anon_key = os.environ.get("SUPABASE_ANON_KEY")
-    if not anon_key:
-        raise RuntimeError("SUPABASE_ANON_KEY saknas i miljövariablerna på servern.")
+if not SUPABASE_SERVICE_ROLE_KEY or not GROQ_API_KEY:
+    print("VARNING: Miljövariabler för Supabase eller Groq saknas.")
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) if SUPABASE_SERVICE_ROLE_KEY else None
+groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
+
+SYSTEM_PROMPT = """Du är FALK – en kognitiv dagbokspartner och reflektionsspegel för personlig utveckling och mental klarhet.
+Din uppgift är att hjälpa användaren att utforska sina tankar, identifiera kognitiva mönster och erbjuda nya perspektiv.
+
+Riktlinjer för dina svar:
+1. Svara alltid på svenska.
+2. Var empatisk, icke-dömande och kognitivt utmanande på ett mjukt sätt.
+3. Håll dina svar koncisa (max 2-3 korta stycken eller en strukturerad punktlista).
+4. Avsluta ofta med en öppen, reflekterande fråga som hjälper användaren att gå djupare.
+5. Formatera ditt svar med ren Markdown (använd fetstil och punktlistor där det förtydligar)."""
+
+def get_authenticated_user_id(req):
+    auth_header = req.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return None, "Saknar Authorization Bearer header"
     
-    if token:
-        opts = ClientOptions(headers={"Authorization": f"Bearer {token}"})
-        return create_client(SUPABASE_URL, anon_key, options=opts)
-    
-    return create_client(SUPABASE_URL, anon_key)
+    token = auth_header.split(" ")[1]
+    try:
+        user_resp = supabase.auth.get_user(token)
+        if not user_resp or not user_resp.user:
+            return None, "Ogiltig eller utgången session"
+        return user_resp.user.id, None
+    except Exception as e:
+        return None, str(e)
 
-@app.route('/history', methods=['GET'])
+@app.route("/history", methods=["GET"])
 def get_history():
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        return jsonify({"error": "Obehörig", "details": "Saknar Bearer-token"}), 401
-
-    token = auth_header.split(' ')[1]
-    if not token or token == "undefined" or token == "null":
-        return jsonify({"error": "Obehörig", "details": "Ogiltigt token-format"}), 401
+    user_id, err = get_authenticated_user_id(request)
+    if err:
+        return jsonify({"error": err}), 401
 
     try:
-        supabase_admin = get_supabase_client()
-        user_response = supabase_admin.auth.get_user(token)
-        if not user_response or not user_response.user:
-            return jsonify({"error": "Obehörig", "details": "Ogiltig token"}), 401
-        
-        user_id = user_response.user.id
-
-        supabase_user_client = get_supabase_client(token=token)
-        history_response = supabase_user_client.table("journal_entries")\
-            .select("user_message, ai_response, created_at")\
-            .eq("user_id", user_id)\
-            .order("created_at", desc=False)\
-            .limit(20)\
+        resp = supabase.table("journal_entries") \
+            .select("id, user_message, ai_response, created_at") \
+            .eq("user_id", user_id) \
+            .order("created_at", desc=False) \
             .execute()
-
-        return jsonify({"history": history_response.data or []})
-
+        
+        return jsonify({"history": resp.data or []}), 200
     except Exception as e:
-        return jsonify({"error": "Serverfel", "details": str(e)}), 500
+        return jsonify({"error": "Kunde inte hämta historik", "details": str(e)}), 500
 
-@app.route('/chat', methods=['POST'])
+@app.route("/chat", methods=["POST"])
 def chat():
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        return jsonify({"error": "Obehörig", "details": "Saknar Bearer-token"}), 401
-
-    token = auth_header.split(' ')[1]
-    if not token or token == "undefined" or token == "null":
-        return jsonify({"error": "Obehörig", "details": "Ogiltigt token-format"}), 401
-
-    try:
-        supabase_admin = get_supabase_client()
-        user_response = supabase_admin.auth.get_user(token)
-        if not user_response or not user_response.user:
-            return jsonify({"error": "Obehörig", "details": "Ogiltig eller utgången token"}), 401
-        user_id = user_response.user.id
-    except Exception as e:
-        return jsonify({"error": "Obehörig", "details": f"Token-validering misslyckades: {str(e)}"}), 401
+    user_id, err = get_authenticated_user_id(request)
+    if err:
+        return jsonify({"error": err}), 401
 
     data = request.get_json() or {}
-    user_message = data.get('message', '').strip()
+    user_message = data.get("message", "").strip()
     if not user_message:
-        return jsonify({"error": "Bad Request", "details": "Meddelande saknas"}), 400
-
-    groq_api_key = os.environ.get("GROQ_API_KEY")
-    if not groq_api_key:
-        return jsonify({"error": "Serverfel", "details": "GROQ_API_KEY saknas i serverns miljövariabler"}), 500
+        return jsonify({"error": "Meddelandet får inte vara tomt"}), 400
 
     try:
-        supabase_user_client = get_supabase_client(token=token)
-
-        history_response = supabase_user_client.table("journal_entries")\
-            .select("user_message, ai_response")\
-            .eq("user_id", user_id)\
-            .order("created_at", desc=True)\
-            .limit(5)\
+        # Hämta de senaste 15 inläggen för ett utökat kognitivt kontextfönster
+        recent_resp = supabase.table("journal_entries") \
+            .select("user_message, ai_response") \
+            .eq("user_id", user_id) \
+            .order("created_at", desc=True) \
+            .limit(15) \
             .execute()
 
-        messages = [
-            {"role": "system", "content": "Du är FALK, en kognitiv samtalspartner och dagboksmotor. Svara insiktsfullt, reflektivt och kortfattat på svenska. Använd tidigare kontext för att bygga en kontinuerlig förståelse för användaren."}
-        ]
+        raw_history = recent_resp.data or []
+        raw_history.reverse()
 
-        if history_response.data:
-            for entry in reversed(history_response.data):
-                messages.append({"role": "user", "content": entry.get("user_message", "")})
-                messages.append({"role": "assistant", "content": entry.get("ai_response", "")})
+        messages_for_groq = [{"role": "system", "content": SYSTEM_PROMPT}]
+        for entry in raw_history:
+            if entry.get("user_message"):
+                messages_for_groq.append({"role": "user", "content": entry["user_message"]})
+            if entry.get("ai_response"):
+                messages_for_groq.append({"role": "assistant", "content": entry["ai_response"]})
 
-        messages.append({"role": "user", "content": user_message})
+        messages_for_groq.append({"role": "user", "content": user_message})
 
-        groq_client = Groq(api_key=groq_api_key)
-        env_model = os.environ.get("GROQ_MODEL")
-
-        try:
-            models_list = groq_client.models.list()
-            valid_chat_models = [
-                m.id for m in models_list.data 
-                if "whisper" not in m.id.lower() and "vision" not in m.id.lower()
-            ]
-            
-            if env_model and env_model in valid_chat_models:
-                selected_model = env_model
-            elif valid_chat_models:
-                selected_model = valid_chat_models[0]
-            else:
-                selected_model = "llama-3.1-8b-instant"
-        except Exception:
-            selected_model = env_model or "llama-3.1-8b-instant"
-
-        chat_completion = groq_client.chat.completions.create(
-            messages=messages,
-            model=selected_model,
+        groq_response = groq_client.chat.completions.create(
+            messages=messages_for_groq,
+            model="llama-3.3-70b-versatile",
+            temperature=0.7,
+            max_tokens=1024
         )
-        ai_response = chat_completion.choices[0].message.content
 
-        supabase_user_client.table("journal_entries").insert({
+        ai_response = groq_response.choices[0].message.content
+
+        supabase.table("journal_entries").insert({
             "user_id": user_id,
             "user_message": user_message,
             "ai_response": ai_response
         }).execute()
 
-        return jsonify({"response": ai_response})
+        return jsonify({"response": ai_response}), 200
 
     except Exception as e:
-        return jsonify({"error": "Serverfel", "details": str(e)}), 500
+        return jsonify({"error": "Ett fel uppstod vid bearbetning av meddelandet", "details": str(e)}), 500
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)

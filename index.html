@@ -6,6 +6,7 @@
     <title>FALK - Kognitiv Dagbok</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -53,7 +54,7 @@
     <div id="chat-section" class="hidden" style="display: flex; flex-direction: column; height: 100%;">
         <div class="header">
             <div>
-                <h1>FALK <span style="font-size: 0.8rem; color: #4ade80;">[Secure PWA]</span></h1>
+                <h1>FALK <span style="font-size: 0.8rem; color: #4ade80;">[Production Ready]</span></h1>
                 <div id="user-email" class="user-info"></div>
             </div>
             <button onclick="handleLogout()" style="background: #475569; color: white; padding: 8px 12px; font-size: 0.8rem;">Logga ut</button>
@@ -78,9 +79,13 @@
     let currentSession = null;
 
     async function checkSession() {
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        if (session) {
-            setupAuthenticatedUser(session);
+        try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                setupAuthenticatedUser(session);
+            }
+        } catch (err) {
+            console.error("Session check failed:", err);
         }
     }
 
@@ -204,12 +209,12 @@
                 appendMessage(data.response, 'ai');
                 status.innerText = "";
             } else {
-                alert(`Fel: ${data.details || data.error || 'Något gick fel'}`);
-                status.innerText = "Ett fel uppstod.";
+                status.innerText = `Fel: ${data.details || data.error || 'Något gick fel'}`;
+                input.value = text; // Återställ texten vid fel
             }
         } catch (err) {
-            alert("Nätverksfel eller serveruppkoppling misslyckades.");
-            status.innerText = "Kopplingsfel.";
+            status.innerText = "Nätverksfel. Ditt meddelande ligger kvar i inmatningsfältet.";
+            input.value = text; // Återställ texten så att användaren inte förlorar den
         } finally {
             input.disabled = false;
             btn.disabled = false;
@@ -219,7 +224,7 @@
 
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW Registration Failed:', err));
+            navigator.serviceWorker.register('/sw.js').catch(err => console.error('SW Error:', err));
         });
     }
 
