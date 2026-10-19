@@ -112,12 +112,19 @@
     async function loadHistory() {
         if (!currentSession) return;
         const status = document.getElementById('status-indicator');
-        status.innerText = "Hämtar dagbokshistorik...";
+        status.innerText = "Kopplar upp mot FALK-motorn (startar server)...";
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            status.innerText = "Servern vaknar från viloläge, vänta ett ögonblick...";
+        }, 4000);
 
         try {
             const res = await fetch(`${BACKEND_URL}/history`, {
-                headers: { 'Authorization': `Bearer ${currentSession.access_token}` }
+                headers: { 'Authorization': `Bearer ${currentSession.access_token}` },
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
             const data = await res.json();
 
             const chatBox = document.getElementById('chat-box');
@@ -134,7 +141,8 @@
             }
             chatBox.scrollTop = chatBox.scrollHeight;
         } catch (err) {
-            status.innerText = "Kunde inte ladda historik.";
+            clearTimeout(timeoutId);
+            status.innerText = "Kunde inte hämta historik (Serverfel eller timeout).";
         }
     }
 
