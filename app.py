@@ -1,7 +1,7 @@
 import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from supabase import create_client, Client
+from supabase import create_client, Client, ClientOptions
 from groq import Groq
 
 app = Flask(__name__)
@@ -14,8 +14,12 @@ def get_supabase_client(token=None) -> Client:
     if not anon_key:
         raise RuntimeError("SUPABASE_ANON_KEY saknas i miljövariablerna på servern.")
     
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
-    return create_client(SUPABASE_URL, anon_key, options={"headers": headers})
+    if token:
+        # Supabase SDK kräver ett ClientOptions-objekt, inte en dict
+        opts = ClientOptions(headers={"Authorization": f"Bearer {token}"})
+        return create_client(SUPABASE_URL, anon_key, options=opts)
+    
+    return create_client(SUPABASE_URL, anon_key)
 
 @app.route('/chat', methods=['POST'])
 def chat():
