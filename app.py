@@ -47,17 +47,27 @@ def chat():
     if not groq_api_key:
         return jsonify({"error": "Serverfel", "details": "GROQ_API_KEY saknas i serverns miljövariabler"}), 500
 
-    # Läs modell från env var eller använd aktiv standardmodell på Groq
-    groq_model = os.environ.get("GROQ_MODEL", "llama-3.1-8b-instant")
-
     try:
         groq_client = Groq(api_key=groq_api_key)
+
+        # Bestäm modell dynamiskt baserat på vad API-nyckeln faktiskt har tillgång till
+        selected_model = os.environ.get("GROQ_MODEL")
+        if not selected_model:
+            try:
+                models_list = groq_client.models.list()
+                if models_list and models_list.data:
+                    selected_model = models_list.data[0].id
+                else:
+                    selected_model = "llama3-8b-8192"
+            except Exception:
+                selected_model = "llama3-8b-8192"
+
         chat_completion = groq_client.chat.completions.create(
             messages=[
                 {"role": "system", "content": "Du är FALK, en kognitiv samtalspartner och dagboksmotor. Svara insiktsfullt och kortfattat på svenska."},
                 {"role": "user", "content": user_message}
             ],
-            model=groq_model,
+            model=selected_model,
         )
         ai_response = chat_completion.choices[0].message.content
 
