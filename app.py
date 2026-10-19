@@ -5,7 +5,8 @@ from supabase import create_client, Client, ClientOptions
 from groq import Groq
 
 app = Flask(__name__)
-CORS(app)
+# Explicit CORS-konfiguration för Bearer-tokens
+CORS(app, resources={r"/*": {"origins": "*", "allow_headers": ["Authorization", "Content-Type"]}})
 
 SUPABASE_URL = "https://dmerwpgvepkjirugnfzy.supabase.co"
 
@@ -27,6 +28,8 @@ def get_history():
         return jsonify({"error": "Obehörig", "details": "Saknar Bearer-token"}), 401
 
     token = auth_header.split(' ')[1]
+    if not token or token == "undefined" or token == "null":
+        return jsonify({"error": "Obehörig", "details": "Ogiltigt token-format"}), 401
 
     try:
         supabase_admin = get_supabase_client()
@@ -56,6 +59,8 @@ def chat():
         return jsonify({"error": "Obehörig", "details": "Saknar Bearer-token"}), 401
 
     token = auth_header.split(' ')[1]
+    if not token or token == "undefined" or token == "null":
+        return jsonify({"error": "Obehörig", "details": "Ogiltigt token-format"}), 401
 
     try:
         supabase_admin = get_supabase_client()
@@ -78,7 +83,6 @@ def chat():
     try:
         supabase_user_client = get_supabase_client(token=token)
 
-        # Hämta tidigare dagbokskontext (senaste 5 inläggen)
         history_response = supabase_user_client.table("journal_entries")\
             .select("user_message, ai_response")\
             .eq("user_id", user_id)\
@@ -100,7 +104,6 @@ def chat():
         groq_client = Groq(api_key=groq_api_key)
         env_model = os.environ.get("GROQ_MODEL")
 
-        # Hämtar aktiva modeller och validerar mot env_model
         try:
             models_list = groq_client.models.list()
             valid_chat_models = [
@@ -123,7 +126,6 @@ def chat():
         )
         ai_response = chat_completion.choices[0].message.content
 
-        # Skriv till Supabase
         supabase_user_client.table("journal_entries").insert({
             "user_id": user_id,
             "user_message": user_message,
