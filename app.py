@@ -29,7 +29,6 @@ def get_history():
     token = auth_header.split(' ')[1]
 
     try:
-        # Validera token
         supabase_admin = get_supabase_client()
         user_response = supabase_admin.auth.get_user(token)
         if not user_response or not user_response.user:
@@ -37,7 +36,6 @@ def get_history():
         
         user_id = user_response.user.id
 
-        # Hämta de 20 senaste inläggen sorterade kronologiskt (äldst först för chattvy)
         supabase_user_client = get_supabase_client(token=token)
         history_response = supabase_user_client.table("journal_entries")\
             .select("user_message, ai_response, created_at")\
@@ -100,15 +98,24 @@ def chat():
         messages.append({"role": "user", "content": user_message})
 
         groq_client = Groq(api_key=groq_api_key)
-        selected_model = os.environ.get("GROQ_MODEL")
+        env_model = os.environ.get("GROQ_MODEL")
 
-        if not selected_model:
-            try:
-                models_list = groq_client.models.list()
-                valid_chat_models = [m.id for m in models_list.data if "whisper" not in m.id.lower()]
-                selected_model = valid_chat_models[0] if valid_chat_models else "llama-3.3-70b-versatile"
-            except Exception:
-                selected_model = "llama-3.3-70b-versatile"
+        # Hämtar aktiva modeller och validerar mot env_model
+        try:
+            models_list = groq_client.models.list()
+            valid_chat_models = [
+                m.id for m in models_list.data 
+                if "whisper" not in m.id.lower() and "vision" not in m.id.lower()
+            ]
+            
+            if env_model and env_model in valid_chat_models:
+                selected_model = env_model
+            elif valid_chat_models:
+                selected_model = valid_chat_models[0]
+            else:
+                selected_model = "llama-3.1-8b-instant"
+        except Exception:
+            selected_model = env_model or "llama-3.1-8b-instant"
 
         chat_completion = groq_client.chat.completions.create(
             messages=messages,
