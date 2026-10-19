@@ -27,7 +27,6 @@
 <div class="container">
   <h2>FALK <small style="font-size: 0.5em; color: var(--accent);">[AI Expert Version]</small></h2>
 
-  <!-- AUTH SECTION -->
   <div id="auth-section" class="card">
     <h3 id="auth-title">Logga in</h3>
     <input type="email" id="email" placeholder="Din e-postadress">
@@ -38,7 +37,6 @@
     </p>
   </div>
 
-  <!-- CHAT SECTION -->
   <div id="chat-section" class="card hidden">
     <div style="display:flex; justify-content:space-between; align-items:center;">
       <span id="user-display" class="status"></span>
@@ -61,7 +59,6 @@
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   let isSignUpMode = false;
 
-  // 1. Lyssna på Auth-tillstånd
   supabaseClient.auth.onAuthStateChange((event, session) => {
     if (session) {
       document.getElementById('auth-section').classList.add('hidden');
@@ -88,7 +85,7 @@
     if (isSignUpMode) {
       const { data, error } = await supabaseClient.auth.signUp({ email, password });
       if (error) alert('Registreringsfel: ' + error.message);
-      else alert('Konto skapat! Om e-postbekräftelse krävs, kolla din inkorg.');
+      else alert('Konto skapat!');
     } else {
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
       if (error) alert('Inloggningsfel: ' + error.message);
@@ -99,7 +96,6 @@
     await supabaseClient.auth.signOut();
   }
 
-  // 2. Skicka chattmeddelande med Bearer Token & Timeout
   async function sendChat() {
     const input = document.getElementById('chat-input');
     const btnSend = document.getElementById('btn-send');
@@ -108,7 +104,6 @@
 
     if (!messageText) return;
 
-    // Hämta färsk session
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session) return alert('Sessionen har löpt ut. Logga in igen.');
 
@@ -163,7 +158,6 @@
     box.scrollTop = box.scrollHeight;
   }
 
-  // Register Service Worker
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js').catch(err => console.error('SW Error:', err));
