@@ -28,12 +28,10 @@ Riktlinjer för dina svar:
 4. Avsluta ofta med en öppen, reflekterande fråga som hjälper användaren att gå djupare.
 5. Formatera ditt svar med ren Markdown (använd fetstil och punktlistor där det förtydligar)."""
 
-# Garanterat aktiva produktionsmodeller på Groq
+# Exklusivt garanterade, aktiva produktionsmodeller hos Groq
 CANDIDATE_MODELS = [
     "llama-3.3-70b-versatile",
-    "llama-3.1-8b-instant",
-    "llama-3.2-1b-preview",
-    "deepseek-r1-distill-llama-70b"
+    "llama-3.1-8b-instant"
 ]
 
 def get_authenticated_user_id(req):
@@ -126,7 +124,7 @@ def chat():
 
         if not ai_response:
             return jsonify({
-                "error": "AI-motorn kunde inte tillhandahålla ett svar just nu. Försök igen om ett ögonblick.",
+                "error": "AI-motorn kunde inte tillhandahålla ett svar just nu. Kontrollera API-nyckelns behörighet.",
                 "details": f"Senaste felutskrift: {last_exception_details}"
             }), 500
 
