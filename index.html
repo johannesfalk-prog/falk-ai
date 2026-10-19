@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>FALK – Kognitiv Samtalsmentor</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+  <meta name="theme-color" content="#2563eb">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg-main: #f8fafc;
+      --bg-card: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: var(--bg-main); color: var(--text-main); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    header { background-color: var(--bg-card); border-bottom: 1px solid var(--border-color); padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; z-index: 10; }
+    .nav-btn { background-color: #ffffff; border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; color: var(--text-main); transition: all 0.2s ease; }
+    .nav-btn:hover { background-color: #f1f5f9; }
+    .nav-btn.primary-btn { color: var(--primary); border-color: #bfdbfe; background-color: #eff6ff; }
+    .logo { font-size: 1.25rem; font-weight: 700; color: var(--text-main); letter-spacing: -0.5px; }
+
+    main { flex: 1; overflow-y: auto; padding: 20px; max-width: 850px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 16px; }
+
+    .chat-bubble { background-color: #f1f5f9; border-radius: 16px; padding: 16px 20px; line-height: 1.5; font-size: 0.95rem; max-width: 90%; animation: fadeIn 0.3s ease; position: relative; }
+    .chat-bubble.assistant { align-self: flex-start; background-color: #f1f5f9; color: var(--text-main); border-bottom-left-radius: 4px; }
+    .chat-bubble.assistant.typing-state { color: var(--text-muted); font-style: italic; display: flex; align-items: center; gap: 8px; }
+    .chat-bubble.user { align-self: flex-end; background-color: var(--primary); color: #ffffff; border-bottom-right-radius: 4px; }
+
+    .bubble-actions { display: flex; align-items: center; gap: 4px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #e2e8f0; flex-wrap: wrap; }
+    .bubble-action-btn { background: transparent; border: 1px solid transparent; color: var(--text-muted); border-radius: 8px; padding: 4px 6px; font-size: 0.8rem; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.15s ease; height: 30px; }
+    .bubble-action-btn:hover { background-color: #e2e8f0; color: var(--text-main); }
+    .bubble-action-btn svg { width: 16px; height: 16px; stroke-width: 2; }
+
+    .key-proposal-card { margin-top: 12px; padding: 12px 14px; background-color: #ffffff; border: 1px solid #bfdbfe; border-radius: 12px; font-size: 0.85rem; color: #0369a1; display: flex; flex-direction: column; gap: 8px; }
+    .key-proposal-title { font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    .key-proposal-actions { display: flex; gap: 8px; margin-top: 4px; }
+    .key-proposal-btn { padding: 6px 12px; border-radius: 16px; font-size: 0.8rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s ease; }
+    .key-proposal-btn.accept { background-color: var(--primary); color: #ffffff; }
+
+    .error-banner { background-color: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 14px 18px; border-radius: 12px; font-size: 0.9rem; margin: 8px 0; }
+
+    .onboarding-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 8px; }
+    @media (max-width: 768px) { .onboarding-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); } }
+
+    .prompt-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px 16px; cursor: pointer; text-align: left; transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease; }
+    .prompt-card:hover { border-color: #93c5fd; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .prompt-card h4 { font-size: 0.95rem; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .prompt-card p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.3; }
+
+    .keys-container { border: 2px dashed #bfdbfe; background-color: #f0f9ff; border-radius: 12px; padding: 14px 16px; margin-top: 8px; }
+    .keys-title { font-size: 0.8rem; font-weight: 700; color: #0369a1; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .key-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+    .key-btn { background-color: #ffffff; border: 1px solid #7dd3fc; color: #0284c7; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s ease; }
+
+    footer { background-color: var(--bg-card); border-top: 1px solid var(--border-color); padding: 12px 20px; padding-bottom: max(12px, env(safe-area-inset-bottom)); position: relative; }
+    .input-wrapper { max-width: 850px; margin: 0 auto; display: flex; align-items: center; gap: 8px; }
+    .chat-input { flex: 1; min-width: 0; border: 1px solid var(--border-color); border-radius: 24px; padding: 12px 18px; font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
+    .chat-input:focus { border-color: var(--primary); }
+    .action-btn { background-color: var(--primary); color: #ffffff; border: none; padding: 12px 20px; border-radius: 24px; font-weight: 600; cursor: pointer; transition: background-color 0.2s, opacity 0.2s; flex-shrink: 0; }
+    .action-btn:disabled { background-color: #94a3b8; cursor: not-allowed; opacity: 0.7; }
+    
+    .icon-btn { background: none; border: 1px solid var(--border-color); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-main); flex-shrink: 0; transition: all 0.15s ease; }
+    .icon-btn:hover { background-color: #f1f5f9; border-color: #cbd5e1; }
+
+    .click-outside-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: transparent; display: none; z-index: 40; }
+    .click-outside-overlay.active { display: block; }
+
+    .focus-popup { position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; background: #ffffff; border: 1px solid var(--border-color); border-radius: 20px; padding: 18px 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12); z-index: 50; display: none; animation: popUp 0.18s cubic-bezier(0.16, 1, 0.3, 1); }
+
+    @keyframes popUp { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+    .focus-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-bottom: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+    .focus-header-actions { display: flex; align-items: center; gap: 12px; }
+    .reset-btn { background: none; border: none; color: var(--primary); font-size: 0.8rem; font-weight: 600; cursor: pointer; text-decoration: underline; padding: 0; }
+
+    .slider-group { margin-bottom: 12px; }
+    .slider-label { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
+    .focus-slider { width: 100%; accent-color: var(--primary); cursor: pointer; }
+
+    .drawer-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.3); display: none; z-index: 100; }
+    .drawer-overlay.active { display: flex; }
+    .drawer-overlay.right-drawer { justify-content: flex-end; }
+    .drawer-overlay.left-drawer { justify-content: flex-start; }
+
+    .drawer { background-color: #ffffff; width: 100%; max-width: 420px; height: 100%; padding: 24px; overflow-y: auto; box-shadow: 0 0 20px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 16px; position: relative; }
+    .right-drawer .drawer { animation: slideLeft 0.25s ease-out; }
+    .left-drawer .drawer { animation: slideRight 0.25s ease-out; }
+
+    .journal-textarea { width: 100%; height: 90px; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; font-size: 0.9rem; line-height: 1.4; outline: none; resize: none; }
+    .journal-textarea:focus { border-color: var(--primary); }
+
+    .saved-entry-card { background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; cursor: pointer; transition: all 0.15s ease; display: flex; flex-direction: column; gap: 8px; position: relative; }
+    .saved-entry-card:hover { border-color: #93c5fd; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .saved-entry-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .saved-entry-left { display: flex; align-items: center; gap: 8px; }
+    .saved-entry-date { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
+    .saved-entry-preview { font-size: 0.85rem; color: var(--text-main); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }
+
+    .saved-entry-bottom-bar { display: flex; justify-content: space-between; align-items: center; padding-top: 6px; border-top: 1px stroke #f1f5f9; margin-top: 2px; }
+
+    .batch-bar { display: flex; justify-content: space-between; align-items: center; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 8px 12px; font-size: 0.8rem; font-weight: 600; color: var(--primary); }
+
+    .inline-reminder-box { display: flex; align-items: center; gap: 4px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 2px 6px; font-size: 0.72rem; color: var(--text-muted); }
+    .inline-reminder-box input[type="time"] { border: none; background: transparent; font-size: 0.72rem; outline: none; color: var(--text-main); font-weight: 600; }
+
+    .toggle-share-wrapper { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
+    .switch { position: relative; display: inline-block; width: 34px; height: 18px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider-toggle { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .2s; border-radius: 20px; }
+    .slider-toggle:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; transition: .2s; border-radius: 50%; }
+    input:checked + .slider-toggle { background-color: var(--primary); }
+    input:checked + .slider-toggle:before { transform: translateX(16px); }
+
+    .trash-btn { background: none; border: none; color: #94a3b8; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; border-radius: 6px; transition: all 0.15s ease; }
+    .trash-btn:hover { color: #dc2626; background-color: #fef2f2; }
+    .trash-btn svg { width: 15px; height: 15px; stroke-width: 2; }
+
+    .undo-toast { position: sticky; bottom: 10px; left: 0; right: 0; background: #0f172a; color: #ffffff; padding: 10px 16px; border-radius: 12px; font-size: 0.85rem; display: none; align-items: center; justify-content: space-between; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 150; animation: popUp 0.18s ease-out; }
+    .undo-toast.active { display: flex; }
+    .undo-toast-btn { background: #2563eb; color: #ffffff; border: none; padding: 4px 12px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; cursor: pointer; transition: background 0.15s; }
+
+    .day-picker { display: flex; gap: 6px; margin-top: 6px; }
+    .day-btn { flex: 1; height: 30px; border: 1px solid var(--border-color); background: #ffffff; border-radius: 8px; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.15s ease; }
+    .day-btn.selected { background-color: #eff6ff; color: var(--primary); border-color: #93c5fd; }
+
+    /* AUTH MODAL STYLES */
+    .auth-modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(6px); display: flex; justify-content: center; align-items: center; z-index: 300; padding: 16px; }
+    .auth-card { background: #ffffff; width: 100%; max-width: 420px; border-radius: 20px; padding: 28px; box-shadow: 0 25px 50px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 16px; animation: popUp 0.2s ease-out; }
+    .auth-title { font-size: 1.25rem; font-weight: 800; color: var(--text-main); text-align: center; }
+    .auth-subtitle { font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-top: -8px; line-height: 1.4; }
+    .auth-input { width: 100%; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 14px; font-size: 0.95rem; outline: none; }
+    .auth-input:focus { border-color: var(--primary); }
+    .auth-toggle-text { font-size: 0.8rem; color: var(--text-muted); text-align: center; cursor: pointer; text-decoration: underline; margin-top: 8px; }
+
+    .info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 12px 14px; font-size: 0.85rem; color: #1e40af; line-height: 1.4; display: none; }
+
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 200; padding: 16px; }
+    .modal-overlay.active { display: flex; }
+    .modal-card { background: #ffffff; width: 100%; max-width: 520px; border-radius: 20px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 16px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+    .modal-title { font-size: 1rem; font-weight: 700; color: var(--text-main); }
+    .modal-section-label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .modal-textarea { width: 100%; min-height: 90px; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; font-size: 0.95rem; line-height: 1.5; outline: none; resize: vertical; }
+    .modal-context-box { background: #f1f5f9; border-left: 3px solid var(--primary); border-radius: 6px; padding: 10px 12px; font-size: 0.85rem; color: var(--text-main); line-height: 1.4; white-space: pre-wrap; max-height: 140px; overflow-y: auto; }
+    .modal-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); }
+
+    .schedule-box { background: #f8fafc; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+
+    @keyframes slideLeft { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    @keyframes slideRight { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+
+    .drawer-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+    .close-btn { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center; }
+    .section-title { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .badge-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .badge { background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 16px; font-size: 0.85rem; font-weight: 500; display: inline-block; }
+
+    .progress-bar { width: 100%; height: 10px; background-color: #e2e8f0; border-radius: 5px; overflow: hidden; margin: 8px 0; }
+    .progress-fill { height: 100%; background-color: #10b981; width: 0%; transition: width 0.3s ease; }
+    .disclaimer { font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: auto; line-height: 1.4; padding-top: 16px; border-top: 1px solid var(--border-color); }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+
+  <!-- AUTH MODAL -->
+  <div class="auth-modal-overlay" id="auth-modal" style="display: none;">
+    <div class="auth-card">
+      <div class="auth-title">Välkommen till FALK</div>
+      <div class="auth-subtitle" id="auth-subtitle">Logga in för att komma åt dina insikter och din dagbok</div>
+      
+      <div class="info-box" id="auth-info-box"></div>
+
+      <div id="auth-form-fields" style="display: flex; flex-direction: column; gap: 12px;">
+        <input type="email" id="auth-email" class="auth-input" placeholder="Din e-postadress">
+        <input type="password" id="auth-password" class="auth-input" placeholder="Ditt lösenord">
+        <button class="action-btn" id="auth-submit-btn" onclick="handleAuthSubmit()">Logga in</button>
+      </div>
+
+      <div class="auth-toggle-text" id="auth-toggle-btn" onclick="toggleAuthMode()">Inget konto ännu? Skapa konto här</div>
+      <div id="auth-error-msg" style="color: #dc2626; font-size: 0.8rem; text-align: center; display: none;"></div>
+    </div>
+  </div>
+
+  <header>
+    <button class="nav-btn" onclick="toggleJournalDrawer(true)">📓 Dagbok</button>
+    <div class="logo">FALK</div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <button class="nav-btn primary-btn" onclick="resetChat()">+ Ny</button>
+      <button class="nav-btn" onclick="toggleDrawer(true)">🧠 Profil</button>
+      <button class="nav-btn" id="logout-btn" style="color: #dc2626; border-color: #fecaca; display: none;" onclick="handleLogout()" title="Logga ut">🚪</button>
+    </div>
+  </header>
+
+  <main id="chat-container">
+    <div class="chat-bubble assistant">
+      Jag är FALK – Min uppgift är att hjälpa dig på din väg!<br><br>Vad vill du utforska idag?
+    </div>
+
+    <div class="onboarding-grid" id="prompt-grid">
+      <div class="prompt-card" onclick="sendPrompt('Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det.')">
+        <h4>✨ Mening & livsriktning</h4>
+        <p>"Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det."</p>
+      </div>
+      <div class="prompt-card" onclick="sendPrompt('Hjälp mig sortera tankarna och hitta klarhet.')">
+        <h4>🧠 När tankarna tar över</h4>
+        <p>Hjälp mig sortera tankarna och hitta klarhet.</p>
+      </div>
+      <div class="prompt-card" onclick="sendPrompt('Hjälp mig hantera utmaningar och hitta nästa steg.')">
+        <h4>💼 Jobb, ansvar & ledarskap</h4>
+        <p>Hjälp mig hantera utmaningar och hitta nästa steg.</p>
+      </div>
+      <div class="prompt-card" onclick="sendPrompt('Jag känner mig stressad eller orolig och behöver landa.')">
+        <h4>🌱 Hitta lugnet igen</h4>
+        <p>Jag känner mig stressad eller orolig och behöver landa.</p>
+      </div>
+      <div class="prompt-card" onclick="sendPrompt('Hjälp mig komma vidare och få saker att hända.')">
+        <h4>🎯 Från mål till handling</h4>
+        <p>Hjälp mig komma vidare och få saker att hända.</p>
+      </div>
+      <div class="prompt-card" onclick="sendPrompt('Hjälp mig förstå en situation och kommunicera bättre.')">
+        <h4>💬 Relationer & svåra samtal</h4>
+        <p>Hjälp mig förstå en situation och kommunicera bättre.</p>
+      </div>
+      <div class="prompt-card" onclick="sendPrompt('Hjälp mig hitta hållbara vanor för sömn, energi och fokus.')">
+        <h4>⚡ Mer energi & balans</h4>
+        <p>Hjälp mig hitta hållbara vanor för sömn, energi och fokus.</p>
+      </div>
+      <div class="prompt-card" onclick="sendPrompt('Hjälp mig upptäcka mina behov, drivkrafter och mönster.')">
+        <h4>🔍 Förstå mig själv bättre</h4>
+        <p>Hjälp mig upptäcka mina behov, drivkrafter och mönster.</p>
+      </div>
+      <div class="prompt-card" onclick="sendPrompt('Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet.')">
+        <h4>🧩 Utmana mina tankar</h4>
+        <p>Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet.</p>
+      </div>
+    </div>
+
+    <div class="keys-container" id="keys-wrapper" style="display: none;">
+      <div class="keys-title">🗝️ DINA TIDIGARE FUNNA NYCKLAR</div>
+      <div class="key-buttons" id="keys-list"></div>
+    </div>
+  </main>
+
+  <footer>
+    <div id="focus-overlay" class="click-outside-overlay" onclick="toggleFocusMenu(false)"></div>
+
+    <div id="focus-menu" class="focus-popup">
+      <div class="focus-header">
+        <span>Fokus</span>
+        <div class="focus-header-actions">
+          <button class="reset-btn" onclick="resetFocusSliders()">Återställ</button>
+          <button class="close-btn" onclick="toggleFocusMenu(false)">&times;</button>
+        </div>
+      </div>
+      <div class="slider-group">
+        <div class="slider-label"><span>Självförtroende</span><span id="val-sjalvfortroende">50%</span></div>
+        <input type="range" min="0" max="100" value="50" class="focus-slider" id="slider-sjalvfortroende" oninput="updateFocusWeight('sjalvfortroende', this.value)">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label"><span>Stresshantering</span><span id="val-stresshantering">50%</span></div>
+        <input type="range" min="0" max="100" value="50" class="focus-slider" id="slider-stresshantering" oninput="updateFocusWeight('stresshantering', this.value)">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label"><span>Handlingskraft</span><span id="val-handlingskraft">50%</span></div>
+        <input type="range" min="0" max="100" value="50" class="focus-slider" id="slider-handlingskraft" oninput="updateFocusWeight('handlingskraft', this.value)">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label"><span>Gränssättning</span><span id="val-granssattning">50%</span></div>
+        <input type="range" min="0" max="100" value="50" class="focus-slider" id="slider-granssattning" oninput="updateFocusWeight('granssattning', this.value)">
+      </div>
+    </div>
+
+    <div class="input-wrapper">
+      <input type="text" id="user-input" class="chat-input" placeholder="Skriv eller tala..." onkeypress="handleKeyPress(event)">
+      
+      <button class="icon-btn" id="mic-btn" onclick="toggleVoiceInput()" title="Röstinmatning">🎙️</button>
+
+      <button class="icon-btn" id="focus-btn" onclick="toggleFocusMenu()" title="Fokus">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="6" x2="20" y2="6"></line>
+          <circle cx="9" cy="6" r="2.5" fill="currentColor"></circle>
+          <line x1="4" y1="12" x2="20" y2="12"></line>
+          <circle cx="16" cy="12" r="2.5" fill="currentColor"></circle>
+          <line x1="4" y1="18" x2="20" y2="18"></line>
+          <circle cx="11" cy="18" r="2.5" fill="currentColor"></circle>
+        </svg>
+      </button>
+
+      <button class="action-btn" id="send-btn" onclick="sendMessage()">Skicka</button>
+    </div>
+  </footer>
+
+  <!-- DAGBOKS-PANEL -->
+  <div class="drawer-overlay left-drawer" id="journal-drawer-overlay" onclick="toggleJournalDrawer(false)">
+    <div class="drawer" onclick="event.stopPropagation()">
+      <div class="drawer-header">
+        <h3>📓 Personlig Dagbok</h3>
+        <button class="close-btn" onclick="toggleJournalDrawer(false)">&times;</button>
+      </div>
+
+      <div>
+        <div class="section-title">NY DAGBOKSANTECKNING</div>
+        <textarea id="journal-input" class="journal-textarea" placeholder="Vad rör sig i dina tankar idag?"></textarea>
+
+        <div class="schedule-box" style="margin-top: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">PÅMINNELSE & DELNING</span>
+            <div class="toggle-share-wrapper">
+              <span>Dela med FALK</span>
+              <label class="switch">
+                <input type="checkbox" id="new-note-share">
+                <span class="slider-toggle"></span>
+              </label>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+            <input type="time" id="new-note-time" class="chat-input" style="width: 110px; font-size: 0.8rem; padding: 4px 8px;" value="08:00">
+            <select id="new-note-duration" class="chat-input" style="flex:1; font-size: 0.8rem; padding: 4px 8px;">
+              <option value="indefinite">Tills vidare</option>
+              <option value="1_week">1 vecka</option>
+              <option value="2_weeks">2 veckor</option>
+              <option value="4_weeks">4 veckor</option>
+              <option value="8_weeks">8 veckor</option>
+            </select>
+          </div>
+
+          <div>
+            <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; margin-top: 4px;">VÄLJ DAGAR:</div>
+            <div class="day-picker">
+              <button class="day-btn new-note-day" data-day="Mån" onclick="toggleDayBtn(this)">Mån</button>
+              <button class="day-btn new-note-day" data-day="Tis" onclick="toggleDayBtn(this)">Tis</button>
+              <button class="day-btn new-note-day" data-day="Ons" onclick="toggleDayBtn(this)">Ons</button>
+              <button class="day-btn new-note-day" data-day="Tor" onclick="toggleDayBtn(this)">Tor</button>
+              <button class="day-btn new-note-day" data-day="Fre" onclick="toggleDayBtn(this)">Fre</button>
+              <button class="day-btn new-note-day" data-day="Lör" onclick="toggleDayBtn(this)">Lör</button>
+              <button class="day-btn new-note-day" data-day="Sön" onclick="toggleDayBtn(this)">Sön</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 4px;">
+        <button class="action-btn" style="flex: 1;" onclick="saveJournal()">Spara anteckning</button>
+        <button class="nav-btn" style="color: #dc2626; border-color: #fecaca;" onclick="clearJournalInput()">Rensa</button>
+      </div>
+
+      <div id="batch-bar-container" style="display: none;">
+        <div class="batch-bar">
+          <span id="batch-count-label">0 markerade</span>
+          <div style="display: flex; gap: 8px;">
+            <button class="nav-btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="selectAllNotes()">Markera alla</button>
+            <button class="nav-btn" style="padding: 4px 10px; font-size: 0.75rem; color: #dc2626; border-color: #fecaca;" onclick="deleteSelectedNotes()">🗑️ Radera</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title" style="margin-top: 6px;">SPARADE INSIKTER & ANTECKNINGAR</div>
+        <div id="saved-entries-list" style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;"></div>
+      </div>
+
+      <div class="undo-toast" id="undo-toast">
+        <span id="undo-toast-label">Anteckning raderad.</span>
+        <button class="undo-toast-btn" onclick="undoDelete()">Ångra</button>
+      </div>
+
+      <div class="disclaimer">
+        Friskrivning: FALK kan inte ställa medicinska eller psykiatriska diagnoser. FALK är enbart en kognitiv vägledare för självreflektion och ersätter inte professionell hälso- och sjukvård.
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTRERAD MODAL -->
+  <div class="modal-overlay" id="note-modal-overlay" onclick="closeNoteModal()">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-note-date">Anteckning</div>
+        <button class="close-btn" onclick="closeNoteModal()">&times;</button>
+      </div>
+
+      <div>
+        <div class="modal-section-label">ANTECKNING / SAMMANFATTAD INSIKT</div>
+        <textarea id="modal-note-text" class="modal-textarea" placeholder="Skriv eller redigera din sammanfattade insikt..."></textarea>
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-color);">
+        <div>
+          <div style="font-size: 0.85rem; font-weight: 600;">Dela med FALK</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Låt FALK läsa denna anteckning vid samtalsreflektion</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="modal-share-toggle">
+          <span class="slider-toggle"></span>
+        </label>
+      </div>
+
+      <div class="schedule-box">
+        <div class="modal-section-label" style="margin-bottom:0;">SCHEMALAGD PÅMINNELSE</div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <input type="time" id="modal-reminder-time" class="chat-input" style="width: 130px; font-size: 0.85rem; padding: 6px 10px;" value="08:00">
+          <select id="modal-reminder-duration" class="chat-input" style="flex:1; font-size: 0.85rem; padding: 6px 10px;">
+            <option value="indefinite">Tills vidare (tills jag stänger av)</option>
+            <option value="1_week">I 1 vecka</option>
+            <option value="2_weeks">I 2 veckor</option>
+            <option value="4_weeks">I 4 veckor</option>
+            <option value="8_weeks">I 8 veckor</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-top: 4px;">VÄLJ DAGAR:</div>
+          <div class="day-picker">
+            <button class="day-btn modal-day" data-day="Mån" onclick="toggleDayBtn(this)">Mån</button>
+            <button class="day-btn modal-day" data-day="Tis" onclick="toggleDayBtn(this)">Tis</button>
+            <button class="day-btn modal-day" data-day="Ons" onclick="toggleDayBtn(this)">Ons</button>
+            <button class="day-btn modal-day" data-day="Tor" onclick="toggleDayBtn(this)">Tor</button>
+            <button class="day-btn modal-day" data-day="Fre" onclick="toggleDayBtn(this)">Fre</button>
+            <button class="day-btn modal-day" data-day="Lör" onclick="toggleDayBtn(this)">Lör</button>
+            <button class="day-btn modal-day" data-day="Sön" onclick="toggleDayBtn(this)">Sön</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="modal-section-label">KOPPLADE MEDDELANDEN / KONTEXT</div>
+        <div class="modal-context-box" id="modal-linked-context">Ingen chattkontext kopplad vid skapandet.</div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="nav-btn" style="color: #dc2626; border-color: #fecaca;" onclick="deleteCurrentModalNote()">Radera anteckning</button>
+        <button class="action-btn" onclick="saveCurrentModalNote()">Spara ändringar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFIL-PANEL -->
+  <div class="drawer-overlay right-drawer" id="drawer-overlay" onclick="toggleDrawer(false)">
+    <div class="drawer" onclick="event.stopPropagation()">
+      <div class="drawer-header">
+        <h3>🧠 Kognitiv Profil</h3>
+        <button class="close-btn" onclick="toggleDrawer(false)">&times;</button>
+      </div>
+
+      <div>
+        <div class="section-title">📈 KOGNITIV UTVECKLINGSKURVA</div>
+        <div style="display: flex; justify-content: space-between; font-weight: 600;">
+          <span>Insiktsnivå</span>
+          <span id="insight-level">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="insight-progress"></div>
+        </div>
+        <div style="font-size: 0.85rem; color: var(--text-muted);" id="insight-label">Påbörjad självreflektion</div>
+      </div>
+
+      <div>
+        <div class="section-title">KÄRNVÄRDERINGAR</div>
+        <div class="badge-group" id="profile-varderingar"></div>
+      </div>
+
+      <div>
+        <div class="section-title">IDENTIFIERADE MÖNSTER</div>
+        <ul id="profile-monster" style="padding-left: 18px; font-size: 0.9rem; line-height: 1.6;"></ul>
+      </div>
+
+      <div>
+        <div class="section-title">AKTUELLT FOKUS</div>
+        <p id="profile-fokus" style="font-size: 0.95rem; font-weight: 500;"></p>
+      </div>
+
+      <div style="text-align: center;">
+        <button style="background: none; border: none; color: #dc2626; font-size: 0.85rem; cursor: pointer; text-decoration: underline;" onclick="clearProfile()">Rensa kognitivt minne</button>
+      </div>
+
+      <div class="disclaimer">
+        Friskrivning: FALK kan inte ställa medicinska eller psykiatriska diagnoser. FALK är enbart en kognitiv vägledare för självreflektion och ersätter inte professionell hälso- och sjukvård.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'https://falk-ai.onrender.com/chat';
+    
+    const SUPABASE_URL = 'https://drmwtxoseogldbrjifks.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRybXd0eG9zZW9nbGRicmpsZmtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MDk3MTYsImV4cCI6MjEwNzk4NTcxNn0.aP-Kl9p6b1-KyioD5nH1l7IZ6B3BVU-jx160pFk95tE';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const cleanEmptyProfile = {
+      schema_version: "1.0",
+      varderingar: [],
+      identifierade_monster: [],
+      aktuellt_fokus: "Odefinierat",
+      senaste_insikt: "Ingen ännu",
+      nycklar: [],
+      fokus_weights: { sjalvfortroende: 50, stresshantering: 50, handlingskraft: 50, granssattning: 50 }
+    };
+
+    let currentUser = null;
+    let isSignUpMode = false;
+    let userProfile = cleanEmptyProfile;
+    let savedEntries = [];
+    let selectedNoteIds = [];
+    let lastDeletedNotes = [];
+    let undoTimeout = null;
+    let chatHistory = [];
+    let recognition = null;
+    let isListening = false;
+    let currentEditingNoteId = null;
+
+    const SVG_SPEAKER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
+    const SVG_JOURNAL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`;
+    const SVG_TRASH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+
+    async function initAuth() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      
+      if (session && session.user) {
+        currentUser = session.user;
+        document.getElementById('auth-modal').style.display = 'none';
+        document.getElementById('logout-btn').style.display = 'inline-flex';
+        await loadUserData();
+      } else {
+        document.getElementById('auth-modal').style.display = 'flex';
+        document.getElementById('logout-btn').style.display = 'none';
+      }
+
+      supabaseClient.auth.onAuthStateChange(async (event, session) => {
+        if (session && session.user) {
+          currentUser = session.user;
+          document.getElementById('auth-modal').style.display = 'none';
+          document.getElementById('logout-btn').style.display = 'inline-flex';
+          await loadUserData();
+        } else {
+          currentUser = null;
+          document.getElementById('auth-modal').style.display = 'flex';
+          document.getElementById('logout-btn').style.display = 'none';
+        }
+      });
+    }
+
+    function toggleAuthMode() {
+      isSignUpMode = !isSignUpMode;
+      const title = document.querySelector('.auth-title');
+      const btn = document.getElementById('auth-submit-btn');
+      const toggleBtn = document.getElementById('auth-toggle-btn');
+      const infoBox = document.getElementById('auth-info-box');
+
+      infoBox.style.display = 'none';
+
+      if (isSignUpMode) {
+        title.innerText = "Skapa konto på FALK";
+        btn.innerText = "Skapa konto";
+        toggleBtn.innerText = "Har du redan ett konto? Logga in här";
+      } else {
+        title.innerText = "Välkommen till FALK";
+        btn.innerText = "Logga in";
+        toggleBtn.innerText = "Inget konto ännu? Skapa konto här";
+      }
+    }
+
+    async function handleAuthSubmit() {
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value.trim();
+      const errEl = document.getElementById('auth-error-msg');
+      const infoBox = document.getElementById('auth-info-box');
+
+      errEl.style.display = 'none';
+      infoBox.style.display = 'none';
+
+      if (!email || !password) {
+        errEl.innerText = "Vänligen fyll i både e-post och lösenord.";
+        errEl.style.display = 'block';
+        return;
+      }
+
+      let result;
+      if (isSignUpMode) {
+        result = await supabaseClient.auth.signUp({
+          email: email,
+          password: password,
+          options: {
+            emailRedirectTo: window.location.origin
+          }
+        });
+
+        if (result.error) {
+          errEl.innerText = result.error.message;
+          errEl.style.display = 'block';
+        } else {
+          // Vid aktiverad e-postbekräftelse returneras ingen session omedelbart
+          document.getElementById('auth-form-fields').style.display = 'none';
+          document.getElementById('auth-toggle-btn').style.display = 'none';
+          infoBox.innerHTML = `<strong>📧 Bekräftelselänk skickad!</strong><br>Vi har skickat ett mejl till <b>${email}</b>. Klicka på länken i mejlet för att aktivera ditt konto.`;
+          infoBox.style.display = 'block';
+        }
+
+      } else {
+        result = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (result.error) {
+          errEl.innerText = result.error.message;
+          errEl.style.display = 'block';
+        }
+      }
+    }
+
+    async function handleLogout() {
+      await supabaseClient.auth.signOut();
+      location.reload();
+    }
+
+    async function loadUserData() {
+      if (!currentUser) return;
+
+      const { data: profileData } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single();
+
+      if (profileData) {
+        userProfile = {
+          schema_version: "1.0",
+          varderingar: profileData.varderingar || [],
+          identifierade_monster: profileData.identifierade_monster || [],
+          aktuellt_fokus: profileData.aktuellt_fokus || "Odefinierat",
+          senaste_insikt: "Synkad från molnet",
+          nycklar: profileData.nycklar || [],
+          fokus_weights: profileData.fokus_weights || { sjalvfortroende: 50, stresshantering: 50, handlingskraft: 50, granssattning: 50 }
+        };
+      } else {
+        const localProf = JSON.parse(localStorage.getItem('falk_user_profile'));
+        if (localProf) userProfile = localProf;
+        await saveProfileToSupabase();
+      }
+
+      const { data: entriesData } = await supabaseClient
+        .from('journal_entries')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('id', { ascending: false });
+
+      if (entriesData && entriesData.length > 0) {
+        savedEntries = entriesData.map(e => ({
+          id: e.id,
+          date: e.date_str,
+          text: e.text_content,
+          sharedWithFalk: e.shared_with_falk,
+          schedule: e.schedule_config,
+          linkedContext: e.linked_context
+        }));
+      } else {
+        const localEntries = JSON.parse(localStorage.getItem('falk_saved_entries')) || [];
+        if (localEntries.length > 0) {
+          for (const entry of localEntries) {
+            await supabaseClient.from('journal_entries').insert({
+              id: entry.id,
+              user_id: currentUser.id,
+              date_str: entry.date,
+              text_content: entry.text,
+              shared_with_falk: entry.sharedWithFalk,
+              schedule_config: entry.schedule,
+              linked_context: entry.linkedContext
+            });
+          }
+          savedEntries = localEntries;
+          localStorage.removeItem('falk_saved_entries');
+        }
+      }
+
+      initUI();
+    }
+
+    async function saveProfileToSupabase() {
+      if (!currentUser) return;
+      await supabaseClient.from('profiles').upsert({
+        id: currentUser.id,
+        varderingar: userProfile.varderingar,
+        identifierade_monster: userProfile.identifierade_monster,
+        aktuellt_fokus: userProfile.aktuellt_fokus,
+        nycklar: userProfile.nycklar,
+        fokus_weights: userProfile.fokus_weights,
+        updated_at: new Date().toISOString()
+      });
+    }
+
+    function initUI() {
+      updateKeysUI();
+      updateProfileUI();
+      updateFocusSlidersUI();
+      renderSavedEntries();
+    }
+
+    function toggleDrawer(open) {
+      document.getElementById('drawer-overlay').classList.toggle('active', open);
+    }
+
+    function toggleJournalDrawer(open) {
+      document.getElementById('journal-drawer-overlay').classList.toggle('active', open);
+    }
+
+    function toggleFocusMenu(forceState) {
+      const menu = document.getElementById('focus-menu');
+      const overlay = document.getElementById('focus-overlay');
+      const show = (typeof forceState === 'boolean') ? forceState : (menu.style.display === 'none' || !menu.style.display);
+      
+      menu.style.display = show ? 'block' : 'none';
+      if (overlay) overlay.classList.toggle('active', show);
+    }
+
+    async function updateFocusWeight(key, value) {
+      const valNum = parseInt(value, 10);
+      if (!userProfile.fokus_weights) userProfile.fokus_weights = { sjalvfortroende: 50, stresshantering: 50, handlingskraft: 50, granssattning: 50 };
+      userProfile.fokus_weights[key] = valNum;
+      document.getElementById('val-' + key).innerText = valNum + '%';
+      await saveProfileToSupabase();
+    }
+
+    async function resetFocusSliders() {
+      userProfile.fokus_weights = { sjalvfortroende: 50, stresshantering: 50, handlingskraft: 50, granssattning: 50 };
+      await saveProfileToSupabase();
+      updateFocusSlidersUI();
+    }
+
+    function updateFocusSlidersUI() {
+      const weights = userProfile.fokus_weights || { sjalvfortroende: 50, stresshantering: 50, handlingskraft: 50, granssattning: 50 };
+      for (const [key, val] of Object.entries(weights)) {
+        const slider = document.getElementById('slider-' + key);
+        const label = document.getElementById('val-' + key);
+        if (slider && label) {
+          slider.value = val;
+          label.innerText = val + '%';
+        }
+      }
+    }
+
+    async function acceptKeyProposal(keyText, elementId) {
+      if (!userProfile.nycklar) userProfile.nycklar = [];
+      if (!userProfile.nycklar.includes(keyText)) {
+        userProfile.nycklar.push(keyText);
+        await saveProfileToSupabase();
+        initUI();
+      }
+      const proposalEl = document.getElementById(elementId);
+      if (proposalEl) {
+        proposalEl.innerHTML = `<span style="color: #10b981; font-weight: 600;">✓ Nyckel sparad: "${keyText}"</span>`;
+      }
+    }
+
+    function declineKeyProposal(elementId) {
+      const proposalEl = document.getElementById(elementId);
+      if (proposalEl) proposalEl.remove();
+    }
+
+    function speakMessage(text, btnElement) {
+      if (!('speechSynthesis' in window)) {
+        alert("Röstuppläsning stöds inte i din webbläsare.");
+        return;
+      }
+
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+        btnElement.innerHTML = SVG_SPEAKER;
+        return;
+      }
+
+      const cleanText = text.replace(/<[^>]*>?/gm, '').replace(/\*\*/g, '');
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = 'sv-SE';
+      utterance.rate = 0.95;
+
+      utterance.onend = () => { btnElement.innerHTML = SVG_SPEAKER; };
+      utterance.onerror = () => { btnElement.innerHTML = SVG_SPEAKER; };
+
+      btnElement.innerHTML = SVG_STOP;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function distillInsight(rawText) {
+      if (!rawText) return "";
+      const sentences = rawText.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 10);
+      if (sentences.length === 0) return rawText.substring(0, 120);
+      
+      let summary = sentences[0];
+      if (sentences.length > 1 && summary.length < 30) {
+        summary += " " + sentences[1];
+      }
+      return summary;
+    }
+
+    async function saveJournal() {
+      const text = document.getElementById('journal-input').value.trim();
+      if (!text || !currentUser) return;
+
+      const dateStr = new Date().toLocaleDateString('sv-SE', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+      let contextSnippet = "Manuell dagboksanteckning.";
+      if (chatHistory.length > 0) {
+        const lastMsg = chatHistory[chatHistory.length - 1];
+        contextSnippet = `Senaste chattkontext (${lastMsg.role === 'user' ? 'Du' : 'FALK'}):\n"${lastMsg.content.substring(0, 200)}..."`;
+      }
+
+      const selectedDays = [];
+      document.querySelectorAll('.day-btn.new-note-day.selected').forEach(btn => {
+        selectedDays.push(btn.getAttribute('data-day'));
+      });
+
+      const isShared = document.getElementById('new-note-share').checked;
+      const reminderTime = document.getElementById('new-note-time').value || "08:00";
+      const reminderDuration = document.getElementById('new-note-duration').value || "indefinite";
+
+      const noteId = Date.now();
+
+      const newEntryObj = {
+        id: noteId,
+        user_id: currentUser.id,
+        date_str: dateStr,
+        text_content: text,
+        shared_with_falk: isShared,
+        schedule_config: { time: reminderTime, days: selectedDays, duration: reminderDuration },
+        linked_context: contextSnippet
+      };
+
+      await supabaseClient.from('journal_entries').insert(newEntryObj);
+
+      savedEntries.unshift({
+        id: noteId,
+        date: dateStr,
+        text: text,
+        sharedWithFalk: isShared,
+        schedule: { time: reminderTime, days: selectedDays, duration: reminderDuration },
+        linkedContext: contextSnippet
+      });
+
+      clearJournalInput();
+      renderSavedEntries();
+    }
+
+    function clearJournalInput() {
+      document.getElementById('journal-input').value = "";
+      document.getElementById('new-note-share').checked = false;
+      document.getElementById('new-note-time').value = "08:00";
+      document.getElementById('new-note-duration').value = "indefinite";
+      document.querySelectorAll('.day-btn.new-note-day').forEach(btn => btn.classList.remove('selected'));
+    }
+
+    async function copyMessageToJournal(fullText, btnElement) {
+      if (!currentUser) return;
+      const cleanText = fullText.replace(/<[^>]*>?/gm, '').replace(/\*\*/g, '');
+      const dateStr = new Date().toLocaleDateString('sv-SE', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const distilledSummary = distillInsight(cleanText);
+
+      const noteId = Date.now();
+
+      await supabaseClient.from('journal_entries').insert({
+        id: noteId,
+        user_id: currentUser.id,
+        date_str: dateStr,
+        text_content: distilledSummary,
+        shared_with_falk: false,
+        schedule_config: { time: "08:00", days: [], duration: "indefinite" },
+        linked_context: `Fullständigt kopplat meddelande från FALK:\n"${cleanText}"`
+      });
+
+      savedEntries.unshift({
+        id: noteId,
+        date: dateStr,
+        text: distilledSummary,
+        sharedWithFalk: false,
+        schedule: { time: "08:00", days: [], duration: "indefinite" },
+        linkedContext: `Fullständigt kopplat meddelande från FALK:\n"${cleanText}"`
+      });
+
+      renderSavedEntries();
+
+      btnElement.innerHTML = `${SVG_JOURNAL} <span style="color: #10b981;">Sparad i molnet!</span>`;
+      setTimeout(() => {
+        btnElement.innerHTML = `${SVG_JOURNAL} <span>Spara till dagbok</span>`;
+      }, 2000);
+    }
+
+    function renderSavedEntries() {
+      const container = document.getElementById('saved-entries-list');
+      const batchContainer = document.getElementById('batch-bar-container');
+      const batchCountLabel = document.getElementById('batch-count-label');
+
+      if (!container) return;
+
+      if (savedEntries.length === 0) {
+        container.innerHTML = '<span style="font-size:0.85rem; color:var(--text-muted);">Inga sparade anteckningar i molnet ännu.</span>';
+        if (batchContainer) batchContainer.style.display = 'none';
+        return;
+      }
+
+      if (selectedNoteIds.length > 0) {
+        batchContainer.style.display = 'block';
+        batchCountLabel.innerText = `${selectedNoteIds.length} markerade`;
+      } else {
+        batchContainer.style.display = 'none';
+      }
+
+      container.innerHTML = savedEntries.map(entry => {
+        const isSelected = selectedNoteIds.includes(entry.id);
+        const schedTime = (entry.schedule && entry.schedule.time) ? entry.schedule.time : "08:00";
+
+        return `
+          <div class="saved-entry-card" onclick="openNoteModal(${entry.id})">
+            <div class="saved-entry-top">
+              <div class="saved-entry-left">
+                <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="toggleSelectNote(${entry.id}, event)">
+                <span class="saved-entry-date">${entry.date}</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;" onclick="event.stopPropagation()">
+                <div class="inline-reminder-box" title="Sätt snabb-påminnelsetid">
+                  <span>⏰</span>
+                  <input type="time" value="${schedTime}" onchange="updateInlineTime(${entry.id}, this.value)">
+                </div>
+                <button class="trash-btn" onclick="deleteSingleNote(${entry.id}, event)" title="Radera anteckning">
+                  ${SVG_TRASH}
+                </button>
+              </div>
+            </div>
+
+            <div class="saved-entry-preview">${entry.text}</div>
+
+            <div class="saved-entry-bottom-bar" onclick="event.stopPropagation()">
+              <div class="toggle-share-wrapper">
+                <span>Dela med FALK</span>
+                <label class="switch">
+                  <input type="checkbox" ${entry.sharedWithFalk ? 'checked' : ''} onchange="toggleNoteShare(${entry.id}, event)">
+                  <span class="slider-toggle"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function showUndoToast(notesArray, message) {
+      lastDeletedNotes = notesArray;
+      const toast = document.getElementById('undo-toast');
+      const label = document.getElementById('undo-toast-label');
+      label.innerText = message;
+      toast.classList.add('active');
+
+      if (undoTimeout) clearTimeout(undoTimeout);
+      undoTimeout = setTimeout(() => {
+        toast.classList.remove('active');
+        lastDeletedNotes = [];
+      }, 5000);
+    }
+
+    async function undoDelete() {
+      if (lastDeletedNotes.length === 0 || !currentUser) return;
+      
+      for (const entry of lastDeletedNotes) {
+        await supabaseClient.from('journal_entries').insert({
+          id: entry.id,
+          user_id: currentUser.id,
+          date_str: entry.date,
+          text_content: entry.text,
+          shared_with_falk: entry.sharedWithFalk,
+          schedule_config: entry.schedule,
+          linked_context: entry.linkedContext
+        });
+      }
+
+      savedEntries = [...lastDeletedNotes, ...savedEntries];
+      savedEntries.sort((a, b) => b.id - a.id);
+
+      lastDeletedNotes = [];
+      document.getElementById('undo-toast').classList.remove('active');
+      if (undoTimeout) clearTimeout(undoTimeout);
+
+      renderSavedEntries();
+    }
+
+    function toggleSelectNote(id, event) {
+      event.stopPropagation();
+      if (selectedNoteIds.includes(id)) {
+        selectedNoteIds = selectedNoteIds.filter(i => i !== id);
+      } else {
+        selectedNoteIds.push(id);
+      }
+      renderSavedEntries();
+    }
+
+    function selectAllNotes() {
+      if (selectedNoteIds.length === savedEntries.length) {
+        selectedNoteIds = [];
+      } else {
+        selectedNoteIds = savedEntries.map(e => e.id);
+      }
+      renderSavedEntries();
+    }
+
+    async function deleteSelectedNotes() {
+      if (selectedNoteIds.length === 0 || !currentUser) return;
+      const notesToDelete = savedEntries.filter(e => selectedNoteIds.includes(e.id));
+      const count = selectedNoteIds.length;
+
+      await supabaseClient
+        .from('journal_entries')
+        .delete()
+        .in('id', selectedNoteIds);
+
+      savedEntries = savedEntries.filter(e => !selectedNoteIds.includes(e.id));
+      selectedNoteIds = [];
+      renderSavedEntries();
+
+      showUndoToast(notesToDelete, `${count} anteckningar raderade.`);
+    }
+
+    async function deleteSingleNote(id, event) {
+      if (event) event.stopPropagation();
+      if (!currentUser) return;
+      const noteToDelete = savedEntries.find(e => e.id === id);
+      if (!noteToDelete) return;
+
+      await supabaseClient
+        .from('journal_entries')
+        .delete()
+        .eq('id', id);
+
+      savedEntries = savedEntries.filter(e => e.id !== id);
+      selectedNoteIds = selectedNoteIds.filter(i => i !== id);
+      renderSavedEntries();
+
+      showUndoToast([noteToDelete], "Anteckning raderad.");
+    }
+
+    async function updateInlineTime(id, timeValue) {
+      const note = savedEntries.find(e => e.id === id);
+      if (note && currentUser) {
+        if (!note.schedule) note.schedule = { time: "08:00", days: [], duration: "indefinite" };
+        note.schedule.time = timeValue;
+
+        await supabaseClient
+          .from('journal_entries')
+          .update({ schedule_config: note.schedule })
+          .eq('id', id);
+      }
+    }
+
+    async function toggleNoteShare(id, event) {
+      event.stopPropagation();
+      const note = savedEntries.find(e => e.id === id);
+      if (note && currentUser) {
+        note.sharedWithFalk = !note.sharedWithFalk;
+
+        await supabaseClient
+          .from('journal_entries')
+          .update({ shared_with_falk: note.sharedWithFalk })
+          .eq('id', id);
+
+        renderSavedEntries();
+      }
+    }
+
+    function toggleDayBtn(btn) {
+      btn.classList.toggle('selected');
+    }
+
+    function openNoteModal(id) {
+      const note = savedEntries.find(e => e.id === id);
+      if (!note) return;
+
+      currentEditingNoteId = id;
+      document.getElementById('modal-note-date').innerText = `Anteckning (${note.date})`;
+      document.getElementById('modal-note-text').value = note.text;
+      document.getElementById('modal-share-toggle').checked = !!note.sharedWithFalk;
+      document.getElementById('modal-linked-context').innerText = note.linkedContext || "Ingen chattkontext kopplad vid skapandet.";
+
+      const sched = note.schedule || { time: "08:00", days: [], duration: "indefinite" };
+      document.getElementById('modal-reminder-time').value = sched.time || "08:00";
+      document.getElementById('modal-reminder-duration').value = sched.duration || "indefinite";
+
+      const dayBtns = document.querySelectorAll('.modal-day');
+      dayBtns.forEach(btn => {
+        const dayStr = btn.getAttribute('data-day');
+        if (sched.days && sched.days.includes(dayStr)) {
+          btn.classList.add('selected');
+        } else {
+          btn.classList.remove('selected');
+        }
+      });
+
+      document.getElementById('note-modal-overlay').classList.add('active');
+    }
+
+    function closeNoteModal() {
+      document.getElementById('note-modal-overlay').classList.remove('active');
+      currentEditingNoteId = null;
+    }
+
+    async function saveCurrentModalNote() {
+      if (!currentEditingNoteId || !currentUser) return;
+      const noteIndex = savedEntries.findIndex(e => e.id === currentEditingNoteId);
+      if (noteIndex !== -1) {
+        const updatedText = document.getElementById('modal-note-text').value.trim();
+        const updatedShare = document.getElementById('modal-share-toggle').checked;
+
+        const selectedDays = [];
+        document.querySelectorAll('.modal-day.selected').forEach(btn => {
+          selectedDays.push(btn.getAttribute('data-day'));
+        });
+
+        const updatedSchedule = {
+          time: document.getElementById('modal-reminder-time').value,
+          duration: document.getElementById('modal-reminder-duration').value,
+          days: selectedDays
+        };
+
+        savedEntries[noteIndex].text = updatedText;
+        savedEntries[noteIndex].sharedWithFalk = updatedShare;
+        savedEntries[noteIndex].schedule = updatedSchedule;
+
+        await supabaseClient
+          .from('journal_entries')
+          .update({
+            text_content: updatedText,
+            shared_with_falk: updatedShare,
+            schedule_config: updatedSchedule
+          })
+          .eq('id', currentEditingNoteId);
+
+        renderSavedEntries();
+      }
+      closeNoteModal();
+    }
+
+    function deleteCurrentModalNote() {
+      if (!currentEditingNoteId) return;
+      const noteId = currentEditingNoteId;
+      closeNoteModal();
+      deleteSingleNote(noteId, null);
+    }
+
+    function handleKeyPress(e) {
+      if (e.key === 'Enter') sendMessage();
+    }
+
+    function sendPrompt(text) {
+      const sendBtn = document.getElementById('send-btn');
+      if (sendBtn.disabled) return;
+      document.getElementById('user-input').value = text;
+      sendMessage();
+    }
+
+    async function sendMessage() {
+      const inputEl = document.getElementById('user-input');
+      const sendBtn = document.getElementById('send-btn');
+      const container = document.getElementById('chat-container');
+      const message = inputEl.value.trim();
+
+      if (!message || sendBtn.disabled) return;
+
+      const grid = document.getElementById('prompt-grid');
+      if (grid) grid.style.display = 'none';
+
+      toggleFocusMenu(false);
+
+      appendMessage('user', message);
+      inputEl.value = '';
+
+      sendBtn.disabled = true;
+
+      const typingBubble = document.createElement('div');
+      typingBubble.className = 'chat-bubble assistant typing-state';
+      typingBubble.id = 'typing-indicator';
+      typingBubble.innerHTML = 'FALK tänker...';
+      container.appendChild(typingBubble);
+      container.scrollTop = container.scrollHeight;
+
+      chatHistory.push({ role: 'user', content: message });
+
+      const sharedNotesText = savedEntries
+        .filter(e => e.sharedWithFalk)
+        .map(e => `[Anteckning ${e.date}]\n${e.text}`)
+        .join('\n\n');
+
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          mode: 'cors',
+          body: JSON.stringify({
+            message: message,
+            user_profile: userProfile,
+            history: chatHistory,
+            shared_journal: sharedNotesText
+          })
+        });
+
+        const activeIndicator = document.getElementById('typing-indicator');
+        if (activeIndicator) activeIndicator.remove();
+
+        if (!response.ok) {
+          throw new Error('HTTP Error ' + response.status);
+        }
+
+        const data = await response.json();
+
+        if (data.response) {
+          appendMessage('assistant', data.response, data.proposed_key);
+          chatHistory.push({ role: 'assistant', content: data.response });
+        }
+
+        if (data.user_profile) {
+          userProfile = data.user_profile;
+          await saveProfileToSupabase();
+          initUI();
+        }
+
+      } catch (err) {
+        console.error("FALK Communication Error:", err);
+        const activeIndicator = document.getElementById('typing-indicator');
+        if (activeIndicator) activeIndicator.remove();
+
+        const errBanner = document.createElement('div');
+        errBanner.className = 'error-banner';
+        errBanner.innerText = 'Kommunikationsfel med FALK-motorn. Dina insikter är säkrade lokalt.';
+        container.appendChild(errBanner);
+        container.scrollTop = container.scrollHeight;
+      } finally {
+        sendBtn.disabled = false;
+      }
+    }
+
+    function appendMessage(role, text, proposedKey = null) {
+      const container = document.getElementById('chat-container');
+      const bubble = document.createElement('div');
+      bubble.className = 'chat-bubble ' + role;
+      
+      let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      bubble.innerHTML = formattedText;
+
+      if (role === 'assistant') {
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'bubble-actions';
+
+        const rawTextEscaped = text.replace(/'/g, "\\'").replace(/\n/g, ' ');
+
+        actionsDiv.innerHTML = `
+          <button class="bubble-action-btn" onclick="speakMessage('${rawTextEscaped}', this)" title="Läs upp">${SVG_SPEAKER}</button>
+          <button class="bubble-action-btn" onclick="copyMessageToJournal('${rawTextEscaped}', this)">${SVG_JOURNAL} <span>Spara till dagbok</span></button>
+        `;
+        bubble.appendChild(actionsDiv);
+      }
+
+      if (role === 'assistant' && proposedKey && proposedKey.trim() !== '') {
+        const proposalId = 'proposal-' + Date.now();
+        const proposalCard = document.createElement('div');
+        proposalCard.className = 'key-proposal-card';
+        proposalCard.id = proposalId;
+        proposalCard.innerHTML = `
+          <div class="key-proposal-title">🗝️ Vill du spara denna insiktsnyckel?</div>
+          <div>"${proposedKey}"</div>
+          <div class="key-proposal-actions">
+            <button class="key-proposal-btn accept" onclick="acceptKeyProposal('${proposedKey.replace(/'/g, "\\'")}', '${proposalId}')">➕ Spara nyckel</button>
+            <button class="key-proposal-btn decline" onclick="declineKeyProposal('${proposalId}')">Avböj</button>
+          </div>
+        `;
+        bubble.appendChild(proposalCard);
+      }
+
+      container.appendChild(bubble);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function updateKeysUI() {
+      const keysWrapper = document.getElementById('keys-wrapper');
+      const keysList = document.getElementById('keys-list');
+
+      if (userProfile.nycklar && userProfile.nycklar.length > 0) {
+        keysWrapper.style.display = 'block';
+        keysList.innerHTML = userProfile.nycklar.slice(-3).map(key => 
+          `<button class="key-btn" onclick="sendPrompt('Låt oss utforska nyckeln: ${key}')">🗝️ ${key}</button>`
+        ).join('');
+      } else {
+        keysWrapper.style.display = 'none';
+        keysList.innerHTML = '';
+      }
+    }
+
+    function calculateInsightScore() {
+      const numKeys = (userProfile.nycklar || []).length;
+      const numVarderingar = (userProfile.varderingar || []).length;
+      const numMonster = (userProfile.identifierade_monster || []).length;
+
+      const totalPoints = (numKeys * 3) + (numVarderingar * 2) + (numMonster * 2);
+
+      if (totalPoints === 0) return 0;
+
+      const turns = Math.floor((chatHistory || []).length / 2);
+      let baseScore = Math.round(100 * (1 - Math.exp(-0.08 * totalPoints)));
+      let depthBonus = Math.min(turns * 2, 20);
+
+      return Math.min(Math.round(baseScore + depthBonus), 100);
+    }
+
+    function updateProfileUI() {
+      const score = calculateInsightScore();
+      document.getElementById('insight-level').innerText = score + '%';
+      document.getElementById('insight-progress').style.width = score + '%';
+
+      const labelEl = document.getElementById('insight-label');
+      if (score === 0) labelEl.innerText = "Påbörjad självreflektion";
+      else if (score < 50) labelEl.innerText = "Måttlig kognitiv insikt";
+      else labelEl.innerText = "Hög kognitiv linjering";
+
+      const varderingarContainer = document.getElementById('profile-varderingar');
+      if (userProfile.varderingar && userProfile.varderingar.length > 0) {
+        varderingarContainer.innerHTML = userProfile.varderingar
+          .slice(-12)
+          .map(v => `<span class="badge">${v}</span>`)
+          .join('');
+      } else {
+        varderingarContainer.innerHTML = '<span style="font-size:0.85rem; color:var(--text-muted);">Inga kärnvärderingar registrerade ännu.</span>';
+      }
+
+      const monsterList = document.getElementById('profile-monster');
+      if (userProfile.identifierade_monster && userProfile.identifierade_monster.length > 0) {
+        monsterList.innerHTML = userProfile.identifierade_monster
+          .slice(-6)
+          .map(m => `<li>${m}</li>`)
+          .join('');
+      } else {
+        monsterList.innerHTML = '<li>Inga mönster identifierade ännu.</li>';
+      }
+
+      document.getElementById('profile-fokus').innerText = userProfile.aktuellt_fokus || 'Odefinierat';
+    }
+
+    function resetChat() {
+      location.reload();
+    }
+
+    async function clearProfile() {
+      if (confirm("Vill du rensa din kognitiva profil och nollställa alla sparade nycklar i molnet?")) {
+        userProfile = JSON.parse(JSON.stringify(cleanEmptyProfile));
+        await saveProfileToSupabase();
+        initUI();
+        toggleDrawer(false);
+      }
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Registration skipped:', err));
+    }
+
+    initAuth();
+  </script>
+</body>
+</html>
