@@ -2,233 +2,370 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FALK - Kognitiv Dagbok</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>FALK – Kognitiv Dagbok</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0f172a">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
-        .app-container { width: 100%; max-width: 600px; background: #1e293b; border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: flex; flex-direction: column; height: 85vh; }
-        .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; border-bottom: 1px solid #334155; margin-bottom: 16px; }
-        .header h1 { font-size: 1.5rem; font-weight: 700; color: #38bdf8; }
-        .user-info { font-size: 0.85rem; color: #94a3b8; }
-        .chat-box { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 8px; margin-bottom: 16px; }
-        .message { padding: 12px 16px; border-radius: 12px; max-width: 88%; font-size: 0.95rem; line-height: 1.5; word-break: break-word; }
-        .user-message { background: #4f46e5; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .ai-message { background: #334155; color: #f1f5f9; align-self: flex-start; border-bottom-left-radius: 2px; }
-        .ai-message p { margin-bottom: 8px; }
-        .ai-message p:last-child { margin-bottom: 0; }
-        .ai-message ul, .ai-message ol { margin-left: 18px; margin-bottom: 8px; }
-        .ai-message li { margin-bottom: 4px; }
-        .ai-message strong { color: #38bdf8; font-weight: 600; }
-        .input-group { display: flex; gap: 8px; }
-        input[type="text"] { flex: 1; background: #0f172a; border: 1px solid #334155; padding: 14px; border-radius: 8px; color: white; font-size: 1rem; outline: none; }
-        input[type="text"]:focus { border-color: #38bdf8; }
-        button { background: #38bdf8; color: #0f172a; border: none; padding: 14px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s, opacity 0.2s; }
-        button:hover:not(:disabled) { background: #7dd3fc; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .login-box { display: flex; flex-direction: column; gap: 12px; justify-content: center; height: 100%; text-align: center; }
-        .login-box input { margin-bottom: 8px; padding: 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: white; }
+        :root {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-hover: #0284c7;
+            --user-msg: #4f46e5;
+            --ai-msg: #1e293b;
+            --border: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 600px;
+            height: 90vh;
+            background-color: #111827;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        .header {
+            padding: 16px 20px;
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header .badge {
+            font-size: 0.75rem;
+            background: #059669;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+
+        .user-info {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .auth-container {
+            padding: 32px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            justify-content: center;
+            flex-grow: 1;
+        }
+
+        .auth-container h2 {
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-group label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        input[type="email"],
+        input[type="password"],
+        textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background-color: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 1rem;
+            outline: none;
+        }
+
+        input:focus, textarea:focus {
+            border-color: var(--accent);
+        }
+
+        .btn {
+            padding: 12px 20px;
+            background-color: var(--accent);
+            color: #0f172a;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-logout {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 6px 12px;
+            font-size: 0.85rem;
+        }
+
+        .chat-history {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .msg-bubble {
+            max-width: 85%;
+            padding: 14px 18px;
+            border-radius: 12px;
+            line-height: 1.5;
+            font-size: 0.95rem;
+        }
+
+        .msg-user {
+            align-self: flex-end;
+            background-color: var(--user-msg);
+            color: #fff;
+            border-bottom-right-radius: 2px;
+        }
+
+        .msg-ai {
+            align-self: flex-start;
+            background-color: var(--ai-msg);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 2px;
+        }
+
+        .msg-ai p { margin-bottom: 8px; }
+        .msg-ai p:last-child { margin-bottom: 0; }
+        .msg-ai ul, .msg-ai ol { margin-left: 20px; margin-bottom: 8px; }
+
+        .chat-input-area {
+            padding: 16px;
+            background-color: var(--bg-card);
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+        }
+
+        .chat-input-area textarea {
+            resize: none;
+            height: 50px;
+        }
+
         .hidden { display: none !important; }
-        .status-text { font-size: 0.8rem; color: #64748b; text-align: center; margin-top: 8px; }
     </style>
 </head>
 <body>
 
 <div class="app-container">
-    <div id="auth-section" class="login-box">
-        <h2 style="color: #38bdf8; margin-bottom: 12px;">Logga in på FALK</h2>
-        <input type="email" id="email" placeholder="Din e-postadress">
-        <input type="password" id="password" placeholder="Ditt lösenord">
-        <button id="login-btn" onclick="handleLogin()">Logga in</button>
-        <div id="auth-error" class="status-text" style="color: #ef4444;"></div>
+    <div class="header">
+        <h1>FALK <span class="badge">Production Ready</span></h1>
+        <div id="user-header" class="hidden">
+            <span id="user-email" class="user-info"></span>
+            <button class="btn btn-logout" onclick="handleLogout()">Logga ut</button>
+        </div>
     </div>
 
-    <div id="chat-section" class="hidden" style="display: flex; flex-direction: column; height: 100%;">
-        <div class="header">
-            <div>
-                <h1>FALK <span style="font-size: 0.8rem; color: #4ade80;">[Production Ready]</span></h1>
-                <div id="user-email" class="user-info"></div>
+    <!-- Auth View -->
+    <div id="auth-view" class="auth-container">
+        <h2>Logga in på FALK</h2>
+        <form id="auth-form" onsubmit="handleAuth(event)">
+            <div class="input-group">
+                <label for="email">Din e-postadress</label>
+                <input type="email" id="email" autocomplete="username" required placeholder="namn@exempel.se">
             </div>
-            <button onclick="handleLogout()" style="background: #475569; color: white; padding: 8px 12px; font-size: 0.8rem;">Logga ut</button>
-        </div>
+            <div class="input-group" style="margin-top: 12px;">
+                <label for="password">Ditt lösenord</label>
+                <input type="password" id="password" autocomplete="current-password" required placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn" style="width: 100%; margin-top: 20px;">Logga in</button>
+        </form>
+    </div>
 
-        <div id="chat-box" class="chat-box"></div>
+    <!-- Chat View -->
+    <div id="chat-view" class="chat-history hidden"></div>
 
-        <div class="input-group">
-            <input type="text" id="message-input" placeholder="Skriv ditt meddelande till FALK..." onkeydown="if(event.key==='Enter') sendMessage()">
-            <button id="send-btn" onclick="sendMessage()">Skicka</button>
-        </div>
-        <div id="status-indicator" class="status-text"></div>
+    <div id="input-view" class="chat-input-area hidden">
+        <textarea id="chat-message" placeholder="Skriv ditt meddelande till FALK..."></textarea>
+        <button class="btn" onclick="sendMessage()">Skicka</button>
     </div>
 </div>
 
 <script>
     const SUPABASE_URL = "https://dmerwpgvepkjirugnfzy.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZXJ3cGd2ZXBramlydWduZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MjM3NjksImV4cCI6MjEwNzk5OTc2OX0.UNX_fozGEsKKMrQpn-8VP3g3r1boegX5jl5B8oW69Ww";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZXJ3cGd2ZXBramlydWduZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg1ODcyNzUsImV4cCI6MjA1NDE2MzI3NX0.sb_anon_secret_placeholders";
     const BACKEND_URL = "https://falk-ai.onrender.com";
 
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    let currentSession = null;
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    async function checkSession() {
-        try {
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            if (session) {
-                setupAuthenticatedUser(session);
-            }
-        } catch (err) {
-            console.error("Session check failed:", err);
-        }
-    }
-
-    supabaseClient.auth.onAuthStateChange((event, session) => {
+    document.addEventListener("DOMContentLoaded", async () => {
+        const { data: { session } } = await supabaseClient.auth.getSession();
         if (session) {
-            setupAuthenticatedUser(session);
-        } else {
-            document.getElementById('auth-section').classList.remove('hidden');
-            document.getElementById('chat-section').classList.add('hidden');
-            currentSession = null;
+            showChat(session);
+        }
+
+        supabaseClient.auth.onAuthStateChange((_event, session) => {
+            if (session) {
+                showChat(session);
+            } else {
+                showAuth();
+            }
+        });
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(err => console.error("SW Reg Error:", err));
         }
     });
 
-    async function handleLogin() {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        const errorDiv = document.getElementById('auth-error');
-        errorDiv.innerText = "";
+    async function handleAuth(e) {
+        e.preventDefault();
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
 
         const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
         if (error) {
-            errorDiv.innerText = error.message;
+            alert("Inloggningsfel: " + error.message);
         }
     }
 
     async function handleLogout() {
         await supabaseClient.auth.signOut();
-        document.getElementById('chat-box').innerHTML = "";
+        showAuth();
     }
 
-    async function setupAuthenticatedUser(session) {
-        currentSession = session;
-        document.getElementById('auth-section').classList.add('hidden');
-        document.getElementById('chat-section').classList.remove('hidden');
-        document.getElementById('user-email').innerText = session.user.email;
-        
+    function showAuth() {
+        document.getElementById("auth-view").classList.remove("hidden");
+        document.getElementById("chat-view").classList.add("hidden");
+        document.getElementById("input-view").classList.add("hidden");
+        document.getElementById("user-header").classList.add("hidden");
+    }
+
+    async function showChat(session) {
+        document.getElementById("auth-view").classList.add("hidden");
+        document.getElementById("chat-view").classList.remove("hidden");
+        document.getElementById("input-view").classList.remove("hidden");
+        document.getElementById("user-header").classList.remove("hidden");
+        document.getElementById("user-email").innerText = session.user.email;
+
         await loadHistory();
     }
 
     async function loadHistory() {
-        if (!currentSession) return;
-        const status = document.getElementById('status-indicator');
-        status.innerText = "Kopplar upp mot FALK-motorn (startar server)...";
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-            status.innerText = "Servern vaknar från viloläge, vänta ett ögonblick...";
-        }, 4000);
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session) return;
 
         try {
             const res = await fetch(`${BACKEND_URL}/history`, {
-                headers: { 'Authorization': `Bearer ${currentSession.access_token}` },
-                signal: controller.signal
+                headers: { "Authorization": `Bearer ${session.access_token}` }
             });
-            clearTimeout(timeoutId);
             const data = await res.json();
+            
+            const chatView = document.getElementById("chat-view");
+            chatView.innerHTML = "";
 
-            const chatBox = document.getElementById('chat-box');
-            chatBox.innerHTML = "";
-
-            if (data.history && data.history.length > 0) {
+            if (data.history) {
                 data.history.forEach(entry => {
-                    appendMessage(entry.user_message, 'user');
-                    appendMessage(entry.ai_response, 'ai');
+                    appendMessage(entry.user_message, "user");
+                    appendMessage(entry.ai_response, "ai");
                 });
-                status.innerText = "";
-            } else {
-                status.innerText = "Inga tidigare inlägg funna. Starta din dagbok nedan.";
+                chatView.scrollTop = chatView.scrollHeight;
             }
-            chatBox.scrollTop = chatBox.scrollHeight;
         } catch (err) {
-            clearTimeout(timeoutId);
-            status.innerText = "Kunde inte hämta historik (Serverfel eller timeout).";
+            console.error("Fel vid hämtning av historik:", err);
+        }
+    }
+
+    async function sendMessage() {
+        const input = document.getElementById("chat-message");
+        const message = input.value.trim();
+        if (!message) return;
+
+        input.value = "";
+        appendMessage(message, "user");
+
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session) return;
+
+        try {
+            const res = await fetch(`${BACKEND_URL}/chat`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({ message })
+            });
+
+            const data = await res.json();
+            if (data.response) {
+                appendMessage(data.response, "ai");
+            } else if (data.error) {
+                appendMessage("Fel: " + data.error, "ai");
+            }
+        } catch (err) {
+            appendMessage("Kunde inte nå servern.", "ai");
         }
     }
 
     function appendMessage(text, sender) {
-        const chatBox = document.getElementById('chat-box');
-        const msg = document.createElement('div');
-        msg.className = `message ${sender === 'user' ? 'user-message' : 'ai-message'}`;
+        const chatView = document.getElementById("chat-view");
+        const div = document.createElement("div");
+        div.classList.add("msg-bubble", sender === "user" ? "msg-user" : "msg-ai");
 
-        if (sender === 'ai') {
-            const rawHtml = typeof marked !== 'undefined' ? marked.parse(text) : text;
-            const cleanHtml = typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
-            msg.innerHTML = cleanHtml;
+        if (sender === "ai") {
+            const cleanHtml = DOMPurify.sanitize(marked.parse(text));
+            div.innerHTML = cleanHtml;
         } else {
-            msg.innerText = text;
+            div.textContent = text;
         }
 
-        chatBox.appendChild(msg);
-        chatBox.scrollTop = chatBox.scrollHeight;
+        chatView.appendChild(div);
+        chatView.scrollTop = chatView.scrollHeight;
     }
-
-    async function sendMessage() {
-        const input = document.getElementById('message-input');
-        const btn = document.getElementById('send-btn');
-        const status = document.getElementById('status-indicator');
-        const text = input.value.trim();
-
-        if (!text || !currentSession) return;
-
-        input.disabled = true;
-        btn.disabled = true;
-        status.innerText = "FALK tänker...";
-
-        appendMessage(text, 'user');
-        input.value = "";
-
-        try {
-            const res = await fetch(`${BACKEND_URL}/chat`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${currentSession.access_token}`
-                },
-                body: JSON.stringify({ message: text })
-            });
-
-            const data = await res.json();
-            if (res.ok && data.response) {
-                appendMessage(data.response, 'ai');
-                status.innerText = "";
-            } else {
-                status.innerText = `Fel: ${data.details || data.error || 'Något gick fel'}`;
-                input.value = text; // Återställ texten vid fel
-            }
-        } catch (err) {
-            status.innerText = "Nätverksfel. Ditt meddelande ligger kvar i inmatningsfältet.";
-            input.value = text; // Återställ texten så att användaren inte förlorar den
-        } finally {
-            input.disabled = false;
-            btn.disabled = false;
-            input.focus();
-        }
-    }
-
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js').catch(err => console.error('SW Error:', err));
-        });
-    }
-
-    checkSession();
 </script>
 </body>
 </html>
