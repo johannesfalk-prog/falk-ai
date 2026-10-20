@@ -381,9 +381,14 @@
             const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: { session: null } }));
             if (!session) return;
 
+            if (!session || !session.access_token) return;
             const res = await fetch(`${BACKEND_URL}/history`, {
                 headers: { "Authorization": `Bearer ${session.access_token}` }
             }).catch(() => null);
+            if (res && res.status === 401) {
+                console.warn("Session utgången - kräver ny inloggning.");
+                return;
+            }
 
             if (res && res.ok) {
                 const data = await res.json();
