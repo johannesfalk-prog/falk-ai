@@ -66,7 +66,7 @@
             background-color: var(--white);
             width: 100%;
             max-width: 400px;
-            padding: 32px 24px 28px 24px;
+            padding: 32px 24px 24px 24px;
             border-radius: 20px;
             box-shadow: var(--card-shadow);
             border: 1px solid rgba(78, 92, 75, 0.12);
@@ -144,8 +144,25 @@
             margin-top: 16px;
         }
 
-        /* Header Navigation */
+        .support-link-wrapper {
+            margin-top: 18px;
+            font-size: 0.85rem;
+        }
+
+        .support-link-wrapper a {
+            color: var(--text-muted);
+            text-decoration: underline;
+            font-weight: 500;
+            transition: color 0.15s ease;
+        }
+
+        .support-link-wrapper a:hover {
+            color: var(--deep-olive);
+        }
+
+        /* Header Navigation (EXAKT CENTRERAD HEADER) */
         .header-nav {
+            position: relative;
             background-color: var(--warm-beige-light);
             padding: 12px 16px;
             display: flex;
@@ -170,21 +187,35 @@
             display: flex;
             align-items: center;
             gap: 6px;
+            flex-shrink: 0;
         }
 
         .nav-pill.active { background-color: var(--deep-olive); color: var(--white); border-color: var(--deep-olive); }
-        .nav-pill.new-chat { background-color: var(--soft-sage-light); color: var(--deep-olive); border-color: var(--soft-sage); }
-
-        .header-brand-title {
-            font-size: 1.1rem;
-            font-weight: 800;
+        .nav-pill.new-chat {
+            background-color: var(--soft-sage-light);
             color: var(--deep-olive);
-            letter-spacing: 0.8px;
+            border-color: var(--soft-sage);
+            font-weight: 800;
+            font-size: 1.1rem;
+            padding: 4px 14px;
+            line-height: 1;
+        }
+
+        /* ORAMAD, STÖRRE OCH MATEMATISKT ABSOLUT CENTRERAD FALK TITEL */
+        .header-brand-title {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.35rem;
+            font-weight: 900;
+            color: var(--deep-olive);
+            letter-spacing: 1px;
             cursor: pointer;
             padding: 4px 8px;
             background: none;
             border: none;
             outline: none;
+            white-space: nowrap;
             transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
         }
 
@@ -193,8 +224,14 @@
         }
 
         @keyframes sweepTitleIn {
-            0% { opacity: 0; transform: translateY(20px) scale(1.15); }
-            100% { opacity: 1; transform: translateY(0) scale(1); }
+            0% { opacity: 0; transform: translate(-50%, 20px) scale(1.15); }
+            100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+        }
+
+        .header-right-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         /* Main Container */
@@ -219,8 +256,7 @@
             margin-bottom: 8px;
         }
 
-        .welcome-card h2 { font-size: 1.1rem; color: var(--deep-olive); margin-bottom: 8px; font-weight: 700; }
-        .welcome-card p { font-size: 0.95rem; color: var(--text-muted); line-height: 1.4; }
+        .welcome-card h2 { font-size: 1.1rem; color: var(--deep-olive); font-weight: 700; line-height: 1.35; }
 
         .prompt-grid { display: flex; flex-direction: column; gap: 10px; }
         .prompt-grid.hidden { display: none; }
@@ -261,7 +297,7 @@
 
         @keyframes pulseThinking { 0% { opacity: 0.5; } 50% { opacity: 0.9; } 100% { opacity: 0.5; } }
 
-        /* GEMINI-STYLE ACTION TOOLBAR UNDER AI MESSAGES (RENA SVG:ER, INGA EMOJIS) */
+        /* Action Toolbar */
         .msg-toolbar {
             display: flex;
             align-items: center;
@@ -294,11 +330,7 @@
             background-color: rgba(197, 123, 87, 0.12);
         }
 
-        .action-icon-btn svg {
-            width: 16px;
-            height: 16px;
-            stroke-width: 2;
-        }
+        .action-icon-btn svg { width: 16px; height: 16px; stroke-width: 2; }
 
         /* Input Footer Bar */
         .input-footer {
@@ -389,7 +421,7 @@
 </head>
 <body>
 
-    <!-- SPA Auth Overlay -->
+    <!-- SPA Auth Overlay (MED ENTER-SUBMIT OCH SUPPORTLINK) -->
     <div id="auth-overlay" class="auth-overlay-screen">
         <div class="auth-card">
             <h2>FALK</h2>
@@ -402,10 +434,10 @@
 
             <div class="auth-input-group">
                 <label>E-postadress</label>
-                <input type="email" id="auth-email" placeholder="din.epost@doman.se">
+                <input type="email" id="auth-email" placeholder="din.epost@doman.se" onkeydown="if(event.key==='Enter') handleAuthSubmit()">
                 
                 <label style="margin-top: 8px;">Lösenord</label>
-                <input type="password" id="auth-password" placeholder="••••••••">
+                <input type="password" id="auth-password" placeholder="••••••••" onkeydown="if(event.key==='Enter') handleAuthSubmit()">
             </div>
 
             <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px; text-align: left; font-size: 0.85rem; color: var(--text-dark);">
@@ -414,24 +446,32 @@
             </div>
 
             <button class="auth-submit-btn" id="auth-submit-btn" onclick="handleAuthSubmit()">Logga in</button>
+            
+            <!-- KONTROLLERAD SUPPORTLINK -->
+            <div class="support-link-wrapper">
+                <a href="mailto:support@falk-ai.se?subject=Inloggningshj%C3%A4lp%20FALK">Behöver du hjälp? Kontakta support</a>
+            </div>
+
             <div id="auth-error" style="color: #9B1C1C; font-size: 0.85rem; margin-top: 10px;" class="hidden"></div>
             <div id="auth-success" style="color: #15803D; font-size: 0.85rem; margin-top: 10px;" class="hidden"></div>
         </div>
     </div>
 
-    <!-- Main Header -->
+    <!-- Main Header (MATEMATISKT CENTRERAD FALK & REN + KNAPP) -->
     <header class="header-nav">
         <button class="nav-pill" id="nav-dagbok-btn" onclick="openDagbok()">📓 Dagbok</button>
         <div class="header-brand-title" id="header-falk-title" onclick="startNewChat()">FALK</div>
-        <button class="nav-pill new-chat" onclick="startNewChat()">+ Ny</button>
-        <button class="nav-pill" id="nav-profil-btn" onclick="openProfile()">Profil</button>
+        <div class="header-right-group">
+            <button class="nav-pill new-chat" title="Ny chatt" onclick="startNewChat()">+</button>
+            <button class="nav-pill" id="nav-profil-btn" onclick="openProfile()">Profil</button>
+        </div>
     </header>
 
     <!-- Main Scroll Container -->
     <main class="main-container">
+        <!-- VÄLKOMSTKORT MED NY TONA OCH EXAKT RUBRIK -->
         <div class="welcome-card" id="welcome-card">
-            <h2>Jag är FALK – Min uppgift är att hjälpa dig på din väg!</h2>
-            <p>Vad vill du utforska idag?</p>
+            <h2>Skriv till mig eller välj ett av alternativen...</h2>
         </div>
 
         <section class="prompt-grid" id="prompt-grid">
@@ -618,7 +658,6 @@
         let activeAuthMode = 'login';
         const TEN_MINUTES_MS = 10 * 60 * 1000;
 
-        /* GEMINI-STYLE SVG ICON DEFINITIONS (INGA EMOJIS) */
         const SVG_SPEAKER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
         const SVG_REGEN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>`;
         const SVG_THUMBS_UP = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>`;
@@ -633,7 +672,6 @@
             evaluateSessionLifecycle();
         });
 
-        /* 10-MINUTERS LIFECYCLE CONTROLLER */
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "hidden") {
                 localStorage.setItem("falk_last_active_timestamp", Date.now().toString());
@@ -873,7 +911,6 @@
 
             wrapperDiv.appendChild(msgDiv);
 
-            // ÅTERINFÖRD FULLSTÄNDIG GEMINI-STYLE SVG IKONRAD UNDER AI-SVAR
             if (type === "ai") {
                 const toolbarDiv = document.createElement("div");
                 toolbarDiv.className = "msg-toolbar";
@@ -906,7 +943,6 @@
             main.scrollTop = main.scrollHeight;
         }
 
-        /* TOOLBAR ACTIONS LOGIK */
         function speakText(btn) {
             const msgBody = btn.closest(".message-wrapper").querySelector(".message");
             if (!msgBody) return;
