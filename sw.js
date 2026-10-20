@@ -1,5 +1,5 @@
-const CACHE_NAME = "falk-v15";
-const ASSETS = [
+const CACHE_NAME = "falk-v21";
+const STATIC_ASSETS = [
   "/",
   "/index.html",
   "/manifest.json",
@@ -9,43 +9,62 @@ const ASSETS = [
   "/js/supabase.js"
 ];
 
-self.addEventListener("install", (e) => {
-  e.waitUntil(
+self.addEventListener("install", (event) => {
+  event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
-      for (const asset of ASSETS) {
-        try { await cache.add(asset); } catch (err) { console.warn("Asset-varning:", asset); }
+      for (const asset of STATIC_ASSETS) {
+        try {
+          await cache.add(asset);
+        } catch (err) {
+          console.warn("Asset-varning vid install:", asset, err);
+        }
       }
     }).then(() => self.skipWaiting())
   );
 });
 
-self.addEventListener("activate", (e) => {
-  e.waitUntil(
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
     caches.keys().then((keys) => Promise.all(
-      keys.map((k) => k !== CACHE_NAME && caches.delete(k))
+      keys.map((key) => key !== CACHE_NAME && caches.delete(key))
     )).then(() => self.clients.claim())
   );
 });
 
-self.addEventListener("fetch", (e) => {
-  if (e.request.method !== "GET") return;
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
 
-  e.respondWith(
-    caches.match(e.request).then((cached) => {
-      if (cached) return cached;
+  event.respondWith(
+    (async () => {
+      // 1. Sök i cachen efter exakt matchning
+      const cachedResponse = await caches.match(event.request);
+      if (cachedResponse) return cachedResponse;
 
-      return fetch(e.request).then((res) => {
-        if (res && res.status === 200 && res.type === "basic") {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then((c) => c.put(e.request, clone));
+      // 2. Försök hämta via nätverket
+      try {
+        const networkResponse = await fetch(event.request);
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === "basic") {
+          const cache = await caches.open(CACHE_NAME);
+          cache.put(event.request, networkResponse.clone());
         }
-        return res;
-      }).catch(() => {
-        if (e.request.mode === "navigate") {
-          return caches.match("/index.html");
+        return networkResponse;
+      } catch (networkError) {
+        // 3. Vid offline: försök hitta fallback i cachen
+        if (event.request.mode === "navigate") {
+          const fallbackIndex = await caches.match("/index.html") || await caches.match("/");
+          if (fallbackIndex) return fallbackIndex;
         }
-        return new Response("Offline", { status: 503, statusText: "Offline" });
-      });
-    })
+
+        // 4. GARANTERAT RESPONSE-OBJEKT (Säkrar mot TypeError)
+        return new Response(
+          "<html><body><h2>FALK Offline Mode</h2><p>Applikationen laddades utan sparad cache.</p></body></html>",
+          {
+            status: 503,
+            statusText: "Service Unavailable",
+            headers: { "Content-Type": "text/html; charset=utf-8" }
+          }
+        );
+      }
+    })()
   );
 });
