@@ -1,4 +1,4 @@
-const CACHE_NAME = 'falk-v10';
+const CACHE_NAME = 'falk-v11';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -11,7 +11,15 @@ const STATIC_ASSETS = [
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then(c => c.addAll(STATIC_ASSETS)).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then(async (cache) => {
+      for (const asset of STATIC_ASSETS) {
+        try {
+          await cache.add(asset);
+        } catch (err) {
+          console.warn('Fejl vid cachning av tillgång:', asset, err);
+        }
+      }
+    }).then(() => self.skipWaiting())
   );
 });
 
