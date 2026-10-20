@@ -1,4 +1,4 @@
-const CACHE_NAME = 'falk-v5';
+const CACHE_NAME = 'falk-v6';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -11,9 +11,8 @@ const STATIC_ASSETS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    }).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -22,9 +21,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
+          if (key !== CACHE_NAME) return caches.delete(key);
         })
       );
     }).then(() => self.clients.claim())
@@ -32,33 +29,35 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Ignorera anrop som inte är GET eller gällande API-endpoints
   if (event.request.method !== 'GET') return;
+
+  // Ignorera favicon-förfrågningar om de saknas
+  if (event.request.url.includes('favicon.ico')) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        return cached || new Response('', { status: 200, headers: { 'Content-Type': 'image/x-icon' } });
+      })
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
+      if (cachedResponse) return cachedResponse;
 
       return fetch(event.request).then((networkResponse) => {
-        // Cacha giltiga nätverkssvar för statiska resurser
         if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
           const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
         }
         return networkResponse;
       }).catch(() => {
-        // Skottsäker offline-fallback: returnera index.html vid navigering, annars ett giltigt 503 Response
         if (event.request.mode === 'navigate') {
           return caches.match('/index.html');
         }
-        return new Response('Offline', {
+        return new Response(JSON.stringify({ error: "Offline" }), {
           status: 503,
-          statusText: 'Service Unavailable',
-          headers: new Headers({ 'Content-Type': 'text/plain' })
+          headers: new Headers({ 'Content-Type': 'application/json' })
         });
       });
     })
