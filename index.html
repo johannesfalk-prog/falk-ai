@@ -5,14 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>FALK – Kognitiv Dagbok</title>
     
-    <!-- Skottsäker, komplett Content Security Policy för alla aktiva resurser -->
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self' https: data: blob:;
         script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.supabase.co;
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
         font-src 'self' https://fonts.gstatic.com data:;
-        connect-src 'self' https://dmerwpgvepkjirugnfzy.supabase.co https://falk-ai.onrender.com wss://dmerwpgvepkjirugnfzy.supabase.co https://cdn.jsdelivr.net https://cdn-icons-png.flaticon.com;
-        img-src 'self' data: https: blob: https://cdn-icons-png.flaticon.com;
+        connect-src 'self' https://dmerwpgvepkjirugnfzy.supabase.co https://falk-ai.onrender.com wss://dmerwpgvepkjirugnfzy.supabase.co https://cdn.jsdelivr.net;
+        img-src 'self' data: https: blob:;
         object-src 'none';
         base-uri 'self';
         form-action 'self';
@@ -36,6 +35,7 @@
             --user-msg: #4f46e5;
             --ai-msg: #1e293b;
             --border: #334155;
+            --danger: #ef4444;
         }
 
         * {
@@ -75,6 +75,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0;
         }
 
         .header h1 {
@@ -125,8 +126,7 @@
         }
 
         input[type="email"],
-        input[type="password"],
-        textarea {
+        input[type="password"] {
             width: 100%;
             padding: 12px 16px;
             background-color: #0f172a;
@@ -135,34 +135,6 @@
             color: var(--text-main);
             font-size: 1rem;
             outline: none;
-        }
-
-        input:focus, textarea:focus {
-            border-color: var(--accent);
-        }
-
-        .btn {
-            padding: 12px 20px;
-            background-color: var(--accent);
-            color: #0f172a;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .btn:hover {
-            background-color: var(--accent-hover);
-        }
-
-        .btn-logout {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-            padding: 6px 12px;
-            font-size: 0.85rem;
         }
 
         .chat-history {
@@ -196,21 +168,79 @@
             border-bottom-left-radius: 2px;
         }
 
+        .msg-system-error {
+            align-self: center;
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            color: #fca5a5;
+            font-size: 0.85rem;
+            padding: 8px 14px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
         .msg-ai p { margin-bottom: 8px; }
         .msg-ai p:last-child { margin-bottom: 0; }
         .msg-ai ul, .msg-ai ol { margin-left: 20px; margin-bottom: 8px; }
 
+        /* Perfekt CSS-layout för textrutan utan textklippning */
         .chat-input-area {
-            padding: 16px;
+            padding: 12px 16px;
             background-color: var(--bg-card);
             border-top: 1px solid var(--border);
             display: flex;
             gap: 12px;
+            align-items: center;
+            flex-shrink: 0;
         }
 
         .chat-input-area textarea {
+            flex-grow: 1;
+            height: 48px;
+            min-height: 48px;
+            max-height: 120px;
+            padding: 12px 14px;
+            background-color: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            line-height: 1.4;
+            outline: none;
             resize: none;
-            height: 50px;
+        }
+
+        .chat-input-area textarea:focus {
+            border-color: var(--accent);
+        }
+
+        .btn {
+            padding: 12px 20px;
+            background-color: var(--accent);
+            color: #0f172a;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-logout {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            height: auto;
         }
 
         .hidden { display: none !important; }
@@ -254,7 +284,7 @@
 
 <script>
     const SUPABASE_URL = "https://dmerwpgvepkjirugnfzy.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZXJ3cGd2ZXBramlydWduZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MjM3NjksImV4cCI6MjEwNzk5OTc2OX0.UNX_fozGEsKKMrQpn-8VP3g3r1boegX5jl5B8oW69Ww";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZXJ3cGd2ZXBramlydWduZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg1ODcyNzUsImV4cCI6MjA1NDE2MzI3NX0.sb_anon_secret_placeholders";
     const BACKEND_URL = "https://falk-ai.onrender.com";
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -264,9 +294,13 @@
         document.getElementById("logout-btn").addEventListener("click", handleLogout);
         document.getElementById("send-btn").addEventListener("click", sendMessage);
 
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        if (session) {
-            showChat(session);
+        try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                showChat(session);
+            }
+        } catch (e) {
+            console.warn("Session retrieval fallback");
         }
 
         supabaseClient.auth.onAuthStateChange((_event, session) => {
@@ -287,14 +321,16 @@
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
 
-        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-        if (error) {
-            alert("Inloggningsfel: " + error.message);
+        try {
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) alert("Inloggningsfel: " + error.message);
+        } catch (err) {
+            alert("Nätverksfel vid inloggning.");
         }
     }
 
     async function handleLogout() {
-        await supabaseClient.auth.signOut();
+        try { await supabaseClient.auth.signOut(); } catch (e) {}
         showAuth();
     }
 
@@ -316,10 +352,10 @@
     }
 
     async function loadHistory() {
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        if (!session) return;
-
         try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) return;
+
             const res = await fetch(`${BACKEND_URL}/history`, {
                 headers: { "Authorization": `Bearer ${session.access_token}` }
             });
@@ -336,7 +372,7 @@
                 chatView.scrollTop = chatView.scrollHeight;
             }
         } catch (err) {
-            console.error("Fel vid hämtning av historik:", err);
+            console.warn("Kunde inte hämta historik offline");
         }
     }
 
@@ -345,13 +381,14 @@
         const message = input.value.trim();
         if (!message) return;
 
-        input.value = "";
+        // Tillfällig visning i chatten
         appendMessage(message, "user");
-
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        if (!session) return;
+        input.value = "";
 
         try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) throw new Error("Ingen aktiv session");
+
             const res = await fetch(`${BACKEND_URL}/chat`, {
                 method: "POST",
                 headers: {
@@ -361,27 +398,35 @@
                 body: JSON.stringify({ message })
             });
 
+            if (!res.ok) throw new Error("Serverfel");
+
             const data = await res.json();
             if (data.response) {
                 appendMessage(data.response, "ai");
-            } else if (data.error) {
-                appendMessage("Fel: " + data.error, "ai");
+            } else {
+                throw new Error("Tomt svar");
             }
         } catch (err) {
-            appendMessage("Kunde inte nå servern.", "ai");
+            // Skottsäker offline-fallback: Återställ texten i rutan och visa systemvarning
+            input.value = message;
+            appendMessage("Kunna inte nå servern. Ditt meddelande ligger kvar i textfältet.", "system-error");
         }
     }
 
     function appendMessage(text, sender) {
         const chatView = document.getElementById("chat-view");
         const div = document.createElement("div");
-        div.classList.add("msg-bubble", sender === "user" ? "msg-user" : "msg-ai");
 
-        if (sender === "ai") {
-            const cleanHtml = DOMPurify.sanitize(marked.parse(text));
-            div.innerHTML = cleanHtml;
-        } else {
+        if (sender === "system-error") {
+            div.classList.add("msg-system-error");
             div.textContent = text;
+        } else {
+            div.classList.add("msg-bubble", sender === "user" ? "msg-user" : "msg-ai");
+            if (sender === "ai") {
+                div.innerHTML = DOMPurify.sanitize(marked.parse(text));
+            } else {
+                div.textContent = text;
+            }
         }
 
         chatView.appendChild(div);
