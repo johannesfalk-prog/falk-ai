@@ -1,4 +1,4 @@
-const CACHE_NAME = "falk-v22";
+const CACHE_NAME = "falk-v23";
 const STATIC_ASSETS = [
   "/",
   "/index.html",
@@ -42,6 +42,20 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith(
     (async () => {
+      try {
+        // Nätverk först för index.html/roten för att alltid garantera nyaste UI-koden
+        if (event.request.mode === "navigate" || event.request.url.endsWith("/index.html")) {
+          const networkResponse = await fetch(event.request);
+          if (networkResponse && networkResponse.status === 200) {
+            const cache = await caches.open(CACHE_NAME);
+            cache.put(event.request, networkResponse.clone());
+            return networkResponse;
+          }
+        }
+      } catch (e) {
+        // Fallback till cache om offline
+      }
+
       const cachedResponse = await caches.match(event.request);
       if (cachedResponse) return cachedResponse;
 
