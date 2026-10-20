@@ -1,8 +1,9 @@
-const CACHE_NAME = 'falk-v8';
+const CACHE_NAME = 'falk-v9';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/icon.svg',
   '/js/purify.min.js',
   '/js/marked.min.js',
   '/js/supabase.js'
