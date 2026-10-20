@@ -488,6 +488,7 @@
 
     async function sendMessage() {
         const input = document.getElementById("chat-message");
+        const sendBtn = document.getElementById("send-btn");
         const message = input.value.trim();
         if (!message) return;
 
@@ -500,6 +501,16 @@
             return;
         }
 
+        // 1. UI Loading State (Lås gränssnittet och visa laddningsstatus)
+        input.disabled = true;
+        sendBtn.disabled = true;
+        const originalBtnText = sendBtn.innerText;
+        sendBtn.innerText = "Tänker...";
+
+        // 2. AbortController med 60 sekunders timeout för Renders cold-start
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
+
         try {
             const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: { session: null } }));
             if (!session) throw new Error("Ingen aktiv session");
@@ -510,8 +521,11 @@
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${session.access_token}`
                 },
-                body: JSON.stringify({ message })
+                body: JSON.stringify({ message }),
+                signal: controller.signal
             }).catch(() => null);
+
+            clearTimeout(timeoutId);
 
             if (!res || !res.ok) throw new Error("Serveranslutningsfel");
 
@@ -525,7 +539,20 @@
             } else {
                 throw new Error("Tomt svar");
             }
-        } catch (err) {}
+        } catch (err) {
+            clearTimeout(timeoutId);
+            input.value = message;
+            const errorMsg = err.name === 'AbortError' 
+                ? "Servern tog för lång tid på sig att svara (timeout 60s). Ditt meddelande ligger kvar." 
+                : "Kunde inte nå servern. Ditt meddelande ligger kvar i textfältet.";
+            appendMessage(errorMsg, "system-error");
+        } finally {
+            // 3. Återställ UI-tillståndet
+            input.disabled = false;
+            sendBtn.disabled = false;
+            sendBtn.innerText = originalBtnText;
+            input.focus();
+        }
     }
 
     function appendMessage(text, sender) {
