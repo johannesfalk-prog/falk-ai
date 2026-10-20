@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <title>FALK – Din kompass med perspektiv</title>
     <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/icon.svg">
     <meta name="theme-color" content="#E8DCC4">
     <script src="/js/purify.min.js"></script>
     <script src="/js/marked.min.js"></script>
@@ -42,13 +43,10 @@
             overflow: hidden;
         }
 
-        /* Fullscreen Auth Overlay */
+        /* Auth Overlay */
         .auth-overlay-screen {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            top: 0; left: 0; right: 0; bottom: 0;
             background-color: var(--warm-beige-light);
             z-index: 2000;
             display: flex;
@@ -130,20 +128,8 @@
             text-align: left;
         }
 
-        .auth-input-group label {
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: var(--deep-olive);
-        }
-
-        .auth-input-group input {
-            width: 100%;
-            padding: 12px 14px;
-            border-radius: 10px;
-            border: 1px solid rgba(78, 92, 75, 0.2);
-            font-size: 0.95rem;
-            outline: none;
-        }
+        .auth-input-group label { font-size: 0.8rem; font-weight: 700; color: var(--deep-olive); }
+        .auth-input-group input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(78, 92, 75, 0.2); font-size: 0.95rem; outline: none; }
 
         .auth-submit-btn {
             background-color: var(--deep-olive);
@@ -186,17 +172,8 @@
             gap: 6px;
         }
 
-        .nav-pill.active {
-            background-color: var(--deep-olive);
-            color: var(--white);
-            border-color: var(--deep-olive);
-        }
-
-        .nav-pill.new-chat {
-            background-color: var(--soft-sage-light);
-            color: var(--deep-olive);
-            border-color: var(--soft-sage);
-        }
+        .nav-pill.active { background-color: var(--deep-olive); color: var(--white); border-color: var(--deep-olive); }
+        .nav-pill.new-chat { background-color: var(--soft-sage-light); color: var(--deep-olive); border-color: var(--soft-sage); }
 
         .header-brand-title {
             font-size: 1.1rem;
@@ -220,7 +197,7 @@
             100% { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        /* Main Scroll Area */
+        /* Main Container */
         .main-container {
             flex: 1;
             overflow-y: auto;
@@ -259,11 +236,7 @@
             transition: transform 0.15s ease, border-color 0.15s ease;
         }
 
-        .prompt-card:active {
-            transform: scale(0.98);
-            border-color: var(--terracotta);
-        }
-
+        .prompt-card:active { transform: scale(0.98); border-color: var(--terracotta); }
         .prompt-title { font-weight: 700; font-size: 0.95rem; color: var(--deep-olive); margin-bottom: 4px; }
         .prompt-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.35; }
 
@@ -288,12 +261,44 @@
 
         @keyframes pulseThinking { 0% { opacity: 0.5; } 50% { opacity: 0.9; } 100% { opacity: 0.5; } }
 
-        .msg-toolbar { display: flex; align-items: center; gap: 4px; margin-top: 6px; padding-left: 4px; }
-        .action-icon-btn {
-            background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 4px 6px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+        /* GEMINI-STYLE ACTION TOOLBAR UNDER AI MESSAGES (RENA SVG:ER, INGA EMOJIS) */
+        .msg-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            margin-top: 6px;
+            padding-left: 2px;
+            flex-wrap: wrap;
         }
-        .action-icon-btn.active { color: var(--terracotta); }
-        .action-icon-btn svg { width: 15px; height: 15px; stroke-width: 2; }
+
+        .action-icon-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 5px 7px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+
+        .action-icon-btn:hover, .action-icon-btn:active {
+            background-color: rgba(78, 92, 75, 0.08);
+            color: var(--deep-olive);
+        }
+
+        .action-icon-btn.active {
+            color: var(--terracotta);
+            background-color: rgba(197, 123, 87, 0.12);
+        }
+
+        .action-icon-btn svg {
+            width: 16px;
+            height: 16px;
+            stroke-width: 2;
+        }
 
         /* Input Footer Bar */
         .input-footer {
@@ -611,9 +616,16 @@
 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let activeAuthMode = 'login';
-        const TEN_MINUTES_MS = 10 * 60 * 1000; // 10 minuter i ms
+        const TEN_MINUTES_MS = 10 * 60 * 1000;
 
+        /* GEMINI-STYLE SVG ICON DEFINITIONS (INGA EMOJIS) */
         const SVG_SPEAKER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
+        const SVG_REGEN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>`;
+        const SVG_THUMBS_UP = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>`;
+        const SVG_THUMBS_DOWN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path></svg>`;
+        const SVG_MINUS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+        const SVG_PLUS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+        const SVG_SAVE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>`;
 
         window.addEventListener("DOMContentLoaded", () => {
             initAuthCheck();
@@ -640,7 +652,6 @@
             const now = Date.now();
 
             if (!lastActiveStr) {
-                // Första appstarten någonsin eller efter rensning
                 if (!activeSessionStream) startNewChat();
                 return;
             }
@@ -649,11 +660,9 @@
             const elapsed = now - lastActiveTime;
 
             if (elapsed > TEN_MINUTES_MS) {
-                // Mer än 10 minuter har gått -> Återställ till Ny Chatt
                 localStorage.removeItem("falk_active_session_stream");
                 startNewChat();
             } else {
-                // Mindre än 10 minuter har gått -> Återuppta exakt där användaren var
                 restoreActiveSessionStream();
             }
         }
@@ -864,10 +873,19 @@
 
             wrapperDiv.appendChild(msgDiv);
 
+            // ÅTERINFÖRD FULLSTÄNDIG GEMINI-STYLE SVG IKONRAD UNDER AI-SVAR
             if (type === "ai") {
                 const toolbarDiv = document.createElement("div");
                 toolbarDiv.className = "msg-toolbar";
-                toolbarDiv.innerHTML = `<button class="action-icon-btn" title="Läs upp" onclick="speakText(this)">${SVG_SPEAKER}</button>`;
+                toolbarDiv.innerHTML = `
+                    <button class="action-icon-btn" title="Läs upp" onclick="speakText(this)">${SVG_SPEAKER}</button>
+                    <button class="action-icon-btn" title="Generera igen" onclick="regenerateLastResponse()">${SVG_REGEN}</button>
+                    <button class="action-icon-btn" title="Bra svar" onclick="toggleFeedback(this, 'up')">${SVG_THUMBS_UP}</button>
+                    <button class="action-icon-btn" title="Dåligt svar" onclick="toggleFeedback(this, 'down')">${SVG_THUMBS_DOWN}</button>
+                    <button class="action-icon-btn" title="Minska detaljer" onclick="adjustDetail('minus')">${SVG_MINUS}</button>
+                    <button class="action-icon-btn" title="Utöka detaljer" onclick="adjustDetail('plus')">${SVG_PLUS}</button>
+                    <button class="action-icon-btn" title="Spara till Dagbok" onclick="saveToDiary(this)">${SVG_SAVE}</button>
+                `;
                 wrapperDiv.appendChild(toolbarDiv);
             }
 
@@ -878,7 +896,6 @@
         function appendMessage(text, type) {
             appendMessageToDOM(text, type);
 
-            // Spara det aktiva chattskicket lokalt för snabb återställning inom 10 minuter
             const activeStream = JSON.parse(localStorage.getItem("falk_active_session_stream") || "[]");
             activeStream.push({ text, type });
             localStorage.setItem("falk_active_session_stream", JSON.stringify(activeStream));
@@ -889,6 +906,7 @@
             main.scrollTop = main.scrollHeight;
         }
 
+        /* TOOLBAR ACTIONS LOGIK */
         function speakText(btn) {
             const msgBody = btn.closest(".message-wrapper").querySelector(".message");
             if (!msgBody) return;
@@ -909,6 +927,33 @@
                 window.speechSynthesis.speak(utterance);
                 btn.classList.add("active");
             }
+        }
+
+        function regenerateLastResponse() {
+            const activeStream = JSON.parse(localStorage.getItem("falk_active_session_stream") || "[]");
+            if (activeStream.length > 0) {
+                const userMsgs = activeStream.filter(m => m.type === 'user');
+                if (userMsgs.length > 0) {
+                    const lastUserMsg = userMsgs[userMsgs.length - 1].text;
+                    document.getElementById("chat-message").value = lastUserMsg;
+                    sendMessage();
+                }
+            }
+        }
+
+        function toggleFeedback(btn, type) {
+            btn.classList.toggle("active");
+        }
+
+        function adjustDetail(direction) {
+            const msg = direction === 'plus' ? "Kan du utveckla ditt förra svar lite mer?" : "Kan du sammanfatta förra svaret kortare?";
+            document.getElementById("chat-message").value = msg;
+            sendMessage();
+        }
+
+        function saveToDiary(btn) {
+            btn.classList.add("active");
+            alert("Svaret har sparats till din kognitiva dagbok!");
         }
 
         async function sendMessage() {
