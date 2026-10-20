@@ -710,22 +710,25 @@
             initAuthCheck();
         });
 
-        async function initAuthCheck() {
-            const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: { session: null } }));
-            if (!session) {
-                console.log("Ingen aktiv session – rekommenderar inloggning.");
-            }
-        }
+        
 
         function toggleRememberMe(isRemembered) {
             localStorage.setItem("falk_remember_me", isRemembered ? "true" : "false");
         }
 
+        async function initAuthCheck() {
+            const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: { session: null } }));
+            if (!session) {
+                // Tvinga omdirigering till inloggningssidan om session saknas
+                window.location.href = "/login.html";
+            }
+        }
+
         async function handleLogout() {
             if (confirm("Vill du logga ut från FALK?")) {
                 await supabaseClient.auth.signOut().catch(() => {});
-                alert("Du har loggats ut.");
-                window.location.reload();
+                localStorage.removeItem("falk_chat_history");
+                window.location.href = "/login.html";
             }
         }
 
@@ -823,12 +826,30 @@
             if (!msgBody) return;
 
             if ('speechSynthesis' in window) {
+                // Om ljud redan spelas och denna knapp är aktiv: STOPPA
+                if (window.speechSynthesis.speaking && btn.classList.contains("active")) {
+                    window.speechSynthesis.cancel();
+                    btn.classList.remove("active");
+                    return;
+                }
+
+                // Återställ alla andra aktiva högtalarknappar
+                document.querySelectorAll(".action-icon-btn.active").forEach(b => {
+                    if (b.getAttribute("onclick") && b.getAttribute("onclick").includes("speakText")) {
+                        b.classList.remove("active");
+                    }
+                });
+
                 window.speechSynthesis.cancel();
+
                 const utterance = new SpeechSynthesisUtterance(msgBody.innerText);
                 utterance.lang = 'sv-SE';
+
+                utterance.onend = () => btn.classList.remove("active");
+                utterance.onerror = () => btn.classList.remove("active");
+
                 window.speechSynthesis.speak(utterance);
                 btn.classList.add("active");
-                utterance.onend = () => btn.classList.remove("active");
             } else {
                 alert("Uppläsning stöds inte i denna webbläsare.");
             }
