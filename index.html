@@ -22,6 +22,7 @@
             --text-muted: #6B7B68;
             --white: #FFFFFF;
             --card-shadow: 0 4px 15px rgba(78, 92, 75, 0.06);
+            --accent-blue: #2563eb;
         }
 
         * {
@@ -70,19 +71,46 @@
         .auth-card h2 {
             color: var(--deep-olive);
             font-size: 1.4rem;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .auth-card p {
             color: var(--text-muted);
-            font-size: 0.9rem;
-            margin-bottom: 20px;
+            font-size: 0.88rem;
+            margin-bottom: 18px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            background-color: var(--warm-beige-light);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 16px;
+        }
+
+        .auth-tab-btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            background: transparent;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .auth-tab-btn.active {
+            background-color: var(--white);
+            color: var(--deep-olive);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
         }
 
         .auth-input-group {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
             text-align: left;
         }
 
@@ -152,7 +180,7 @@
             border-color: var(--soft-sage);
         }
 
-        /* Main Container */
+        /* Main Scroll Area */
         .main-container {
             flex: 1;
             overflow-y: auto;
@@ -188,6 +216,12 @@
             text-align: left;
             cursor: pointer;
             box-shadow: var(--card-shadow);
+            transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+
+        .prompt-card:active {
+            transform: scale(0.98);
+            border-color: var(--terracotta);
         }
 
         .prompt-title { font-weight: 700; font-size: 0.95rem; color: var(--deep-olive); margin-bottom: 4px; }
@@ -254,7 +288,7 @@
             background-color: var(--deep-olive); color: var(--white); border: none; padding: 0 20px; height: 42px; border-radius: 21px; font-weight: 700; font-size: 0.9rem; cursor: pointer; flex-shrink: 0;
         }
 
-        /* Drawers */
+        /* Drawers (Vänster & Höger) */
         .drawer-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(44, 53, 43, 0.4); display: flex; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
         }
@@ -270,13 +304,96 @@
         .drawer-overlay.active .drawer-card { transform: translateX(0); }
 
         .drawer-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid rgba(78, 92, 75, 0.1); }
-        .drawer-header h3 { color: var(--deep-olive); font-size: 1.2rem; }
+        .drawer-header h3 { color: var(--deep-olive); font-size: 1.2rem; font-weight: 700; }
         .close-btn { background: none; border: none; font-size: 1.4rem; color: var(--text-muted); cursor: pointer; }
 
         .entry-item { background-color: var(--warm-beige-light); border: 1px solid rgba(78, 92, 75, 0.1); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
         .entry-date { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; }
         .entry-snippet { font-size: 0.88rem; color: var(--text-dark); }
 
+        /* FOKUS MODAL MODAL (REGULATORER) */
+        .focus-modal-card {
+            background-color: var(--white);
+            border-radius: 24px;
+            padding: 24px;
+            width: 90%;
+            max-width: 420px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            border: 1px solid rgba(78, 92, 75, 0.1);
+        }
+
+        .focus-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .focus-modal-header h3 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .focus-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .reset-link {
+            color: #2563eb;
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .focus-subtext {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 18px;
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .slider-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .slider-label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+            font-size: 0.92rem;
+            color: #334155;
+        }
+
+        .slider-val {
+            color: #475569;
+            font-weight: 600;
+        }
+
+        .slider-item input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #e2e8f0;
+            outline: none;
+            accent-color: #2563eb;
+            cursor: pointer;
+        }
+
+        .progress-bar-bg { background-color: var(--warm-beige); height: 10px; border-radius: 5px; overflow: hidden; margin: 8px 0 16px 0; }
+        .progress-bar-fill { background-color: var(--soft-sage); height: 100%; width: 47%; border-radius: 5px; }
+        .tag-pill { display: inline-block; background-color: var(--soft-sage-light); color: var(--deep-olive); padding: 6px 12px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; margin-right: 6px; }
         .btn-logout { background-color: #FDF2F2; color: #9B1C1C; border: 1px solid #F8B4B4; width: 100%; padding: 12px; border-radius: 12px; font-weight: 700; margin-top: 16px; cursor: pointer; }
 
         .hidden { display: none !important; }
@@ -287,9 +404,14 @@
     <!-- SPA Auth Overlay -->
     <div id="auth-overlay" class="auth-overlay-screen">
         <div class="auth-card">
-            <h2>🧠 Välkommen till FALK</h2>
-            <p>Logga in för att fortsätta din kognitiva resa</p>
+            <h2>Välkommen till FALK</h2>
+            <p>Din kognitiva vägledare för självreflektion</p>
             
+            <div class="auth-tabs">
+                <button class="auth-tab-btn active" id="tab-login-btn" onclick="switchAuthTab('login')">Logga in</button>
+                <button class="auth-tab-btn" id="tab-signup-btn" onclick="switchAuthTab('signup')">Skapa konto</button>
+            </div>
+
             <div class="auth-input-group">
                 <label>E-postadress</label>
                 <input type="email" id="auth-email" placeholder="din.epost@doman.se">
@@ -303,17 +425,18 @@
                 <label for="auth-remember">Håll mig inloggad</label>
             </div>
 
-            <button class="auth-submit-btn" onclick="handleLogin()">Logga in</button>
+            <button class="auth-submit-btn" id="auth-submit-btn" onclick="handleAuthSubmit()">Logga in</button>
             <div id="auth-error" style="color: #9B1C1C; font-size: 0.85rem; margin-top: 10px;" class="hidden"></div>
+            <div id="auth-success" style="color: #15803D; font-size: 0.85rem; margin-top: 10px;" class="hidden"></div>
         </div>
     </div>
 
     <!-- Main Header -->
     <header class="header-nav">
         <button class="nav-pill" id="nav-dagbok-btn" onclick="openDagbok()">📓 Dagbok</button>
-        <button class="nav-pill active" id="nav-falk-btn" onclick="openChatView()">🧠 FALK</button>
-        <button class="nav-pill new-chat" onclick="resetChat()">+ Ny</button>
-        <button class="nav-pill" id="nav-profil-btn" onclick="openProfile()">🧠 Profil</button>
+        <button class="nav-pill active" id="nav-falk-btn" onclick="startNewChat()">FALK</button>
+        <button class="nav-pill new-chat" onclick="startNewChat()">+ Ny</button>
+        <button class="nav-pill" id="nav-profil-btn" onclick="openProfile()">Profil</button>
     </header>
 
     <!-- Main Scroll Container -->
@@ -323,13 +446,14 @@
             <p>Vad vill du utforska idag?</p>
         </div>
 
+        <!-- 9 ÅTERSTÄLLDA STARTKORT -->
         <section class="prompt-grid" id="prompt-grid">
             <div class="prompt-card" onclick="selectPrompt('Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det.')">
                 <div class="prompt-title">✨ Mening & livsriktning</div>
                 <div class="prompt-desc">"Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det."</div>
             </div>
             <div class="prompt-card" onclick="selectPrompt('Hjälp mig sortera tankarna och hitta klarhet.')">
-                <div class="prompt-title">🧠 När tankarna tar över</div>
+                <div class="prompt-title">💭 När tankarna tar över</div>
                 <div class="prompt-desc">Hjälp mig sortera tankarna och hitta klarhet.</div>
             </div>
             <div class="prompt-card" onclick="selectPrompt('Hjälp mig hantera utmaningar och hitta nästa steg.')">
@@ -344,6 +468,22 @@
                 <div class="prompt-title">🎯 Från mål till handling</div>
                 <div class="prompt-desc">Hjälp mig komma vidare och få saker att hända.</div>
             </div>
+            <div class="prompt-card" onclick="selectPrompt('Hjälp mig förstå en situation och kommunicera bättre.')">
+                <div class="prompt-title">💬 Relationer & svåra samtal</div>
+                <div class="prompt-desc">Hjälp mig förstå en situation och kommunicera bättre.</div>
+            </div>
+            <div class="prompt-card" onclick="selectPrompt('Hjälp mig hitta hållbara vanor för sömn, energi och fokus.')">
+                <div class="prompt-title">⚡ Mer energi & balans</div>
+                <div class="prompt-desc">Hjälp mig hitta hållbara vanor för sömn, energi och fokus.</div>
+            </div>
+            <div class="prompt-card" onclick="selectPrompt('Hjälp mig upptäcka mina behov, drivkrafter och mönster.')">
+                <div class="prompt-title">🔍 Förstå mig själv bättre</div>
+                <div class="prompt-desc">Hjälp mig upptäcka mina behov, drivkrafter och mönster.</div>
+            </div>
+            <div class="prompt-card" onclick="selectPrompt('Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet.')">
+                <div class="prompt-title">🧩 Utmana mina tankar</div>
+                <div class="prompt-desc">Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet.</div>
+            </div>
         </section>
 
         <div class="chat-messages" id="chat-messages"></div>
@@ -355,9 +495,77 @@
             <input type="text" id="chat-message" placeholder="Skriv eller tala..." onkeydown="if(event.key==='Enter') sendMessage()">
         </div>
         <button class="icon-btn" title="Röstinmatning" onclick="alert('Röstinmatning aktiveras inom kort.')">🎙️</button>
-        <button class="icon-btn" title="Inställningar" onclick="openProfile()">🎛️</button>
+        
+        <!-- REGLAGE IKON (ÖPPNAR FOKUS MODAL) -->
+        <button class="icon-btn" title="Kognitivt Fokus" onclick="openFocusModal()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line>
+                <line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line>
+                <line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line>
+                <line x1="17" y1="16" x2="23" y2="16"></line>
+            </svg>
+        </button>
+
         <button class="send-btn" id="send-btn" onclick="sendMessage()">Skicka</button>
     </footer>
+
+    <!-- FOKUS MODAL (EXAKT SOM I BILDEN) -->
+    <div class="drawer-overlay" id="focus-modal" style="align-items: center; justify-content: center;" onclick="if(event.target===this) closeFocusModal()">
+        <div class="focus-modal-card">
+            <div class="focus-modal-header">
+                <h3>Fokus</h3>
+                <div class="focus-header-actions">
+                    <span class="reset-link" onclick="resetFocusSliders()">Återställ</span>
+                    <button class="close-btn" onclick="closeFocusModal()">✕</button>
+                </div>
+            </div>
+
+            <div class="focus-subtext">FALK är inställd på att höja:</div>
+
+            <div class="slider-group">
+                <div class="slider-item">
+                    <div class="slider-label-row">
+                        <span>Självförtroende</span>
+                        <span class="slider-val" id="val-confidence">50%</span>
+                    </div>
+                    <input type="range" id="slider-confidence" min="0" max="100" value="50" oninput="updateSliderVal('confidence', this.value)">
+                </div>
+
+                <div class="slider-item">
+                    <div class="slider-label-row">
+                        <span>Stresshantering</span>
+                        <span class="slider-val" id="val-stress">50%</span>
+                    </div>
+                    <input type="range" id="slider-stress" min="0" max="100" value="50" oninput="updateSliderVal('stress', this.value)">
+                </div>
+
+                <div class="slider-item">
+                    <div class="slider-label-row">
+                        <span>Handlingskraft</span>
+                        <span class="slider-val" id="val-action">50%</span>
+                    </div>
+                    <input type="range" id="slider-action" min="0" max="100" value="50" oninput="updateSliderVal('action', this.value)">
+                </div>
+
+                <div class="slider-item">
+                    <div class="slider-label-row">
+                        <span>Gränssättning</span>
+                        <span class="slider-val" id="val-boundaries">50%</span>
+                    </div>
+                    <input type="range" id="slider-boundaries" min="0" max="100" value="50" oninput="updateSliderVal('boundaries', this.value)">
+                </div>
+
+                <div class="slider-item">
+                    <div class="slider-label-row">
+                        <span>Motivation</span>
+                        <span class="slider-val" id="val-motivation">50%</span>
+                    </div>
+                    <input type="range" id="slider-motivation" min="0" max="100" value="50" oninput="updateSliderVal('motivation', this.value)">
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- VÄNSTER DRAWER: Dagbok -->
     <div class="drawer-overlay left-drawer" id="dagbok-drawer" onclick="if(event.target===this) closeDagbok()">
@@ -370,17 +578,48 @@
         </div>
     </div>
 
-    <!-- HÖGER DRAWER: Profil -->
+    <!-- HÖGER DRAWER: Profil (FULLSTÄNDIG UTAN EMOJI) -->
     <div class="drawer-overlay right-drawer" id="profile-drawer" onclick="if(event.target===this) closeProfile()">
         <div class="drawer-card">
             <div class="drawer-header">
-                <h3>🧠 Kognitiv Profil</h3>
+                <h3>Kognitiv Profil</h3>
                 <button class="close-btn" onclick="closeProfile()">✕</button>
             </div>
-            
-            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">Insiktsnivå: 47%</p>
+
+            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-top: 10px;">📈 KOGNITIV UTVECKLINGSKURVA</div>
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px;">
+                <span style="font-weight: 700; color: var(--deep-olive);">Insiktsnivå</span>
+                <span style="font-weight: 700; color: var(--deep-olive);">47%</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill"></div>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">Måttlig kognitiv insikt</div>
+
+            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;">KÄRNVÄRDERINGAR</div>
+            <div style="margin: 8px 0 16px 0;">
+                <span class="tag-pill">Transparens</span>
+                <span class="tag-pill">Tydlighet</span>
+            </div>
+
+            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;">IDENTIFIERADE MÖNSTER</div>
+            <ul style="margin: 8px 0 16px 20px; font-size: 0.9rem; color: var(--text-dark); line-height: 1.5;">
+                <li>Informationssökning</li>
+                <li>Direkt fråga</li>
+            </ul>
+
+            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;">AKTUELLT FOKUS</div>
+            <div style="font-size: 0.95rem; font-weight: 700; color: var(--deep-olive); margin-top: 4px;">Användaren vill veta FALK:s syfte</div>
 
             <button class="btn-logout" onclick="handleLogout()">Logga ut</button>
+
+            <div style="margin-top: 16px;">
+                <a style="color: var(--terracotta); text-decoration: none; font-size: 0.85rem; font-weight: 600; cursor: pointer;" onclick="clearCognitiveMemory()">Rensa kognitivt minne</a>
+            </div>
+
+            <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.35; margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(78, 92, 75, 0.1); text-align: center;">
+                Friskrivning: FALK kan inte ställa medicinska eller psykiatriska diagnoser. FALK är enbart en kognitiv vägledare för självreflektion.
+            </div>
         </div>
     </div>
 
@@ -390,13 +629,14 @@
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZXJ3cGd2ZXBramlydWduZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MjM3NjksImV4cCI6MjEwNzk5OTc2OX0.UNX_fozGEsKKMrQpn-8VP3g3r1boegX5jl5B8oW69Ww";
 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let activeAuthMode = 'login'; // 'login' or 'signup'
 
         const SVG_SPEAKER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
-        const SVG_REGEN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>`;
 
         window.addEventListener("DOMContentLoaded", () => {
             initAuthCheck();
-            loadChatHistory();
+            loadFocusSettings();
+            startNewChat(); // Starta alltid i "Ny chatt"-vy vid appstart
         });
 
         async function initAuthCheck() {
@@ -408,10 +648,23 @@
             }
         }
 
-        async function handleLogin() {
+        function switchAuthTab(mode) {
+            activeAuthMode = mode;
+            document.getElementById("tab-login-btn").classList.toggle("active", mode === 'login');
+            document.getElementById("tab-signup-btn").classList.toggle("active", mode === 'signup');
+            document.getElementById("auth-submit-btn").textContent = mode === 'login' ? "Logga in" : "Skapa konto";
+            document.getElementById("auth-error").classList.add("hidden");
+            document.getElementById("auth-success").classList.add("hidden");
+        }
+
+        async function handleAuthSubmit() {
             const email = document.getElementById("auth-email").value.trim();
             const password = document.getElementById("auth-password").value.trim();
             const errDiv = document.getElementById("auth-error");
+            const succDiv = document.getElementById("auth-success");
+
+            errDiv.classList.add("hidden");
+            succDiv.classList.add("hidden");
 
             if (!email || !password) {
                 errDiv.textContent = "Fyll i både e-post och lösenord.";
@@ -419,13 +672,28 @@
                 return;
             }
 
-            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-            if (error) {
-                errDiv.textContent = "Felaktig e-post eller lösenord.";
-                errDiv.classList.remove("hidden");
+            if (activeAuthMode === 'login') {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                if (error) {
+                    errDiv.textContent = "Felaktig e-post eller lösenord.";
+                    errDiv.classList.remove("hidden");
+                } else {
+                    document.getElementById("auth-overlay").classList.add("hidden");
+                    startNewChat();
+                }
             } else {
-                errDiv.classList.add("hidden");
-                document.getElementById("auth-overlay").classList.add("hidden");
+                const { data, error } = await supabaseClient.auth.signUp({ email, password });
+                if (error) {
+                    errDiv.textContent = error.message || "Kunde inte skapa konto.";
+                    errDiv.classList.remove("hidden");
+                } else {
+                    succDiv.textContent = "Konto skapat! Om bekräftelse krävs, kontrollera din e-post.";
+                    succDiv.classList.remove("hidden");
+                    if (data.session) {
+                        document.getElementById("auth-overlay").classList.add("hidden");
+                        startNewChat();
+                    }
+                }
             }
         }
 
@@ -438,40 +706,89 @@
             }
         }
 
-        function loadChatHistory() {
+        function startNewChat() {
+            document.getElementById("chat-messages").innerHTML = "";
+            document.getElementById("prompt-grid").classList.remove("hidden");
+            closeDagbok();
+            closeProfile();
+            closeFocusModal();
+            loadDagbokHistoryOnly();
+        }
+
+        function loadDagbokHistoryOnly() {
             const cached = JSON.parse(localStorage.getItem("falk_chat_history") || "[]");
-            const messagesContainer = document.getElementById("chat-messages");
-            const promptGrid = document.getElementById("prompt-grid");
             const dagbokList = document.getElementById("dagbok-entries-list");
+            dagbokList.innerHTML = "";
 
-            if (cached.length > 0) {
-                promptGrid.classList.add("hidden");
-                messagesContainer.innerHTML = "";
-                dagbokList.innerHTML = "";
-
-                cached.forEach((item, idx) => {
-                    if (item.user_message) appendMessage(item.user_message, "user", false);
-                    if (item.ai_response) appendMessage(item.ai_response, "ai", false);
-
-                    if (item.user_message) {
-                        const entryDiv = document.createElement("div");
-                        entryDiv.className = "entry-item";
-
-                        const dateDiv = document.createElement("div");
-                        dateDiv.className = "entry-date";
-                        dateDiv.textContent = `SESSION ${idx + 1}`;
-
-                        const snippetDiv = document.createElement("div");
-                        snippetDiv.className = "entry-snippet";
-                        snippetDiv.textContent = item.user_message;
-
-                        entryDiv.appendChild(dateDiv);
-                        entryDiv.appendChild(snippetDiv);
-                        dagbokList.appendChild(entryDiv);
-                    }
-                });
-                scrollToBottom();
+            if (cached.length === 0) {
+                dagbokList.innerHTML = `<div class="entry-item"><div class="entry-date">IDAG</div><div class="entry-snippet">Inga sparade reflektioner ännu.</div></div>`;
+                return;
             }
+
+            cached.forEach((item, idx) => {
+                if (item.user_message) {
+                    const entryDiv = document.createElement("div");
+                    entryDiv.className = "entry-item";
+
+                    const dateDiv = document.createElement("div");
+                    dateDiv.className = "entry-date";
+                    dateDiv.textContent = `SESSION ${idx + 1}`;
+
+                    const snippetDiv = document.createElement("div");
+                    snippetDiv.className = "entry-snippet";
+                    snippetDiv.textContent = item.user_message;
+
+                    entryDiv.appendChild(dateDiv);
+                    entryDiv.appendChild(snippetDiv);
+                    dagbokList.appendChild(entryDiv);
+                }
+            });
+        }
+
+        /* FOKUS REGLAGE KONTROLLER */
+        function openFocusModal() {
+            document.getElementById("focus-modal").classList.add("active");
+        }
+
+        function closeFocusModal() {
+            document.getElementById("focus-modal").classList.remove("active");
+        }
+
+        function updateSliderVal(key, val) {
+            document.getElementById(`val-${key}`).textContent = `${val}%`;
+            saveFocusSettings();
+        }
+
+        function resetFocusSliders() {
+            const keys = ['confidence', 'stress', 'action', 'boundaries', 'motivation'];
+            keys.forEach(k => {
+                document.getElementById(`slider-${k}`).value = 50;
+                document.getElementById(`val-${k}`).textContent = '50%';
+            });
+            saveFocusSettings();
+        }
+
+        function saveFocusSettings() {
+            const settings = {
+                confidence: document.getElementById('slider-confidence').value,
+                stress: document.getElementById('slider-stress').value,
+                action: document.getElementById('slider-action').value,
+                boundaries: document.getElementById('slider-boundaries').value,
+                motivation: document.getElementById('slider-motivation').value
+            };
+            localStorage.setItem("falk_focus_settings", JSON.stringify(settings));
+        }
+
+        function loadFocusSettings() {
+            const saved = JSON.parse(localStorage.getItem("falk_focus_settings") || "{}");
+            const keys = ['confidence', 'stress', 'action', 'boundaries', 'motivation'];
+            keys.forEach(k => {
+                const val = saved[k] !== undefined ? saved[k] : 50;
+                const input = document.getElementById(`slider-${k}`);
+                const label = document.getElementById(`val-${k}`);
+                if (input) input.value = val;
+                if (label) label.textContent = `${val}%`;
+            });
         }
 
         function selectPrompt(promptText) {
@@ -479,7 +796,7 @@
             sendMessage();
         }
 
-        function appendMessage(text, type, save = true) {
+        function appendMessage(text, type) {
             const messagesContainer = document.getElementById("chat-messages");
             const promptGrid = document.getElementById("prompt-grid");
             promptGrid.classList.add("hidden");
@@ -566,6 +883,9 @@
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 60000);
 
+            // Hämta reglageinställningarna för att baka in i anropet
+            const focusSettings = JSON.parse(localStorage.getItem("falk_focus_settings") || "{}");
+
             try {
                 const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: { session: null } }));
                 if (!session) throw new Error("Ingen aktiv session");
@@ -576,7 +896,7 @@
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${session.access_token}`
                     },
-                    body: JSON.stringify({ message }),
+                    body: JSON.stringify({ message, focus: focusSettings }),
                     signal: controller.signal
                 }).catch(() => null);
 
@@ -593,7 +913,7 @@
                     const cached = JSON.parse(localStorage.getItem("falk_chat_history") || "[]");
                     cached.push({ user_message: message, ai_response: data.response });
                     localStorage.setItem("falk_chat_history", JSON.stringify(cached));
-                    loadChatHistory();
+                    loadDagbokHistoryOnly();
                 } else {
                     throw new Error("Tomt svar");
                 }
@@ -614,17 +934,9 @@
             }
         }
 
-        function resetChat() {
-            if (confirm("Vill du starta en ny chatt? Historiken sparas lokalt.")) {
-                document.getElementById("chat-messages").innerHTML = "";
-                document.getElementById("prompt-grid").classList.remove("hidden");
-                closeDagbok();
-                closeProfile();
-            }
-        }
-
         function openDagbok() {
             closeProfile();
+            closeFocusModal();
             document.getElementById("dagbok-drawer").classList.add("active");
             document.getElementById("nav-dagbok-btn").classList.add("active");
             document.getElementById("nav-falk-btn").classList.remove("active");
@@ -638,6 +950,7 @@
 
         function openProfile() {
             closeDagbok();
+            closeFocusModal();
             document.getElementById("profile-drawer").classList.add("active");
             document.getElementById("nav-profil-btn").classList.add("active");
             document.getElementById("nav-falk-btn").classList.remove("active");
@@ -649,10 +962,12 @@
             document.getElementById("nav-falk-btn").classList.add("active");
         }
 
-        function openChatView() {
-            closeDagbok();
-            closeProfile();
-            document.getElementById("nav-falk-btn").classList.add("active");
+        function clearCognitiveMemory() {
+            if (confirm("Vill du rensa den kognitiva profilens minne?")) {
+                localStorage.removeItem("falk_chat_history");
+                startNewChat();
+                alert("Kognitivt minne rensat.");
+            }
         }
 
         if ('serviceWorker' in navigator) {
