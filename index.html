@@ -65,7 +65,7 @@
         .auth-card {
             background-color: var(--white);
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             padding: 32px 24px 24px 24px;
             border-radius: 20px;
             box-shadow: var(--card-shadow);
@@ -81,8 +81,8 @@
 
         .auth-card h2 {
             color: var(--deep-olive);
-            font-size: 1.8rem;
-            font-weight: 800;
+            font-size: 1.9rem;
+            font-weight: 900;
             letter-spacing: 0.5px;
             margin-bottom: 4px;
         }
@@ -156,19 +156,17 @@
             transition: color 0.15s ease;
         }
 
-        .support-link-wrapper a:hover {
-            color: var(--deep-olive);
-        }
+        .support-link-wrapper a:hover { color: var(--deep-olive); }
 
-        /* Header Navigation (EXAKT CENTRERAD HEADER) */
+        /* Responsiv Header Navigation (Anpassad till Fönstret upp till 768px) */
         .header-nav {
             position: relative;
             background-color: var(--warm-beige-light);
-            padding: 12px 16px;
+            padding: 12px 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            max-width: 600px;
+            max-width: 768px;
             margin: 0 auto;
             width: 100%;
             border-bottom: 1px solid rgba(78, 92, 75, 0.1);
@@ -196,20 +194,20 @@
             color: var(--deep-olive);
             border-color: var(--soft-sage);
             font-weight: 800;
-            font-size: 1.1rem;
+            font-size: 1.15rem;
             padding: 4px 14px;
             line-height: 1;
         }
 
-        /* ORAMAD, STÖRRE OCH MATEMATISKT ABSOLUT CENTRERAD FALK TITEL */
+        /* FALK I HEADER: STÖRRE (1.5rem / 24px) & ABSOLUT CENTRERAD */
         .header-brand-title {
             position: absolute;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 1.35rem;
+            font-size: 1.5rem;
             font-weight: 900;
             color: var(--deep-olive);
-            letter-spacing: 1px;
+            letter-spacing: 1.2px;
             cursor: pointer;
             padding: 4px 8px;
             background: none;
@@ -234,15 +232,15 @@
             gap: 8px;
         }
 
-        /* Main Container */
+        /* Responsiv Main Container (Anpassad till Fönstret) */
         .main-container {
             flex: 1;
             overflow-y: auto;
-            padding: 16px;
+            padding: 16px 20px;
             display: flex;
             flex-direction: column;
             gap: 16px;
-            max-width: 600px;
+            max-width: 768px;
             margin: 0 auto;
             width: 100%;
         }
@@ -256,7 +254,8 @@
             margin-bottom: 8px;
         }
 
-        .welcome-card h2 { font-size: 1.1rem; color: var(--deep-olive); font-weight: 700; line-height: 1.35; }
+        .welcome-card h2 { font-size: 1.15rem; color: var(--deep-olive); font-weight: 800; margin-bottom: 4px; }
+        .welcome-card p { font-size: 0.92rem; color: var(--text-muted); line-height: 1.4; }
 
         .prompt-grid { display: flex; flex-direction: column; gap: 10px; }
         .prompt-grid.hidden { display: none; }
@@ -265,7 +264,7 @@
             background-color: var(--white);
             border: 1px solid rgba(78, 92, 75, 0.12);
             border-radius: 14px;
-            padding: 14px 16px;
+            padding: 14px 18px;
             text-align: left;
             cursor: pointer;
             box-shadow: var(--card-shadow);
@@ -274,7 +273,7 @@
 
         .prompt-card:active { transform: scale(0.98); border-color: var(--terracotta); }
         .prompt-title { font-weight: 700; font-size: 0.95rem; color: var(--deep-olive); margin-bottom: 4px; }
-        .prompt-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.35; }
+        .prompt-desc { font-size: 0.88rem; color: var(--text-muted); line-height: 1.4; }
 
         /* Chat Messages */
         .chat-messages { display: flex; flex-direction: column; gap: 12px; }
@@ -332,15 +331,15 @@
 
         .action-icon-btn svg { width: 16px; height: 16px; stroke-width: 2; }
 
-        /* Input Footer Bar */
+        /* Responsiv Footer (Anpassad till Fönstret) */
         .input-footer {
             background-color: var(--warm-beige-light);
-            padding: 12px 16px;
+            padding: 12px 20px;
             border-top: 1px solid rgba(78, 92, 75, 0.1);
             display: flex;
             align-items: center;
             gap: 8px;
-            max-width: 600px;
+            max-width: 768px;
             margin: 0 auto;
             width: 100%;
         }
@@ -421,7 +420,7 @@
 </head>
 <body>
 
-    <!-- SPA Auth Overlay (MED ENTER-SUBMIT OCH SUPPORTLINK) -->
+    <!-- SPA Auth Overlay -->
     <div id="auth-overlay" class="auth-overlay-screen">
         <div class="auth-card">
             <h2>FALK</h2>
@@ -447,7 +446,6 @@
 
             <button class="auth-submit-btn" id="auth-submit-btn" onclick="handleAuthSubmit()">Logga in</button>
             
-            <!-- KONTROLLERAD SUPPORTLINK -->
             <div class="support-link-wrapper">
                 <a href="mailto:support@falk-ai.se?subject=Inloggningshj%C3%A4lp%20FALK">Behöver du hjälp? Kontakta support</a>
             </div>
@@ -457,7 +455,7 @@
         </div>
     </div>
 
-    <!-- Main Header (MATEMATISKT CENTRERAD FALK & REN + KNAPP) -->
+    <!-- Main Header (1.5rem FALK & CENTRERAD) -->
     <header class="header-nav">
         <button class="nav-pill" id="nav-dagbok-btn" onclick="openDagbok()">📓 Dagbok</button>
         <div class="header-brand-title" id="header-falk-title" onclick="startNewChat()">FALK</div>
@@ -469,11 +467,13 @@
 
     <!-- Main Scroll Container -->
     <main class="main-container">
-        <!-- VÄLKOMSTKORT MED NY TONA OCH EXAKT RUBRIK -->
+        <!-- VÄLKOMSTKORT SANERAT -->
         <div class="welcome-card" id="welcome-card">
-            <h2>Skriv till mig eller välj ett av alternativen...</h2>
+            <h2>Välkommen till FALK</h2>
+            <p>Din kognitiva kompass för reflektion och vägledning.</p>
         </div>
 
+        <!-- ALLA 9 STARTKORT MED EXPLICITA CITATTECKEN -->
         <section class="prompt-grid" id="prompt-grid">
             <div class="prompt-card" onclick="selectPrompt('Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det.')">
                 <div class="prompt-title">✨ Mening & livsriktning</div>
@@ -481,45 +481,45 @@
             </div>
             <div class="prompt-card" onclick="selectPrompt('Hjälp mig sortera tankarna och hitta klarhet.')">
                 <div class="prompt-title">💭 När tankarna tar över</div>
-                <div class="prompt-desc">Hjälp mig sortera tankarna och hitta klarhet.</div>
+                <div class="prompt-desc">"Hjälp mig sortera tankarna och hitta klarhet."</div>
             </div>
             <div class="prompt-card" onclick="selectPrompt('Hjälp mig hantera utmaningar och hitta nästa steg.')">
                 <div class="prompt-title">💼 Jobb, ansvar & ledarskap</div>
-                <div class="prompt-desc">Hjälp mig hantera utmaningar och hitta nästa steg.</div>
+                <div class="prompt-desc">"Hjälp mig hantera utmaningar och hitta nästa steg."</div>
             </div>
             <div class="prompt-card" onclick="selectPrompt('Jag känner mig stressad eller orolig och behöver landa.')">
                 <div class="prompt-title">🌱 Hitta lugnet igen</div>
-                <div class="prompt-desc">Jag känner mig stressad eller orolig och behöver landa.</div>
+                <div class="prompt-desc">"Jag känner mig stressad eller orolig och behöver landa."</div>
             </div>
             <div class="prompt-card" onclick="selectPrompt('Hjälp mig komma vidare och få saker att hända.')">
                 <div class="prompt-title">🎯 Från mål till handling</div>
-                <div class="prompt-desc">Hjälp mig komma vidare och få saker att hända.</div>
+                <div class="prompt-desc">"Hjälp mig komma vidare och få saker att hända."</div>
             </div>
             <div class="prompt-card" onclick="selectPrompt('Hjälp mig förstå en situation och kommunicera bättre.')">
                 <div class="prompt-title">💬 Relationer & svåra samtal</div>
-                <div class="prompt-desc">Hjälp mig förstå en situation och kommunicera bättre.</div>
+                <div class="prompt-desc">"Hjälp mig förstå en situation och kommunicera bättre."</div>
             </div>
             <div class="prompt-card" onclick="selectPrompt('Hjälp mig hitta hållbara vanor för sömn, energi och fokus.')">
                 <div class="prompt-title">⚡ Mer energi & balans</div>
-                <div class="prompt-desc">Hjälp mig hitta hållbara vanor för sömn, energi och fokus.</div>
+                <div class="prompt-desc">"Hjälp mig hitta hållbara vanor för sömn, energi och fokus."</div>
             </div>
             <div class="prompt-card" onclick="selectPrompt('Hjälp mig upptäcka mina behov, drivkrafter och mönster.')">
                 <div class="prompt-title">🔍 Förstå mig själv bättre</div>
-                <div class="prompt-desc">Hjälp mig upptäcka mina behov, drivkrafter och mönster.</div>
+                <div class="prompt-desc">"Hjälp mig upptäcka mina behov, drivkrafter och mönster."</div>
             </div>
             <div class="prompt-card" onclick="selectPrompt('Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet.')">
                 <div class="prompt-title">🧩 Utmana mina tankar</div>
-                <div class="prompt-desc">Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet.</div>
+                <div class="prompt-desc">"Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet."</div>
             </div>
         </section>
 
         <div class="chat-messages" id="chat-messages"></div>
     </main>
 
-    <!-- Footer Input Bar -->
+    <!-- Footer Input Bar (DYNAMISK INITIAL PLACEHOLDER) -->
     <footer class="input-footer">
         <div class="input-wrapper">
-            <input type="text" id="chat-message" placeholder="Skriv eller tala..." onkeydown="if(event.key==='Enter') sendMessage()">
+            <input type="text" id="chat-message" placeholder="Skriv till mig eller välj ett alternativ..." onkeydown="if(event.key==='Enter') sendMessage()">
         </div>
         <button class="icon-btn" title="Röstinmatning" onclick="alert('Röstinmatning aktiveras inom kort.')">🎙️</button>
         
@@ -672,6 +672,17 @@
             evaluateSessionLifecycle();
         });
 
+        /* PLACEHOLDER STATE MOTOR */
+        function setInputPlaceholderState(isChatActive) {
+            const input = document.getElementById("chat-message");
+            if (!input) return;
+            if (isChatActive) {
+                input.placeholder = "Skriv eller tala...";
+            } else {
+                input.placeholder = "Skriv till mig eller välj ett alternativ...";
+            }
+        }
+
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "hidden") {
                 localStorage.setItem("falk_last_active_timestamp", Date.now().toString());
@@ -717,6 +728,9 @@
                     appendMessageToDOM(msg.text, msg.type);
                 });
                 scrollToBottom();
+                setInputPlaceholderState(true); // Aktiv chatt -> Skriv eller tala...
+            } else {
+                setInputPlaceholderState(false); // Ny chatt -> Skriv till mig...
             }
             loadDagbokHistoryOnly();
         }
@@ -809,6 +823,7 @@
             localStorage.removeItem("falk_active_session_stream");
             document.getElementById("chat-messages").innerHTML = "";
             document.getElementById("prompt-grid").classList.remove("hidden");
+            setInputPlaceholderState(false); // Återställ placeholder vid Ny Chatt
             closeDagbok();
             closeProfile();
             closeFocusModal();
@@ -936,6 +951,8 @@
             const activeStream = JSON.parse(localStorage.getItem("falk_active_session_stream") || "[]");
             activeStream.push({ text, type });
             localStorage.setItem("falk_active_session_stream", JSON.stringify(activeStream));
+            
+            setInputPlaceholderState(true); // Växla placeholder till "Skriv eller tala..." så fort ett meddelande skickas
         }
 
         function scrollToBottom() {
