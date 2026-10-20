@@ -268,8 +268,8 @@
             opacity: 0.6;
         }
 
-        /* Kognitiv Profil Modal */
-        .modal-overlay {
+        /* OFF-CANVAS DRAWERS (VÄNSTER OCH HÖGER) */
+        .drawer-overlay {
             position: fixed;
             top: 0;
             left: 0;
@@ -277,45 +277,66 @@
             bottom: 0;
             background-color: rgba(44, 53, 43, 0.4);
             display: flex;
-            align-items: flex-end;
-            justify-content: center;
             z-index: 1000;
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.25s ease;
         }
 
-        .modal-overlay.active {
+        .drawer-overlay.active {
             opacity: 1;
             pointer-events: auto;
         }
 
-        .modal-card {
+        /* Höger panel (Kognitiv Profil) */
+        .drawer-overlay.right-drawer {
+            justify-content: flex-end;
+        }
+
+        .drawer-overlay.right-drawer .drawer-card {
+            transform: translateX(100%);
+            border-top-left-radius: 20px;
+            border-bottom-left-radius: 20px;
+        }
+
+        /* Vänster panel (Dagbok) */
+        .drawer-overlay.left-drawer {
+            justify-content: flex-start;
+        }
+
+        .drawer-overlay.left-drawer .drawer-card {
+            transform: translateX(-100%);
+            border-top-right-radius: 20px;
+            border-bottom-right-radius: 20px;
+        }
+
+        .drawer-card {
             background-color: var(--white);
-            width: 100%;
-            max-width: 500px;
-            border-top-left-radius: 24px;
-            border-top-right-radius: 24px;
+            width: 85%;
+            max-width: 380px;
+            height: 100vh;
             padding: 24px;
-            max-height: 85vh;
             overflow-y: auto;
-            transform: translateY(100%);
             transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
-            box-shadow: 0 -10px 30px rgba(0,0,0,0.15);
+            box-shadow: 0 0 25px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
         }
 
-        .modal-overlay.active .modal-card {
-            transform: translateY(0);
+        .drawer-overlay.active .drawer-card {
+            transform: translateX(0);
         }
 
-        .modal-header {
+        .drawer-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(78, 92, 75, 0.1);
         }
 
-        .modal-header h3 {
+        .drawer-header h3 {
             color: var(--deep-olive);
             font-size: 1.2rem;
             display: flex;
@@ -331,6 +352,30 @@
             cursor: pointer;
         }
 
+        /* Dagbok Elements */
+        .entry-item {
+            background-color: var(--warm-beige-light);
+            border: 1px solid rgba(78, 92, 75, 0.1);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .entry-date {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .entry-snippet {
+            font-size: 0.88rem;
+            color: var(--text-dark);
+            line-height: 1.35;
+        }
+
+        /* Profil Elements */
         .progress-bar-bg {
             background-color: var(--warm-beige);
             height: 10px;
@@ -371,7 +416,7 @@
             font-size: 0.75rem;
             color: var(--text-muted);
             line-height: 1.35;
-            margin-top: 24px;
+            margin-top: auto;
             padding-top: 16px;
             border-top: 1px solid rgba(78, 92, 75, 0.1);
             text-align: center;
@@ -412,10 +457,10 @@
 
     <!-- Header Navigation -->
     <header class="header-nav">
-        <button class="nav-pill" onclick="switchView('dagbok')">📓 Dagbok</button>
-        <button class="nav-pill active" onclick="switchView('falk')">🧠 FALK</button>
+        <button class="nav-pill" id="nav-dagbok-btn" onclick="openDagbok()">📓 Dagbok</button>
+        <button class="nav-pill active" id="nav-falk-btn" onclick="openChatView()">🧠 FALK</button>
         <button class="nav-pill new-chat" onclick="resetChat()">+ Ny</button>
-        <button class="nav-pill" onclick="openProfile()">🧠 Profil</button>
+        <button class="nav-pill" id="nav-profil-btn" onclick="openProfile()">🧠 Profil</button>
     </header>
 
     <!-- Main Scroll Area -->
@@ -427,49 +472,49 @@
             <p>Vad vill du utforska idag?</p>
         </div>
 
-        <!-- Start Prompt Grid -->
+        <!-- Start Prompt Grid (Rena prompts utan rubriktext) -->
         <section class="prompt-grid" id="prompt-grid">
-            <div class="prompt-card" onclick="selectPrompt('Mening & livsriktning: Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det.')">
+            <div class="prompt-card" onclick="selectPrompt('Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det.')">
                 <div class="prompt-title">✨ Mening & livsriktning</div>
                 <div class="prompt-desc">"Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det."</div>
             </div>
 
-            <div class="prompt-card" onclick="selectPrompt('När tankarna tar över: Hjälp mig sortera tankarna och hitta klarhet.')">
+            <div class="prompt-card" onclick="selectPrompt('Hjälp mig sortera tankarna och hitta klarhet.')">
                 <div class="prompt-title">🧠 När tankarna tar över</div>
                 <div class="prompt-desc">Hjälp mig sortera tankarna och hitta klarhet.</div>
             </div>
 
-            <div class="prompt-card" onclick="selectPrompt('Jobb, ansvar & ledarskap: Hjälp mig hantera utmaningar och hitta nästa steg.')">
+            <div class="prompt-card" onclick="selectPrompt('Hjälp mig hantera utmaningar och hitta nästa steg.')">
                 <div class="prompt-title">💼 Jobb, ansvar & ledarskap</div>
                 <div class="prompt-desc">Hjälp mig hantera utmaningar och hitta nästa steg.</div>
             </div>
 
-            <div class="prompt-card" onclick="selectPrompt('Hitta lugnet igen: Jag känner mig stressad eller orolig och behöver landa.')">
+            <div class="prompt-card" onclick="selectPrompt('Jag känner mig stressad eller orolig och behöver landa.')">
                 <div class="prompt-title">🌱 Hitta lugnet igen</div>
                 <div class="prompt-desc">Jag känner mig stressad eller orolig och behöver landa.</div>
             </div>
 
-            <div class="prompt-card" onclick="selectPrompt('Från mål till handling: Hjälp mig komma vidare och få saker att hända.')">
+            <div class="prompt-card" onclick="selectPrompt('Hjälp mig komma vidare och få saker att hända.')">
                 <div class="prompt-title">🎯 Från mål till handling</div>
                 <div class="prompt-desc">Hjälp mig komma vidare och få saker att hända.</div>
             </div>
 
-            <div class="prompt-card" onclick="selectPrompt('Relationer & svåra samtal: Hjälp mig förstå en situation och kommunicera bättre.')">
+            <div class="prompt-card" onclick="selectPrompt('Hjälp mig förstå en situation och kommunicera bättre.')">
                 <div class="prompt-title">💬 Relationer & svåra samtal</div>
                 <div class="prompt-desc">Hjälp mig förstå en situation och kommunicera bättre.</div>
             </div>
 
-            <div class="prompt-card" onclick="selectPrompt('Mer energi & balans: Hjälp mig hitta hållbara vanor för sömn, energi och fokus.')">
+            <div class="prompt-card" onclick="selectPrompt('Hjälp mig hitta hållbara vanor för sömn, energi och fokus.')">
                 <div class="prompt-title">⚡ Mer energi & balans</div>
                 <div class="prompt-desc">Hjälp mig hitta hållbara vanor för sömn, energi och fokus.</div>
             </div>
 
-            <div class="prompt-card" onclick="selectPrompt('Förstå mig själv bättre: Hjälp mig upptäcka mina behov, drivkrafter och mönster.')">
+            <div class="prompt-card" onclick="selectPrompt('Hjälp mig upptäcka mina behov, drivkrafter och mönster.')">
                 <div class="prompt-title">🔍 Förstå mig själv bättre</div>
                 <div class="prompt-desc">Hjälp mig upptäcka mina behov, drivkrafter och mönster.</div>
             </div>
 
-            <div class="prompt-card" onclick="selectPrompt('Utmana mina tankar: Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet.')">
+            <div class="prompt-card" onclick="selectPrompt('Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet.')">
                 <div class="prompt-title">🧩 Utmana mina tankar</div>
                 <div class="prompt-desc">Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet.</div>
             </div>
@@ -490,10 +535,27 @@
         <button class="send-btn" id="send-btn" onclick="sendMessage()">Skicka</button>
     </footer>
 
-    <!-- Modal: Kognitiv Profil -->
-    <div class="modal-overlay" id="profile-modal" onclick="if(event.target===this) closeProfile()">
-        <div class="modal-card">
-            <div class="modal-header">
+    <!-- VÄNSTER DRAWER: Dagbok -->
+    <div class="drawer-overlay left-drawer" id="dagbok-drawer" onclick="if(event.target===this) closeDagbok()">
+        <div class="drawer-card">
+            <div class="drawer-header">
+                <h3>📓 Kognitiv Dagbok</h3>
+                <button class="close-btn" onclick="closeDagbok()">✕</button>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Dina senast sparade reflektioner:</div>
+            <div id="dagbok-entries-list">
+                <div class="entry-item">
+                    <div class="entry-date">IDAG</div>
+                    <div class="entry-snippet">Inga sparade dagboksanteckningar ännu. Byt tankar med FALK för att bygga din historik.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HÖGER DRAWER: Kognitiv Profil -->
+    <div class="drawer-overlay right-drawer" id="profile-drawer" onclick="if(event.target===this) closeProfile()">
+        <div class="drawer-card">
+            <div class="drawer-header">
                 <h3>🧠 Kognitiv Profil</h3>
                 <button class="close-btn" onclick="closeProfile()">✕</button>
             </div>
@@ -554,13 +616,23 @@
             const cached = JSON.parse(localStorage.getItem("falk_chat_history") || "[]");
             const messagesContainer = document.getElementById("chat-messages");
             const promptGrid = document.getElementById("prompt-grid");
+            const dagbokList = document.getElementById("dagbok-entries-list");
 
             if (cached.length > 0) {
                 promptGrid.classList.add("hidden");
                 messagesContainer.innerHTML = "";
-                cached.forEach(item => {
+                dagbokList.innerHTML = "";
+
+                cached.forEach((item, idx) => {
                     if (item.user_message) appendMessage(item.user_message, "user", false);
                     if (item.ai_response) appendMessage(item.ai_response, "ai", false);
+
+                    if (item.user_message) {
+                        const entryDiv = document.createElement("div");
+                        entryDiv.className = "entry-item";
+                        entryDiv.innerHTML = `<div class="entry-date">SESSION ${idx + 1}</div><div class="entry-snippet">${item.user_message}</div>`;
+                        dagbokList.appendChild(entryDiv);
+                    }
                 });
                 scrollToBottom();
             }
@@ -644,6 +716,7 @@
                     const cached = JSON.parse(localStorage.getItem("falk_chat_history") || "[]");
                     cached.push({ user_message: message, ai_response: data.response });
                     localStorage.setItem("falk_chat_history", JSON.stringify(cached));
+                    loadChatHistory();
                 } else {
                     throw new Error("Tomt svar");
                 }
@@ -666,19 +739,42 @@
             if (confirm("Vill du starta en ny chatt? Historiken sparas lokalt.")) {
                 document.getElementById("chat-messages").innerHTML = "";
                 document.getElementById("prompt-grid").classList.remove("hidden");
+                closeDagbok();
+                closeProfile();
             }
         }
 
-        function switchView(view) {
-            if (view === 'dagbok') alert("Dagboks-vy laddas i nästa modul.");
+        /* DRAWER CONTROLLERS (VÄNSTER & HÖGER) */
+        function openDagbok() {
+            closeProfile();
+            document.getElementById("dagbok-drawer").classList.add("active");
+            document.getElementById("nav-dagbok-btn").classList.add("active");
+            document.getElementById("nav-falk-btn").classList.remove("active");
+        }
+
+        function closeDagbok() {
+            document.getElementById("dagbok-drawer").classList.remove("active");
+            document.getElementById("nav-dagbok-btn").classList.remove("active");
+            document.getElementById("nav-falk-btn").classList.add("active");
         }
 
         function openProfile() {
-            document.getElementById("profile-modal").classList.add("active");
+            closeDagbok();
+            document.getElementById("profile-drawer").classList.add("active");
+            document.getElementById("nav-profil-btn").classList.add("active");
+            document.getElementById("nav-falk-btn").classList.remove("active");
         }
 
         function closeProfile() {
-            document.getElementById("profile-modal").classList.remove("active");
+            document.getElementById("profile-drawer").classList.remove("active");
+            document.getElementById("nav-profil-btn").classList.remove("active");
+            document.getElementById("nav-falk-btn").classList.add("active");
+        }
+
+        function openChatView() {
+            closeDagbok();
+            closeProfile();
+            document.getElementById("nav-falk-btn").classList.add("active");
         }
 
         function clearCognitiveMemory() {
