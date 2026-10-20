@@ -1,12 +1,11 @@
-const CACHE_NAME = 'falk-v7';
+const CACHE_NAME = 'falk-v8';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icon.svg',
-  'https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js',
-  'https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js',
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
+  '/js/purify.min.js',
+  '/js/marked.min.js',
+  '/js/supabase.js'
 ];
 
 self.addEventListener('install', (e) => {
