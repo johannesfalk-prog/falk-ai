@@ -303,7 +303,6 @@
             if (session) {
                 showChat(session);
             } else {
-                // Försök läsa sparad offline-session om Supabase SDK misslyckas offline
                 const cachedUser = localStorage.getItem("falk_cached_user");
                 if (cachedUser && !navigator.onLine) {
                     showChat({ user: { email: cachedUser } });
@@ -368,7 +367,7 @@
         const chatView = document.getElementById("chat-view");
         chatView.innerHTML = "";
 
-        // 1. Läs först från lokal cache för blixtsnabb hydrering offline
+        // 1. Läs från lokal cache för blixtsnabb offline-hydrering
         const cachedHistory = localStorage.getItem("falk_chat_history");
         if (cachedHistory) {
             try {
@@ -377,7 +376,11 @@
             } catch (e) {}
         }
 
-        // 2. Försök uppdatera från servern om nätverk finns
+        // 2. Förhindra helt att avfyra fetch() om mobilen/webbläsaren saknar täckning
+        if (!navigator.onLine) {
+            return;
+        }
+
         try {
             const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: { session: null } }));
             if (!session) return;
@@ -395,7 +398,7 @@
                 }
             }
         } catch (err) {
-            console.warn("Laddar historik från offline-cache");
+            // Tyst fallback
         }
     }
 
@@ -413,6 +416,12 @@
 
         appendMessage(message, "user");
         input.value = "";
+
+        if (!navigator.onLine) {
+            input.value = message;
+            appendMessage("Du är offline. Meddelandet ligger kvar i textfältet.", "system-error");
+            return;
+        }
 
         try {
             const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: { session: null } }));
@@ -433,7 +442,6 @@
             if (data.response) {
                 appendMessage(data.response, "ai");
                 
-                // Uppdatera lokal historikcache med det nya meddelandet
                 const cached = JSON.parse(localStorage.getItem("falk_chat_history") || "[]");
                 cached.push({ user_message: message, ai_response: data.response });
                 localStorage.setItem("falk_chat_history", JSON.stringify(cached));
