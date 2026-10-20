@@ -9,10 +9,10 @@
 
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self' https: data: blob:;
-        script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.supabase.co;
+        script-src 'self' 'unsafe-inline' /js/;
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
         font-src 'self' https://fonts.gstatic.com data:;
-        connect-src 'self' https://dmerwpgvepkjirugnfzy.supabase.co https://falk-ai.onrender.com wss://dmerwpgvepkjirugnfzy.supabase.co https://cdn.jsdelivr.net;
+        connect-src 'self' https://dmerwpgvepkjirugnfzy.supabase.co https://falk-ai.onrender.com wss://dmerwpgvepkjirugnfzy.supabase.co;
         img-src 'self' data: https: blob:;
         object-src 'none';
         base-uri 'self';
@@ -55,12 +55,14 @@
             align-items: center;
             min-height: 100vh;
             padding: 16px;
+            padding-bottom: max(16px, env(safe-area-inset-bottom));
         }
 
         .app-container {
             width: 100%;
             max-width: 600px;
             height: 90vh;
+            height: 90dvh;
             background-color: #111827;
             border-radius: 16px;
             border: 1px solid var(--border);
@@ -288,7 +290,7 @@
 
 <script>
     const SUPABASE_URL = "https://dmerwpgvepkjirugnfzy.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZXJ3cGd2ZXBramlydWduZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MjM3NjksImV4cCI6MjEwNzk5OTc2OX0.UNX_fozGEsKKMrQpn-8VP3g3r1boegX5jl5B8oW69Ww";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZXJ3cGd2ZXBramlydWduZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg1ODcyNzUsImV4cCI6MjA1NDE2MzI3NX0.sb_anon_secret_placeholders";
     const BACKEND_URL = "https://falk-ai.onrender.com";
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -297,6 +299,9 @@
         document.getElementById("auth-form").addEventListener("submit", handleAuth);
         document.getElementById("logout-btn").addEventListener("click", handleLogout);
         document.getElementById("send-btn").addEventListener("click", sendMessage);
+
+        // Lyssna på när nätverket kommer tillbaka för auto-sync
+        window.addEventListener('online', syncPendingMessages);
 
         try {
             const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: { session: null } }));
@@ -308,9 +313,7 @@
                     showChat({ user: { email: cachedUser } });
                 }
             }
-        } catch (e) {
-            console.warn("Session retrieval fallback");
-        }
+        } catch (e) {}
 
         supabaseClient.auth.onAuthStateChange((_event, session) => {
             if (session) {
@@ -322,7 +325,7 @@
         });
 
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(err => console.error("SW Reg Error:", err));
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
         }
     });
 
@@ -367,7 +370,6 @@
         const chatView = document.getElementById("chat-view");
         chatView.innerHTML = "";
 
-        // 1. Läs från lokal cache för blixtsnabb offline-hydrering
         const cachedHistory = localStorage.getItem("falk_chat_history");
         if (cachedHistory) {
             try {
@@ -376,10 +378,7 @@
             } catch (e) {}
         }
 
-        // 2. Förhindra helt att avfyra fetch() om mobilen/webbläsaren saknar täckning
-        if (!navigator.onLine) {
-            return;
-        }
+        if (!navigator.onLine) return;
 
         try {
             const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: { session: null } }));
@@ -397,9 +396,7 @@
                     renderHistoryItems(data.history);
                 }
             }
-        } catch (err) {
-            // Tyst fallback
-        }
+        } catch (err) {}
     }
 
     function renderHistoryItems(historyArray) {
@@ -452,6 +449,11 @@
             input.value = message;
             appendMessage("Kunna inte nå servern. Ditt meddelande ligger kvar i textfältet.", "system-error");
         }
+    }
+
+    async function syncPendingMessages() {
+        // Automatisk synkronisering när täckningen återvänder
+        await loadHistory();
     }
 
     function appendMessage(text, sender) {
