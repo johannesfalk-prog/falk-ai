@@ -1,4 +1,4 @@
-const CACHE_NAME = "falk-v28";
+const CACHE_NAME = "falk-v29";
 const STATIC_ASSETS = [
   "/",
   "/index.html",
