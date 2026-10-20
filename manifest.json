@@ -1,15 +1,16 @@
 {
-  "short_name": "FALK",
   "name": "FALK – Kognitiv Dagbok",
+  "short_name": "FALK",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
   "icons": [
     {
       "src": "/icon.svg",
+      "sizes": "512x512",
       "type": "image/svg+xml",
-      "sizes": "512x512 192x192 any"
+      "purpose": "any maskable"
     }
-  ],
-  "start_url": "/",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
-  "display": "standalone"
+  ]
 }
