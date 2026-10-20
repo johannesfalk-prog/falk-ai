@@ -2,42 +2,26 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <title>FALK – Kognitiv Dagbok</title>
-    
-    <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#0f172a">
-
-    <meta http-equiv="Content-Security-Policy" content="
-        default-src 'self' https: data: blob:;
-        script-src 'self' 'unsafe-inline';
-        worker-src 'self';
-        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-        font-src 'self' https://fonts.gstatic.com data:;
-        connect-src 'self' https://dmerwpgvepkjirugnfzy.supabase.co https://falk-ai.onrender.com wss://dmerwpgvepkjirugnfzy.supabase.co;
-        img-src 'self' data: https: blob:;
-        object-src 'none';
-        base-uri 'self';
-        form-action 'self';
-    ">
-
+    <meta name="theme-color" content="#E8DCC4">
     <script src="/js/purify.min.js"></script>
     <script src="/js/marked.min.js"></script>
     <script src="/js/supabase.js"></script>
-    
     <style>
         :root {
-            --bg-main: #0f172a;
-            --bg-card: #1e293b;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --accent: #38bdf8;
-            --accent-hover: #0284c7;
-            --user-msg: #4f46e5;
-            --ai-msg: #1e293b;
-            --border: #334155;
-            --danger: #ef4444;
+            --warm-beige: #E8DCC4;
+            --warm-beige-light: #F7F3E9;
+            --deep-olive: #4E5C4B;
+            --deep-olive-dark: #3A4638;
+            --terracotta: #C57B57;
+            --soft-sage: #A8BFA1;
+            --soft-sage-light: #E2EBE0;
+            --text-dark: #2C352B;
+            --text-muted: #6B7B68;
+            --white: #FFFFFF;
+            --card-shadow: 0 4px 15px rgba(78, 92, 75, 0.06);
         }
 
         * {
@@ -45,313 +29,670 @@
             margin: 0;
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            background-color: var(--bg-main);
-            color: var(--text-main);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 16px;
-            padding-bottom: max(16px, env(safe-area-inset-bottom));
-        }
-
-        .app-container {
-            width: 100%;
-            max-width: 600px;
-            height: 90vh;
-            height: 90dvh;
-            background-color: #111827;
-            border-radius: 16px;
-            border: 1px solid var(--border);
+            background-color: var(--warm-beige-light);
+            color: var(--text-dark);
+            height: 100vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
         }
 
-        .header {
-            padding: 16px 20px;
-            background-color: var(--bg-card);
-            border-bottom: 1px solid var(--border);
+        /* Header Navigation */
+        .header-nav {
+            background-color: var(--warm-beige-light);
+            padding: 12px 16px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border-bottom: 1px solid rgba(78, 92, 75, 0.1);
+            z-index: 10;
+        }
+
+        .nav-pill {
+            background-color: var(--white);
+            color: var(--deep-olive);
+            border: 1px solid rgba(78, 92, 75, 0.15);
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-pill.active {
+            background-color: var(--deep-olive);
+            color: var(--white);
+            border-color: var(--deep-olive);
+        }
+
+        .nav-pill.new-chat {
+            background-color: var(--soft-sage-light);
+            color: var(--deep-olive);
+            border-color: var(--soft-sage);
+        }
+
+        /* Chat Container */
+        .main-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Welcome Greeting */
+        .welcome-card {
+            background-color: var(--white);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(78, 92, 75, 0.08);
+            margin-bottom: 8px;
+        }
+
+        .welcome-card h2 {
+            font-size: 1.1rem;
+            color: var(--deep-olive);
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .welcome-card p {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        /* Prompt Cards Grid */
+        .prompt-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .prompt-grid.hidden {
+            display: none;
+        }
+
+        .prompt-card {
+            background-color: var(--white);
+            border: 1px solid rgba(78, 92, 75, 0.12);
+            border-radius: 14px;
+            padding: 14px 16px;
+            text-align: left;
+            cursor: pointer;
+            box-shadow: var(--card-shadow);
+            transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+
+        .prompt-card:active {
+            transform: scale(0.98);
+            border-color: var(--terracotta);
+        }
+
+        .prompt-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--deep-olive);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .prompt-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.35;
+        }
+
+        /* Chat Messages */
+        .chat-messages {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            line-height: 1.45;
+            word-break: break-word;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background-color: var(--deep-olive);
+            color: var(--white);
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.ai {
+            align-self: flex-start;
+            background-color: var(--white);
+            color: var(--text-dark);
+            border: 1px solid rgba(78, 92, 75, 0.12);
+            border-bottom-left-radius: 4px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .message.system-error {
+            align-self: center;
+            background-color: #FDF2F2;
+            color: #9B1C1C;
+            border: 1px solid #F8B4B4;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        /* Input Footer Bar */
+        .input-footer {
+            background-color: var(--warm-beige-light);
+            padding: 12px 16px;
+            border-top: 1px solid rgba(78, 92, 75, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            max-width: 600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+            background-color: var(--white);
+            border-radius: 24px;
+            border: 1px solid rgba(78, 92, 75, 0.2);
+            box-shadow: var(--card-shadow);
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 12px 18px;
+            border: none;
+            background: transparent;
+            font-size: 0.95rem;
+            color: var(--text-dark);
+            outline: none;
+        }
+
+        .icon-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 1px solid rgba(78, 92, 75, 0.15);
+            background-color: var(--white);
+            color: var(--deep-olive);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--card-shadow);
             flex-shrink: 0;
         }
 
-        .header h1 {
-            font-size: 1.25rem;
-            color: var(--accent);
+        .send-btn {
+            background-color: var(--deep-olive);
+            color: var(--white);
+            border: none;
+            padding: 0 20px;
+            height: 42px;
+            border-radius: 21px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            box-shadow: var(--card-shadow);
+            flex-shrink: 0;
+            transition: background-color 0.2s ease;
+        }
+
+        .send-btn:disabled {
+            background-color: var(--text-muted);
+            opacity: 0.6;
+        }
+
+        /* Kognitiv Profil Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(44, 53, 43, 0.4);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background-color: var(--white);
+            width: 100%;
+            max-width: 500px;
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+            padding: 24px;
+            max-height: 85vh;
+            overflow-y: auto;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.15);
+        }
+
+        .modal-overlay.active .modal-card {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            color: var(--deep-olive);
+            font-size: 1.2rem;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .header .badge {
-            font-size: 0.75rem;
-            background: #059669;
-            color: #fff;
-            padding: 2px 8px;
-            border-radius: 12px;
-        }
-
-        .user-info {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-right: 8px;
-        }
-
-        .auth-container {
-            padding: 32px 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            justify-content: center;
-            flex-grow: 1;
-        }
-
-        .auth-container h2 {
-            text-align: center;
-            margin-bottom: 8px;
-        }
-
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .input-group label {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
-
-        input[type="email"],
-        input[type="password"] {
-            width: 100%;
-            padding: 12px 16px;
-            background-color: #0f172a;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--text-main);
-            font-size: 1rem;
-            outline: none;
-        }
-
-        .chat-history {
-            flex-grow: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .msg-bubble {
-            max-width: 85%;
-            padding: 14px 18px;
-            border-radius: 12px;
-            line-height: 1.5;
-            font-size: 0.95rem;
-            word-break: break-word;
-            overflow-wrap: anywhere;
-        }
-
-        .msg-user {
-            align-self: flex-end;
-            background-color: var(--user-msg);
-            color: #fff;
-            border-bottom-right-radius: 2px;
-        }
-
-        .msg-ai {
-            align-self: flex-start;
-            background-color: var(--ai-msg);
-            border: 1px solid var(--border);
-            border-bottom-left-radius: 2px;
-        }
-
-        .msg-system-error {
-            align-self: center;
-            background-color: rgba(239, 68, 68, 0.1);
-            border: 1px solid var(--danger);
-            color: #fca5a5;
-            font-size: 0.85rem;
-            padding: 10px 16px;
-            border-radius: 8px;
-            text-align: center;
-            width: 100%;
-        }
-
-        .msg-ai p { margin-bottom: 8px; }
-        .msg-ai p:last-child { margin-bottom: 0; }
-        .msg-ai ul, .msg-ai ol { margin-left: 20px; margin-bottom: 8px; }
-
-        .chat-input-area {
-            padding: 12px 16px;
-            background-color: var(--bg-card);
-            border-top: 1px solid var(--border);
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            flex-shrink: 0;
-        }
-
-        .chat-input-area textarea {
-            flex-grow: 1;
-            height: 48px;
-            min-height: 48px;
-            max-height: 120px;
-            padding: 12px 14px;
-            background-color: #0f172a;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--text-main);
-            font-size: 0.95rem;
-            line-height: 1.4;
-            outline: none;
-            resize: none;
-            word-break: normal;
-            overflow-wrap: break-word;
-            white-space: pre-wrap;
-        }
-
-        .chat-input-area textarea:focus { border-color: var(--accent); }
-
-        .btn {
-            padding: 12px 20px;
-            background-color: var(--accent);
-            color: #0f172a;
+        .close-btn {
+            background: none;
             border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background 0.2s;
-            height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .btn:hover { background-color: var(--accent-hover); }
-
-        .btn-logout {
-            background: transparent;
-            border: 1px solid var(--border);
+            font-size: 1.4rem;
             color: var(--text-muted);
-            padding: 6px 12px;
-            font-size: 0.85rem;
-            height: auto;
+            cursor: pointer;
         }
 
-        .hidden { display: none !important; }
-    
+        .progress-bar-bg {
+            background-color: var(--warm-beige);
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 8px 0 16px 0;
+        }
+
+        .progress-bar-fill {
+            background-color: var(--soft-sage);
+            height: 100%;
+            width: 47%;
+            border-radius: 5px;
+        }
+
+        .tag-pill {
+            display: inline-block;
+            background-color: var(--soft-sage-light);
+            color: var(--deep-olive);
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-right: 6px;
+        }
+
+        .clear-memory-link {
+            color: var(--terracotta);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-top: 16px;
+            cursor: pointer;
+        }
+
+        .disclaimer-text {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            line-height: 1.35;
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(78, 92, 75, 0.1);
+            text-align: center;
+        }
+
         /* PWA Update Banner */
         .update-banner {
             position: fixed;
-            bottom: 20px;
+            bottom: 70px;
             left: 50%;
             transform: translateX(-50%);
-            background-color: var(--accent);
-            color: #0f172a;
-            padding: 12px 20px;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            background-color: var(--deep-olive);
+            color: var(--white);
+            padding: 10px 18px;
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
             display: flex;
             align-items: center;
-            gap: 12px;
-            z-index: 9999;
-            font-weight: 600;
-            font-size: 0.9rem;
+            gap: 10px;
+            z-index: 999;
+            font-size: 0.85rem;
         }
+
         .update-banner button {
-            background-color: #0f172a;
-            color: #fff;
+            background-color: var(--terracotta);
+            color: var(--white);
             border: none;
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: 10px;
             font-weight: 600;
+            cursor: pointer;
         }
-</style>
+
+        .hidden { display: none !important; }
+    </style>
 </head>
 <body>
 
-<div class="app-container">
-    <div class="header">
-        <h1>FALK <span class="badge">Production Ready</span></h1>
-        <div id="user-header" class="hidden">
-            <span id="user-email" class="user-info"></span>
-            <button id="logout-btn" class="btn btn-logout">Logga ut</button>
+    <!-- Header Navigation -->
+    <header class="header-nav">
+        <button class="nav-pill" onclick="switchView('dagbok')">📓 Dagbok</button>
+        <button class="nav-pill active" onclick="switchView('falk')">🧠 FALK</button>
+        <button class="nav-pill new-chat" onclick="resetChat()">+ Ny</button>
+        <button class="nav-pill" onclick="openProfile()">🧠 Profil</button>
+    </header>
+
+    <!-- Main Scroll Area -->
+    <main class="main-container">
+        
+        <!-- Welcome Greeting Card -->
+        <div class="welcome-card" id="welcome-card">
+            <h2>Jag är FALK – Min uppgift är att hjälpa dig på din väg!</h2>
+            <p>Vad vill du utforska idag?</p>
+        </div>
+
+        <!-- Start Prompt Grid -->
+        <section class="prompt-grid" id="prompt-grid">
+            <div class="prompt-card" onclick="selectPrompt('Mening & livsriktning: Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det.')">
+                <div class="prompt-title">✨ Mening & livsriktning</div>
+                <div class="prompt-desc">"Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det."</div>
+            </div>
+
+            <div class="prompt-card" onclick="selectPrompt('När tankarna tar över: Hjälp mig sortera tankarna och hitta klarhet.')">
+                <div class="prompt-title">🧠 När tankarna tar över</div>
+                <div class="prompt-desc">Hjälp mig sortera tankarna och hitta klarhet.</div>
+            </div>
+
+            <div class="prompt-card" onclick="selectPrompt('Jobb, ansvar & ledarskap: Hjälp mig hantera utmaningar och hitta nästa steg.')">
+                <div class="prompt-title">💼 Jobb, ansvar & ledarskap</div>
+                <div class="prompt-desc">Hjälp mig hantera utmaningar och hitta nästa steg.</div>
+            </div>
+
+            <div class="prompt-card" onclick="selectPrompt('Hitta lugnet igen: Jag känner mig stressad eller orolig och behöver landa.')">
+                <div class="prompt-title">🌱 Hitta lugnet igen</div>
+                <div class="prompt-desc">Jag känner mig stressad eller orolig och behöver landa.</div>
+            </div>
+
+            <div class="prompt-card" onclick="selectPrompt('Från mål till handling: Hjälp mig komma vidare och få saker att hända.')">
+                <div class="prompt-title">🎯 Från mål till handling</div>
+                <div class="prompt-desc">Hjälp mig komma vidare och få saker att hända.</div>
+            </div>
+
+            <div class="prompt-card" onclick="selectPrompt('Relationer & svåra samtal: Hjälp mig förstå en situation och kommunicera bättre.')">
+                <div class="prompt-title">💬 Relationer & svåra samtal</div>
+                <div class="prompt-desc">Hjälp mig förstå en situation och kommunicera bättre.</div>
+            </div>
+
+            <div class="prompt-card" onclick="selectPrompt('Mer energi & balans: Hjälp mig hitta hållbara vanor för sömn, energi och fokus.')">
+                <div class="prompt-title">⚡ Mer energi & balans</div>
+                <div class="prompt-desc">Hjälp mig hitta hållbara vanor för sömn, energi och fokus.</div>
+            </div>
+
+            <div class="prompt-card" onclick="selectPrompt('Förstå mig själv bättre: Hjälp mig upptäcka mina behov, drivkrafter och mönster.')">
+                <div class="prompt-title">🔍 Förstå mig själv bättre</div>
+                <div class="prompt-desc">Hjälp mig upptäcka mina behov, drivkrafter och mönster.</div>
+            </div>
+
+            <div class="prompt-card" onclick="selectPrompt('Utmana mina tankar: Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet.')">
+                <div class="prompt-title">🧩 Utmana mina tankar</div>
+                <div class="prompt-desc">Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet.</div>
+            </div>
+        </section>
+
+        <!-- Dynamic Chat Messages -->
+        <div class="chat-messages" id="chat-messages"></div>
+
+    </main>
+
+    <!-- Footer Input Bar -->
+    <footer class="input-footer">
+        <div class="input-wrapper">
+            <input type="text" id="chat-message" placeholder="Skriv eller tala..." onkeydown="if(event.key==='Enter') sendMessage()">
+        </div>
+        <button class="icon-btn" title="Röstinmatning" onclick="alert('Röstinmatning aktiverad i nästa uppdatering.')">🎙️</button>
+        <button class="icon-btn" title="Inställningar" onclick="openProfile()">🎛️</button>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()">Skicka</button>
+    </footer>
+
+    <!-- Modal: Kognitiv Profil -->
+    <div class="modal-overlay" id="profile-modal" onclick="if(event.target===this) closeProfile()">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>🧠 Kognitiv Profil</h3>
+                <button class="close-btn" onclick="closeProfile()">✕</button>
+            </div>
+
+            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-top: 10px;">📈 KOGNITIV UTVECKLINGSKURVA</div>
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px;">
+                <span style="font-weight: 700; color: var(--deep-olive);">Insiktsnivå</span>
+                <span style="font-weight: 700; color: var(--deep-olive);">47%</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill"></div>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">Måttlig kognitiv insikt</div>
+
+            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;">KÄRNVÄRDERINGAR</div>
+            <div style="margin: 8px 0 16px 0;">
+                <span class="tag-pill">Transparens</span>
+                <span class="tag-pill">Tydlighet</span>
+            </div>
+
+            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;">IDENTIFIERADE MÖNSTER</div>
+            <ul style="margin: 8px 0 16px 20px; font-size: 0.9rem; color: var(--text-dark); line-height: 1.5;">
+                <li>Informationssökning</li>
+                <li>Direkt fråga</li>
+            </ul>
+
+            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;">AKTUELLT FOKUS</div>
+            <div style="font-size: 0.95rem; font-weight: 700; color: var(--deep-olive); margin-top: 4px;">Användaren vill veta FALK:s syfte</div>
+
+            <div>
+                <a class="clear-memory-link" onclick="clearCognitiveMemory()">Rensa kognitivt minne</a>
+            </div>
+
+            <div class="disclaimer-text">
+                Friskrivning: FALK kan inte ställa medicinska eller psykiatriska diagnoser. FALK är enbart en kognitiv vägledare för självreflektion och ersätter inte professionell hälso- och sjukvård.
+            </div>
         </div>
     </div>
 
-    <!-- Auth View -->
-    <div id="auth-view" class="auth-container">
-        <h2>Logga in på FALK</h2>
-        <form id="auth-form">
-            <div class="input-group">
-                <label for="email">Din e-postadress</label>
-                <input type="email" id="email" name="email" autocomplete="username" required placeholder="namn@exempel.se">
-            </div>
-            <div class="input-group" style="margin-top: 12px;">
-                <label for="password">Ditt lösenord</label>
-                <input type="password" id="password" name="password" autocomplete="current-password" required placeholder="••••••••">
-            </div>
-            <button type="submit" class="btn" style="width: 100%; margin-top: 20px;">Logga in</button>
-        </form>
+    <!-- PWA Update Banner -->
+    <div id="pwa-update-banner" class="update-banner hidden">
+        <span>Ny version tillgänglig!</span>
+        <button id="pwa-update-btn">Uppdatera</button>
     </div>
 
-    <!-- Chat View -->
-    <div id="chat-view" class="chat-history hidden"></div>
+    <script>
+        const BACKEND_URL = "https://falk-ai.onrender.com";
+        const SUPABASE_URL = "https://dmerwpgvepkjirugnfzy.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZXJ3cGd2ZXBramlydWduZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MjM3NjksImV4cCI6MjEwNzk5OTc2OX0.UNX_fozGEsKKMrQpn-8VP3g3r1boegX5jl5B8oW69Ww";
 
-    <div id="input-view" class="chat-input-area hidden">
-        <textarea id="chat-message" placeholder="Skriv ditt meddelande till FALK..."></textarea>
-        <button id="send-btn" class="btn">Skicka</button>
-    </div>
-</div>
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-<script>
-    const SUPABASE_URL = "https://dmerwpgvepkjirugnfzy.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZXJ3cGd2ZXBramlydWduZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MjM3NjksImV4cCI6MjEwNzk5OTc2OX0.UNX_fozGEsKKMrQpn-8VP3g3r1boegX5jl5B8oW69Ww";
-    const BACKEND_URL = "https://falk-ai.onrender.com";
-
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    document.addEventListener("DOMContentLoaded", async () => {
-        document.getElementById("auth-form").addEventListener("submit", handleAuth);
-        document.getElementById("logout-btn").addEventListener("click", handleLogout);
-        document.getElementById("send-btn").addEventListener("click", sendMessage);
-
-        try {
-            const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: { session: null } }));
-            if (session) {
-                showChat(session);
-            } else {
-                const cachedUser = localStorage.getItem("falk_cached_user");
-                if (cachedUser && !navigator.onLine) {
-                    showChat({ user: { email: cachedUser } });
-                }
-            }
-        } catch (e) {}
-
-        supabaseClient.auth.onAuthStateChange((_event, session) => {
-            if (session) {
-                localStorage.setItem("falk_cached_user", session.user.email);
-                showChat(session);
-            } else if (navigator.onLine) {
-                showAuth();
-            }
+        window.addEventListener("DOMContentLoaded", () => {
+            loadChatHistory();
         });
+
+        function loadChatHistory() {
+            const cached = JSON.parse(localStorage.getItem("falk_chat_history") || "[]");
+            const messagesContainer = document.getElementById("chat-messages");
+            const promptGrid = document.getElementById("prompt-grid");
+
+            if (cached.length > 0) {
+                promptGrid.classList.add("hidden");
+                messagesContainer.innerHTML = "";
+                cached.forEach(item => {
+                    if (item.user_message) appendMessage(item.user_message, "user", false);
+                    if (item.ai_response) appendMessage(item.ai_response, "ai", false);
+                });
+                scrollToBottom();
+            }
+        }
+
+        function selectPrompt(promptText) {
+            document.getElementById("chat-message").value = promptText;
+            sendMessage();
+        }
+
+        function appendMessage(text, type, save = true) {
+            const messagesContainer = document.getElementById("chat-messages");
+            const promptGrid = document.getElementById("prompt-grid");
+            
+            promptGrid.classList.add("hidden");
+
+            const msgDiv = document.createElement("div");
+            msgDiv.className = `message ${type}`;
+            
+            if (type === "ai") {
+                const cleanHTML = DOMPurify.sanitize(marked.parse(text));
+                msgDiv.innerHTML = cleanHTML;
+            } else {
+                msgDiv.textContent = text;
+            }
+
+            messagesContainer.appendChild(msgDiv);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            const main = document.querySelector(".main-container");
+            main.scrollTop = main.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById("chat-message");
+            const sendBtn = document.getElementById("send-btn");
+            const message = input.value.trim();
+            if (!message) return;
+
+            appendMessage(message, "user");
+            input.value = "";
+
+            if (!navigator.onLine) {
+                input.value = message;
+                appendMessage("Du är offline. Meddelandet ligger kvar i textfältet.", "system-error");
+                return;
+            }
+
+            input.disabled = true;
+            sendBtn.disabled = true;
+            const originalBtnText = sendBtn.innerText;
+            sendBtn.innerText = "Tänker...";
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: { session: null } }));
+                if (!session) throw new Error("Ingen aktiv session");
+
+                const res = await fetch(`${BACKEND_URL}/chat`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${session.access_token}`
+                    },
+                    body: JSON.stringify({ message }),
+                    signal: controller.signal
+                }).catch(() => null);
+
+                clearTimeout(timeoutId);
+
+                if (!res || !res.ok) throw new Error("Serveranslutningsfel");
+
+                const data = await res.json();
+                if (data.response) {
+                    appendMessage(data.response, "ai");
+                    
+                    const cached = JSON.parse(localStorage.getItem("falk_chat_history") || "[]");
+                    cached.push({ user_message: message, ai_response: data.response });
+                    localStorage.setItem("falk_chat_history", JSON.stringify(cached));
+                } else {
+                    throw new Error("Tomt svar");
+                }
+            } catch (err) {
+                clearTimeout(timeoutId);
+                input.value = message;
+                const errorMsg = err.name === 'AbortError' 
+                    ? "Servern tog för lång tid på sig (timeout 60s). Ditt meddelande ligger kvar." 
+                    : "Kunde inte nå servern. Ditt meddelande ligger kvar i textfältet.";
+                appendMessage(errorMsg, "system-error");
+            } finally {
+                input.disabled = false;
+                sendBtn.disabled = false;
+                sendBtn.innerText = originalBtnText;
+                input.focus();
+            }
+        }
+
+        function resetChat() {
+            if (confirm("Vill du starta en ny chatt? Historiken sparas lokalt.")) {
+                document.getElementById("chat-messages").innerHTML = "";
+                document.getElementById("prompt-grid").classList.remove("hidden");
+            }
+        }
+
+        function switchView(view) {
+            if (view === 'dagbok') alert("Dagboks-vy laddas i nästa modul.");
+        }
+
+        function openProfile() {
+            document.getElementById("profile-modal").classList.add("active");
+        }
+
+        function closeProfile() {
+            document.getElementById("profile-modal").classList.remove("active");
+        }
+
+        function clearCognitiveMemory() {
+            if (confirm("Vill du rensa den kognitiva profilens minne?")) {
+                localStorage.removeItem("falk_chat_history");
+                document.getElementById("chat-messages").innerHTML = "";
+                document.getElementById("prompt-grid").classList.remove("hidden");
+                closeProfile();
+                alert("Kognitivt minne rensat.");
+            }
+        }
 
         if ('serviceWorker' in navigator) {
             let refreshing = false;
-
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (!refreshing) {
                     refreshing = true;
@@ -362,28 +703,19 @@
             window.addEventListener('load', async () => {
                 try {
                     const reg = await navigator.serviceWorker.register('/sw.js');
-                    
-                    if (reg.waiting) {
-                        showUpdateBanner(reg.waiting);
-                    }
-
+                    if (reg.waiting) showUpdateBanner(reg.waiting);
                     reg.addEventListener('updatefound', () => {
                         const newWorker = reg.installing;
                         if (!newWorker) return;
-
                         newWorker.addEventListener('statechange', () => {
                             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                                 showUpdateBanner(newWorker);
                             }
                         });
                     });
-
                     document.addEventListener('visibilitychange', () => {
-                        if (document.visibilityState === 'visible') {
-                            reg.update();
-                        }
+                        if (document.visibilityState === 'visible') reg.update();
                     });
-
                 } catch (err) {
                     console.warn('SW Registreringsfel:', err);
                 }
@@ -394,191 +726,12 @@
             const banner = document.getElementById('pwa-update-banner');
             const btn = document.getElementById('pwa-update-btn');
             if (!banner || !btn) return;
-
             banner.classList.remove('hidden');
             btn.onclick = () => {
                 worker.postMessage({ type: 'SKIP_WAITING' });
                 banner.classList.add('hidden');
             };
         }
-        }
-    });
-
-    async function handleAuth(e) {
-        e.preventDefault();
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-
-        try {
-            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-            if (error) alert("Inloggningsfel: " + error.message);
-        } catch (err) {
-            alert("Nätverksfel vid inloggning.");
-        }
-    }
-
-    async function handleLogout() {
-        localStorage.removeItem("falk_cached_user");
-        localStorage.removeItem("falk_chat_history");
-        try { await supabaseClient.auth.signOut(); } catch (e) {}
-        showAuth();
-    }
-
-    function showAuth() {
-        document.getElementById("auth-view").classList.remove("hidden");
-        document.getElementById("chat-view").classList.add("hidden");
-        document.getElementById("input-view").classList.add("hidden");
-        document.getElementById("user-header").classList.add("hidden");
-    }
-
-    async function showChat(session) {
-        document.getElementById("auth-view").classList.add("hidden");
-        document.getElementById("chat-view").classList.remove("hidden");
-        document.getElementById("input-view").classList.remove("hidden");
-        document.getElementById("user-header").classList.remove("hidden");
-        document.getElementById("user-email").innerText = session.user.email;
-
-        await loadHistory();
-    }
-
-    async function loadHistory() {
-        const chatView = document.getElementById("chat-view");
-        chatView.innerHTML = "";
-
-        const cachedHistory = localStorage.getItem("falk_chat_history");
-        if (cachedHistory) {
-            try {
-                const parsed = JSON.parse(cachedHistory);
-                renderHistoryItems(parsed);
-            } catch (e) {}
-        }
-
-        if (!navigator.onLine) return;
-
-        try {
-            const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: { session: null } }));
-            if (!session) return;
-
-            if (!session || !session.access_token) return;
-            const res = await fetch(`${BACKEND_URL}/history`, {
-                headers: { "Authorization": `Bearer ${session.access_token}` }
-            }).catch(() => null);
-            if (res && res.status === 401) {
-                console.warn("Session utgången - kräver ny inloggning.");
-                return;
-            }
-
-            if (res && res.ok) {
-                const data = await res.json();
-                if (data.history) {
-                    localStorage.setItem("falk_chat_history", JSON.stringify(data.history));
-                    chatView.innerHTML = "";
-                    renderHistoryItems(data.history);
-                }
-            }
-        } catch (err) {}
-    }
-
-    function renderHistoryItems(historyArray) {
-        historyArray.forEach(entry => {
-            appendMessage(entry.user_message, "user");
-            appendMessage(entry.ai_response, "ai");
-        });
-    }
-
-    async function sendMessage() {
-        const input = document.getElementById("chat-message");
-        const sendBtn = document.getElementById("send-btn");
-        const message = input.value.trim();
-        if (!message) return;
-
-        appendMessage(message, "user");
-        input.value = "";
-
-        if (!navigator.onLine) {
-            input.value = message;
-            appendMessage("Du är offline. Meddelandet ligger kvar i textfältet.", "system-error");
-            return;
-        }
-
-        // 1. UI Loading State (Lås gränssnittet och visa laddningsstatus)
-        input.disabled = true;
-        sendBtn.disabled = true;
-        const originalBtnText = sendBtn.innerText;
-        sendBtn.innerText = "Tänker...";
-
-        // 2. AbortController med 60 sekunders timeout för Renders cold-start
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000);
-
-        try {
-            const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: { session: null } }));
-            if (!session) throw new Error("Ingen aktiv session");
-
-            const res = await fetch(`${BACKEND_URL}/chat`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${session.access_token}`
-                },
-                body: JSON.stringify({ message }),
-                signal: controller.signal
-            }).catch(() => null);
-
-            clearTimeout(timeoutId);
-
-            if (!res || !res.ok) throw new Error("Serveranslutningsfel");
-
-            const data = await res.json();
-            if (data.response) {
-                appendMessage(data.response, "ai");
-                
-                const cached = JSON.parse(localStorage.getItem("falk_chat_history") || "[]");
-                cached.push({ user_message: message, ai_response: data.response });
-                localStorage.setItem("falk_chat_history", JSON.stringify(cached));
-            } else {
-                throw new Error("Tomt svar");
-            }
-        } catch (err) {
-            clearTimeout(timeoutId);
-            input.value = message;
-            const errorMsg = err.name === 'AbortError' 
-                ? "Servern tog för lång tid på sig att svara (timeout 60s). Ditt meddelande ligger kvar." 
-                : "Kunde inte nå servern. Ditt meddelande ligger kvar i textfältet.";
-            appendMessage(errorMsg, "system-error");
-        } finally {
-            // 3. Återställ UI-tillståndet
-            input.disabled = false;
-            sendBtn.disabled = false;
-            sendBtn.innerText = originalBtnText;
-            input.focus();
-        }
-    }
-
-    function appendMessage(text, sender) {
-        const chatView = document.getElementById("chat-view");
-        const div = document.createElement("div");
-
-        if (sender === "system-error") {
-            div.classList.add("msg-system-error");
-            div.textContent = text;
-        } else {
-            div.classList.add("msg-bubble", sender === "user" ? "msg-user" : "msg-ai");
-            if (sender === "ai") {
-                div.innerHTML = DOMPurify.sanitize(marked.parse(text));
-            } else {
-                div.textContent = text;
-            }
-        }
-
-        chatView.appendChild(div);
-        chatView.scrollTop = chatView.scrollHeight;
-    }
-</script>
-
-    <div id="pwa-update-banner" class="update-banner hidden">
-        <span>Ny version av FALK finns tillgänglig!</span>
-        <button id="pwa-update-btn">Uppdatera</button>
-    </div>
+    </script>
 </body>
 </html>
