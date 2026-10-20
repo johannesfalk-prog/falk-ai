@@ -628,9 +628,20 @@
                     if (item.ai_response) appendMessage(item.ai_response, "ai", false);
 
                     if (item.user_message) {
+                        // SÄKER DOM-BYGGNATION MOD XSS
                         const entryDiv = document.createElement("div");
                         entryDiv.className = "entry-item";
-                        entryDiv.innerHTML = `<div class="entry-date">SESSION ${idx + 1}</div><div class="entry-snippet">${item.user_message}</div>`;
+
+                        const dateDiv = document.createElement("div");
+                        dateDiv.className = "entry-date";
+                        dateDiv.textContent = `SESSION ${idx + 1}`;
+
+                        const snippetDiv = document.createElement("div");
+                        snippetDiv.className = "entry-snippet";
+                        snippetDiv.textContent = item.user_message; // textContent exekverar ALDRIG HTML/JS
+
+                        entryDiv.appendChild(dateDiv);
+                        entryDiv.appendChild(snippetDiv);
                         dagbokList.appendChild(entryDiv);
                     }
                 });
