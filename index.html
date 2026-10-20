@@ -152,6 +152,8 @@
             border-radius: 12px;
             line-height: 1.5;
             font-size: 0.95rem;
+            word-break: break-word;
+            overflow-wrap: anywhere;
         }
 
         .msg-user {
@@ -174,16 +176,17 @@
             border: 1px solid var(--danger);
             color: #fca5a5;
             font-size: 0.85rem;
-            padding: 8px 14px;
+            padding: 10px 16px;
             border-radius: 8px;
             text-align: center;
+            width: 100%;
         }
 
         .msg-ai p { margin-bottom: 8px; }
         .msg-ai p:last-child { margin-bottom: 0; }
         .msg-ai ul, .msg-ai ol { margin-left: 20px; margin-bottom: 8px; }
 
-        /* Perfekt CSS-layout för textrutan utan textklippning */
+        /* Perfekt CSS-typografi för textrutan för att förhindra fula ord-avhuggningar */
         .chat-input-area {
             padding: 12px 16px;
             background-color: var(--bg-card);
@@ -208,6 +211,9 @@
             line-height: 1.4;
             outline: none;
             resize: none;
+            word-break: normal;
+            overflow-wrap: break-word;
+            white-space: pre-wrap;
         }
 
         .chat-input-area textarea:focus {
@@ -228,6 +234,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
         }
 
         .btn:hover {
@@ -300,7 +307,7 @@
                 showChat(session);
             }
         } catch (e) {
-            console.warn("Session retrieval fallback");
+            console.warn("Session fetch fallback");
         }
 
         supabaseClient.auth.onAuthStateChange((_event, session) => {
@@ -358,9 +365,11 @@
 
             const res = await fetch(`${BACKEND_URL}/history`, {
                 headers: { "Authorization": `Bearer ${session.access_token}` }
-            });
+            }).catch(() => null);
+
+            if (!res || !res.ok) return;
+
             const data = await res.json();
-            
             const chatView = document.getElementById("chat-view");
             chatView.innerHTML = "";
 
@@ -381,12 +390,11 @@
         const message = input.value.trim();
         if (!message) return;
 
-        // Tillfällig visning i chatten
         appendMessage(message, "user");
         input.value = "";
 
         try {
-            const { data: { session } } = await supabaseClient.auth.getSession();
+            const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: { session: null } }));
             if (!session) throw new Error("Ingen aktiv session");
 
             const res = await fetch(`${BACKEND_URL}/chat`, {
@@ -396,9 +404,9 @@
                     "Authorization": `Bearer ${session.access_token}`
                 },
                 body: JSON.stringify({ message })
-            });
+            }).catch(() => null);
 
-            if (!res.ok) throw new Error("Serverfel");
+            if (!res || !res.ok) throw new Error("Serveranslutningsfel");
 
             const data = await res.json();
             if (data.response) {
@@ -407,7 +415,7 @@
                 throw new Error("Tomt svar");
             }
         } catch (err) {
-            // Skottsäker offline-fallback: Återställ texten i rutan och visa systemvarning
+            // Tystar konsolfelen helt: Återställ texten i rutan och visa systemvarning
             input.value = message;
             appendMessage("Kunna inte nå servern. Ditt meddelande ligger kvar i textfältet.", "system-error");
         }
