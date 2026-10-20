@@ -41,6 +41,79 @@
             overflow: hidden;
         }
 
+        /* Fullscreen Auth Overlay */
+        .auth-overlay-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--warm-beige-light);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .auth-card {
+            background-color: var(--white);
+            width: 100%;
+            max-width: 400px;
+            padding: 28px 24px;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(78, 92, 75, 0.12);
+            text-align: center;
+        }
+
+        .auth-card h2 {
+            color: var(--deep-olive);
+            font-size: 1.4rem;
+            margin-bottom: 8px;
+        }
+
+        .auth-card p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        .auth-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            text-align: left;
+        }
+
+        .auth-input-group label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--deep-olive);
+        }
+
+        .auth-input-group input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(78, 92, 75, 0.2);
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .auth-submit-btn {
+            background-color: var(--deep-olive);
+            color: var(--white);
+            border: none;
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            margin-top: 16px;
+        }
+
         /* Header Navigation */
         .header-nav {
             background-color: var(--warm-beige-light);
@@ -65,7 +138,6 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            transition: all 0.2s ease;
         }
 
         .nav-pill.active {
@@ -80,7 +152,7 @@
             border-color: var(--soft-sage);
         }
 
-        /* Main Scroll Area */
+        /* Main Container */
         .main-container {
             flex: 1;
             overflow-y: auto;
@@ -93,7 +165,6 @@
             width: 100%;
         }
 
-        /* Welcome Greeting */
         .welcome-card {
             background-color: var(--white);
             border-radius: 16px;
@@ -103,30 +174,11 @@
             margin-bottom: 8px;
         }
 
-        .welcome-card h2 {
-            font-size: 1.1rem;
-            color: var(--deep-olive);
-            margin-bottom: 8px;
-            font-weight: 700;
-        }
+        .welcome-card h2 { font-size: 1.1rem; color: var(--deep-olive); margin-bottom: 8px; font-weight: 700; }
+        .welcome-card p { font-size: 0.95rem; color: var(--text-muted); line-height: 1.4; }
 
-        .welcome-card p {
-            font-size: 0.95rem;
-            color: var(--text-muted);
-            line-height: 1.4;
-        }
-
-        /* Prompt Cards Grid */
-        .prompt-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            transition: opacity 0.3s ease, transform 0.3s ease;
-        }
-
-        .prompt-grid.hidden {
-            display: none;
-        }
+        .prompt-grid { display: flex; flex-direction: column; gap: 10px; }
+        .prompt-grid.hidden { display: none; }
 
         .prompt-card {
             background-color: var(--white);
@@ -136,74 +188,21 @@
             text-align: left;
             cursor: pointer;
             box-shadow: var(--card-shadow);
-            transition: transform 0.15s ease, border-color 0.15s ease;
         }
 
-        .prompt-card:active {
-            transform: scale(0.98);
-            border-color: var(--terracotta);
-        }
-
-        .prompt-title {
-            font-weight: 700;
-            font-size: 0.95rem;
-            color: var(--deep-olive);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 4px;
-        }
-
-        .prompt-desc {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            line-height: 1.35;
-        }
+        .prompt-title { font-weight: 700; font-size: 0.95rem; color: var(--deep-olive); margin-bottom: 4px; }
+        .prompt-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.35; }
 
         /* Chat Messages */
-        .chat-messages {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
+        .chat-messages { display: flex; flex-direction: column; gap: 12px; }
+        .message-wrapper { display: flex; flex-direction: column; max-width: 88%; }
+        .message-wrapper.user { align-self: flex-end; }
+        .message-wrapper.ai { align-self: flex-start; }
 
-        .message-wrapper {
-            display: flex;
-            flex-direction: column;
-            max-width: 88%;
-        }
+        .message { padding: 12px 16px; border-radius: 16px; font-size: 0.95rem; line-height: 1.45; word-break: break-word; }
+        .message.user { background-color: var(--deep-olive); color: var(--white); border-bottom-right-radius: 4px; }
+        .message.ai { background-color: var(--white); color: var(--text-dark); border: 1px solid rgba(78, 92, 75, 0.12); border-bottom-left-radius: 4px; box-shadow: var(--card-shadow); }
 
-        .message-wrapper.user {
-            align-self: flex-end;
-        }
-
-        .message-wrapper.ai {
-            align-self: flex-start;
-        }
-
-        .message {
-            padding: 12px 16px;
-            border-radius: 16px;
-            font-size: 0.95rem;
-            line-height: 1.45;
-            word-break: break-word;
-        }
-
-        .message.user {
-            background-color: var(--deep-olive);
-            color: var(--white);
-            border-bottom-right-radius: 4px;
-        }
-
-        .message.ai {
-            background-color: var(--white);
-            color: var(--text-dark);
-            border: 1px solid rgba(78, 92, 75, 0.12);
-            border-bottom-left-radius: 4px;
-            box-shadow: var(--card-shadow);
-        }
-
-        /* Transparent Thinking Bubble */
         .message.ai-thinking {
             background-color: rgba(255, 255, 255, 0.55);
             color: var(--text-muted);
@@ -211,60 +210,16 @@
             font-style: italic;
             animation: pulseThinking 1.5s infinite ease-in-out;
             align-self: flex-start;
-            border-bottom-left-radius: 4px;
         }
 
-        @keyframes pulseThinking {
-            0% { opacity: 0.5; }
-            50% { opacity: 0.9; }
-            100% { opacity: 0.5; }
-        }
+        @keyframes pulseThinking { 0% { opacity: 0.5; } 50% { opacity: 0.9; } 100% { opacity: 0.5; } }
 
-        .message.system-error {
-            align-self: center;
-            background-color: #FDF2F2;
-            color: #9B1C1C;
-            border: 1px solid #F8B4B4;
-            font-size: 0.85rem;
-            text-align: center;
-        }
-
-        /* Action Toolbar under AI Messages */
-        .msg-toolbar {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            margin-top: 6px;
-            padding-left: 4px;
-        }
-
+        .msg-toolbar { display: flex; align-items: center; gap: 4px; margin-top: 6px; padding-left: 4px; }
         .action-icon-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            padding: 4px 6px;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.15s ease;
+            background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 4px 6px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
         }
-
-        .action-icon-btn:hover, .action-icon-btn:active {
-            background-color: rgba(78, 92, 75, 0.08);
-            color: var(--deep-olive);
-        }
-
-        .action-icon-btn.active {
-            color: var(--terracotta);
-        }
-
-        .action-icon-btn svg {
-            width: 15px;
-            height: 15px;
-            stroke-width: 2;
-        }
+        .action-icon-btn.active { color: var(--terracotta); }
+        .action-icon-btn svg { width: 15px; height: 15px; stroke-width: 2; }
 
         /* Input Footer Bar */
         .input-footer {
@@ -281,7 +236,6 @@
 
         .input-wrapper {
             flex: 1;
-            position: relative;
             background-color: var(--white);
             border-radius: 24px;
             border: 1px solid rgba(78, 92, 75, 0.2);
@@ -289,254 +243,72 @@
         }
 
         .input-wrapper input {
-            width: 100%;
-            padding: 12px 18px;
-            border: none;
-            background: transparent;
-            font-size: 0.95rem;
-            color: var(--text-dark);
-            outline: none;
+            width: 100%; padding: 12px 18px; border: none; background: transparent; font-size: 0.95rem; color: var(--text-dark); outline: none;
         }
 
         .icon-btn {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            border: 1px solid rgba(78, 92, 75, 0.15);
-            background-color: var(--white);
-            color: var(--deep-olive);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: var(--card-shadow);
-            flex-shrink: 0;
+            width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(78, 92, 75, 0.15); background-color: var(--white); color: var(--deep-olive); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: var(--card-shadow); flex-shrink: 0;
         }
 
         .send-btn {
-            background-color: var(--deep-olive);
-            color: var(--white);
-            border: none;
-            padding: 0 20px;
-            height: 42px;
-            border-radius: 21px;
-            font-weight: 700;
-            font-size: 0.9rem;
-            cursor: pointer;
-            box-shadow: var(--card-shadow);
-            flex-shrink: 0;
-            transition: background-color 0.2s ease;
+            background-color: var(--deep-olive); color: var(--white); border: none; padding: 0 20px; height: 42px; border-radius: 21px; font-weight: 700; font-size: 0.9rem; cursor: pointer; flex-shrink: 0;
         }
 
-        .send-btn:disabled {
-            background-color: var(--text-muted);
-            opacity: 0.6;
-        }
-
-        /* OFF-CANVAS DRAWERS */
+        /* Drawers */
         .drawer-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(44, 53, 43, 0.4);
-            display: flex;
-            z-index: 1000;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.25s ease;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(44, 53, 43, 0.4); display: flex; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
         }
-
-        .drawer-overlay.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
+        .drawer-overlay.active { opacity: 1; pointer-events: auto; }
         .drawer-overlay.right-drawer { justify-content: flex-end; }
-        .drawer-overlay.right-drawer .drawer-card {
-            transform: translateX(100%);
-            border-top-left-radius: 20px;
-            border-bottom-left-radius: 20px;
-        }
-
+        .drawer-overlay.right-drawer .drawer-card { transform: translateX(100%); border-top-left-radius: 20px; border-bottom-left-radius: 20px; }
         .drawer-overlay.left-drawer { justify-content: flex-start; }
-        .drawer-overlay.left-drawer .drawer-card {
-            transform: translateX(-100%);
-            border-top-right-radius: 20px;
-            border-bottom-right-radius: 20px;
-        }
+        .drawer-overlay.left-drawer .drawer-card { transform: translateX(-100%); border-top-right-radius: 20px; border-bottom-right-radius: 20px; }
 
         .drawer-card {
-            background-color: var(--white);
-            width: 85%;
-            max-width: 380px;
-            height: 100vh;
-            padding: 24px;
-            overflow-y: auto;
-            transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
-            box-shadow: 0 0 25px rgba(0,0,0,0.15);
-            display: flex;
-            flex-direction: column;
+            background-color: var(--white); width: 85%; max-width: 380px; height: 100vh; padding: 24px; overflow-y: auto; transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1); box-shadow: 0 0 25px rgba(0,0,0,0.15); display: flex; flex-direction: column;
         }
-
         .drawer-overlay.active .drawer-card { transform: translateX(0); }
 
-        .drawer-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid rgba(78, 92, 75, 0.1);
-        }
+        .drawer-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid rgba(78, 92, 75, 0.1); }
+        .drawer-header h3 { color: var(--deep-olive); font-size: 1.2rem; }
+        .close-btn { background: none; border: none; font-size: 1.4rem; color: var(--text-muted); cursor: pointer; }
 
-        .drawer-header h3 {
-            color: var(--deep-olive);
-            font-size: 1.2rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+        .entry-item { background-color: var(--warm-beige-light); border: 1px solid rgba(78, 92, 75, 0.1); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+        .entry-date { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; }
+        .entry-snippet { font-size: 0.88rem; color: var(--text-dark); }
 
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 1.4rem;
-            color: var(--text-muted);
-            cursor: pointer;
-        }
-
-        /* Dagbok Elements */
-        .entry-item {
-            background-color: var(--warm-beige-light);
-            border: 1px solid rgba(78, 92, 75, 0.1);
-            border-radius: 12px;
-            padding: 12px;
-            margin-bottom: 10px;
-            cursor: pointer;
-        }
-
-        .entry-date {
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            margin-bottom: 4px;
-        }
-
-        .entry-snippet {
-            font-size: 0.88rem;
-            color: var(--text-dark);
-            line-height: 1.35;
-        }
-
-        /* Profil & Auth Elements */
-        .progress-bar-bg {
-            background-color: var(--warm-beige);
-            height: 10px;
-            border-radius: 5px;
-            overflow: hidden;
-            margin: 8px 0 16px 0;
-        }
-
-        .progress-bar-fill {
-            background-color: var(--soft-sage);
-            height: 100%;
-            width: 47%;
-            border-radius: 5px;
-        }
-
-        .tag-pill {
-            display: inline-block;
-            background-color: var(--soft-sage-light);
-            color: var(--deep-olive);
-            padding: 6px 12px;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin-right: 6px;
-        }
-
-        .btn-action-block {
-            width: 100%;
-            padding: 12px;
-            border-radius: 12px;
-            border: none;
-            font-weight: 700;
-            font-size: 0.9rem;
-            cursor: pointer;
-            margin-top: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .btn-logout {
-            background-color: #FDF2F2;
-            color: #9B1C1C;
-            border: 1px solid #F8B4B4;
-        }
-
-        .remember-me-container {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 14px;
-            font-size: 0.88rem;
-            color: var(--text-dark);
-        }
-
-        .remember-me-container input[type="checkbox"] {
-            accent-color: var(--deep-olive);
-            width: 16px;
-            height: 16px;
-        }
-
-        .disclaimer-text {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            line-height: 1.35;
-            margin-top: auto;
-            padding-top: 16px;
-            border-top: 1px solid rgba(78, 92, 75, 0.1);
-            text-align: center;
-        }
-
-        /* PWA Update Banner */
-        .update-banner {
-            position: fixed;
-            bottom: 70px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: var(--deep-olive);
-            color: var(--white);
-            padding: 10px 18px;
-            border-radius: 20px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            z-index: 999;
-            font-size: 0.85rem;
-        }
-
-        .update-banner button {
-            background-color: var(--terracotta);
-            color: var(--white);
-            border: none;
-            padding: 4px 10px;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-        }
+        .btn-logout { background-color: #FDF2F2; color: #9B1C1C; border: 1px solid #F8B4B4; width: 100%; padding: 12px; border-radius: 12px; font-weight: 700; margin-top: 16px; cursor: pointer; }
 
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <!-- Header Navigation -->
+    <!-- SPA Auth Overlay -->
+    <div id="auth-overlay" class="auth-overlay-screen">
+        <div class="auth-card">
+            <h2>🧠 Välkommen till FALK</h2>
+            <p>Logga in för att fortsätta din kognitiva resa</p>
+            
+            <div class="auth-input-group">
+                <label>E-postadress</label>
+                <input type="email" id="auth-email" placeholder="din.epost@doman.se">
+                
+                <label style="margin-top: 8px;">Lösenord</label>
+                <input type="password" id="auth-password" placeholder="••••••••">
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px; text-align: left; font-size: 0.85rem; color: var(--text-dark);">
+                <input type="checkbox" id="auth-remember" checked>
+                <label for="auth-remember">Håll mig inloggad</label>
+            </div>
+
+            <button class="auth-submit-btn" onclick="handleLogin()">Logga in</button>
+            <div id="auth-error" style="color: #9B1C1C; font-size: 0.85rem; margin-top: 10px;" class="hidden"></div>
+        </div>
+    </div>
+
+    <!-- Main Header -->
     <header class="header-nav">
         <button class="nav-pill" id="nav-dagbok-btn" onclick="openDagbok()">📓 Dagbok</button>
         <button class="nav-pill active" id="nav-falk-btn" onclick="openChatView()">🧠 FALK</button>
@@ -544,66 +316,37 @@
         <button class="nav-pill" id="nav-profil-btn" onclick="openProfile()">🧠 Profil</button>
     </header>
 
-    <!-- Main Scroll Area -->
+    <!-- Main Scroll Container -->
     <main class="main-container">
-        
-        <!-- Welcome Greeting Card -->
         <div class="welcome-card" id="welcome-card">
             <h2>Jag är FALK – Min uppgift är att hjälpa dig på din väg!</h2>
             <p>Vad vill du utforska idag?</p>
         </div>
 
-        <!-- Start Prompt Grid -->
         <section class="prompt-grid" id="prompt-grid">
             <div class="prompt-card" onclick="selectPrompt('Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det.')">
                 <div class="prompt-title">✨ Mening & livsriktning</div>
                 <div class="prompt-desc">"Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det."</div>
             </div>
-
             <div class="prompt-card" onclick="selectPrompt('Hjälp mig sortera tankarna och hitta klarhet.')">
                 <div class="prompt-title">🧠 När tankarna tar över</div>
                 <div class="prompt-desc">Hjälp mig sortera tankarna och hitta klarhet.</div>
             </div>
-
             <div class="prompt-card" onclick="selectPrompt('Hjälp mig hantera utmaningar och hitta nästa steg.')">
                 <div class="prompt-title">💼 Jobb, ansvar & ledarskap</div>
                 <div class="prompt-desc">Hjälp mig hantera utmaningar och hitta nästa steg.</div>
             </div>
-
             <div class="prompt-card" onclick="selectPrompt('Jag känner mig stressad eller orolig och behöver landa.')">
                 <div class="prompt-title">🌱 Hitta lugnet igen</div>
                 <div class="prompt-desc">Jag känner mig stressad eller orolig och behöver landa.</div>
             </div>
-
             <div class="prompt-card" onclick="selectPrompt('Hjälp mig komma vidare och få saker att hända.')">
                 <div class="prompt-title">🎯 Från mål till handling</div>
                 <div class="prompt-desc">Hjälp mig komma vidare och få saker att hända.</div>
             </div>
-
-            <div class="prompt-card" onclick="selectPrompt('Hjälp mig förstå en situation och kommunicera bättre.')">
-                <div class="prompt-title">💬 Relationer & svåra samtal</div>
-                <div class="prompt-desc">Hjälp mig förstå en situation och kommunicera bättre.</div>
-            </div>
-
-            <div class="prompt-card" onclick="selectPrompt('Hjälp mig hitta hållbara vanor för sömn, energi och fokus.')">
-                <div class="prompt-title">⚡ Mer energi & balans</div>
-                <div class="prompt-desc">Hjälp mig hitta hållbara vanor för sömn, energi och fokus.</div>
-            </div>
-
-            <div class="prompt-card" onclick="selectPrompt('Hjälp mig upptäcka mina behov, drivkrafter och mönster.')">
-                <div class="prompt-title">🔍 Förstå mig själv bättre</div>
-                <div class="prompt-desc">Hjälp mig upptäcka mina behov, drivkrafter och mönster.</div>
-            </div>
-
-            <div class="prompt-card" onclick="selectPrompt('Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet.')">
-                <div class="prompt-title">🧩 Utmana mina tankar</div>
-                <div class="prompt-desc">Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet.</div>
-            </div>
         </section>
 
-        <!-- Dynamic Chat Messages -->
         <div class="chat-messages" id="chat-messages"></div>
-
     </main>
 
     <!-- Footer Input Bar -->
@@ -611,7 +354,7 @@
         <div class="input-wrapper">
             <input type="text" id="chat-message" placeholder="Skriv eller tala..." onkeydown="if(event.key==='Enter') sendMessage()">
         </div>
-        <button class="icon-btn" title="Röstinmatning" onclick="alert('Röstinmatning aktiverad i nästa uppdatering.')">🎙️</button>
+        <button class="icon-btn" title="Röstinmatning" onclick="alert('Röstinmatning aktiveras inom kort.')">🎙️</button>
         <button class="icon-btn" title="Inställningar" onclick="openProfile()">🎛️</button>
         <button class="send-btn" id="send-btn" onclick="sendMessage()">Skicka</button>
     </footer>
@@ -623,70 +366,22 @@
                 <h3>📓 Kognitiv Dagbok</h3>
                 <button class="close-btn" onclick="closeDagbok()">✕</button>
             </div>
-            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Dina senast sparade reflektioner:</div>
-            <div id="dagbok-entries-list">
-                <div class="entry-item">
-                    <div class="entry-date">IDAG</div>
-                    <div class="entry-snippet">Inga sparade dagboksanteckningar ännu. Byt tankar med FALK för att bygga din historik.</div>
-                </div>
-            </div>
+            <div id="dagbok-entries-list"></div>
         </div>
     </div>
 
-    <!-- HÖGER DRAWER: Kognitiv Profil & Auth -->
+    <!-- HÖGER DRAWER: Profil -->
     <div class="drawer-overlay right-drawer" id="profile-drawer" onclick="if(event.target===this) closeProfile()">
         <div class="drawer-card">
             <div class="drawer-header">
                 <h3>🧠 Kognitiv Profil</h3>
                 <button class="close-btn" onclick="closeProfile()">✕</button>
             </div>
+            
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">Insiktsnivå: 47%</p>
 
-            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-top: 10px;">📈 KOGNITIV UTVECKLINGSKURVA</div>
-            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px;">
-                <span style="font-weight: 700; color: var(--deep-olive);">Insiktsnivå</span>
-                <span style="font-weight: 700; color: var(--deep-olive);">47%</span>
-            </div>
-            <div class="progress-bar-bg">
-                <div class="progress-bar-fill"></div>
-            </div>
-            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">Måttlig kognitiv insikt</div>
-
-            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;">KÄRNVÄRDERINGAR</div>
-            <div style="margin: 8px 0 16px 0;">
-                <span class="tag-pill">Transparens</span>
-                <span class="tag-pill">Tydlighet</span>
-            </div>
-
-            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;">IDENTIFIERADE MÖNSTER</div>
-            <ul style="margin: 8px 0 16px 20px; font-size: 0.9rem; color: var(--text-dark); line-height: 1.5;">
-                <li>Informationssökning</li>
-                <li>Direkt fråga</li>
-            </ul>
-
-            <div class="remember-me-container">
-                <input type="checkbox" id="remember-me-checkbox" checked onchange="toggleRememberMe(this.checked)">
-                <label for="remember-me-checkbox">Håll mig inloggad på denna enhet</label>
-            </div>
-
-            <button class="btn-action-block btn-logout" onclick="handleLogout()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                Logga ut
-            </button>
-
-            <div style="margin-top: 12px;">
-                <a style="color: var(--terracotta); text-decoration: none; font-size: 0.85rem; font-weight: 600; cursor: pointer;" onclick="clearCognitiveMemory()">Rensa kognitivt minne</a>
-            </div>
-
-            <div class="disclaimer-text">
-                Friskrivning: FALK kan inte ställa medicinska eller psykiatriska diagnoser. FALK är enbart en kognitiv vägledare för självreflektion och ersätter inte professionell hälso- och sjukvård.
-            </div>
+            <button class="btn-logout" onclick="handleLogout()">Logga ut</button>
         </div>
-    </div>
-
-    <!-- PWA Update Banner -->
-    <div id="pwa-update-banner" class="update-banner hidden">
-        <span>Ny version tillgänglig!</span>
-        <button id="pwa-update-btn">Uppdatera</button>
     </div>
 
     <script>
@@ -696,31 +391,41 @@
 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // SVG Icons String Definitions (GEMINI STYLE - NO EMOJIS)
         const SVG_SPEAKER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
         const SVG_REGEN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>`;
-        const SVG_THUMBS_UP = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>`;
-        const SVG_THUMBS_DOWN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path></svg>`;
-        const SVG_MINUS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
-        const SVG_PLUS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
-        const SVG_SAVE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>`;
 
         window.addEventListener("DOMContentLoaded", () => {
-            loadChatHistory();
             initAuthCheck();
+            loadChatHistory();
         });
-
-        
-
-        function toggleRememberMe(isRemembered) {
-            localStorage.setItem("falk_remember_me", isRemembered ? "true" : "false");
-        }
 
         async function initAuthCheck() {
             const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: { session: null } }));
             if (!session) {
-                // Tvinga omdirigering till inloggningssidan om session saknas
-                window.location.href = "/login.html";
+                document.getElementById("auth-overlay").classList.remove("hidden");
+            } else {
+                document.getElementById("auth-overlay").classList.add("hidden");
+            }
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById("auth-email").value.trim();
+            const password = document.getElementById("auth-password").value.trim();
+            const errDiv = document.getElementById("auth-error");
+
+            if (!email || !password) {
+                errDiv.textContent = "Fyll i både e-post och lösenord.";
+                errDiv.classList.remove("hidden");
+                return;
+            }
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) {
+                errDiv.textContent = "Felaktig e-post eller lösenord.";
+                errDiv.classList.remove("hidden");
+            } else {
+                errDiv.classList.add("hidden");
+                document.getElementById("auth-overlay").classList.add("hidden");
             }
         }
 
@@ -728,7 +433,8 @@
             if (confirm("Vill du logga ut från FALK?")) {
                 await supabaseClient.auth.signOut().catch(() => {});
                 localStorage.removeItem("falk_chat_history");
-                window.location.href = "/login.html";
+                closeProfile();
+                document.getElementById("auth-overlay").classList.remove("hidden");
             }
         }
 
@@ -745,7 +451,7 @@
 
                 cached.forEach((item, idx) => {
                     if (item.user_message) appendMessage(item.user_message, "user", false);
-                    if (item.ai_response) appendMessage(item.ai_response, "ai", false, idx);
+                    if (item.ai_response) appendMessage(item.ai_response, "ai", false);
 
                     if (item.user_message) {
                         const entryDiv = document.createElement("div");
@@ -773,10 +479,9 @@
             sendMessage();
         }
 
-        function appendMessage(text, type, save = true, msgIndex = null) {
+        function appendMessage(text, type, save = true) {
             const messagesContainer = document.getElementById("chat-messages");
             const promptGrid = document.getElementById("prompt-grid");
-            
             promptGrid.classList.add("hidden");
 
             const wrapperDiv = document.createElement("div");
@@ -794,20 +499,10 @@
 
             wrapperDiv.appendChild(msgDiv);
 
-            // Lägg till Gemini-style ikonrad enbart under AI-svar
             if (type === "ai") {
                 const toolbarDiv = document.createElement("div");
                 toolbarDiv.className = "msg-toolbar";
-                
-                toolbarDiv.innerHTML = `
-                    <button class="action-icon-btn" title="Läs upp" onclick="speakText(this)">${SVG_SPEAKER}</button>
-                    <button class="action-icon-btn" title="Generera igen" onclick="regenerateLastResponse()">${SVG_REGEN}</button>
-                    <button class="action-icon-btn" title="Bra svar" onclick="toggleFeedback(this, 'up')">${SVG_THUMBS_UP}</button>
-                    <button class="action-icon-btn" title="Dåligt svar" onclick="toggleFeedback(this, 'down')">${SVG_THUMBS_DOWN}</button>
-                    <button class="action-icon-btn" title="Minska detaljer" onclick="adjustDetail('minus')">${SVG_MINUS}</button>
-                    <button class="action-icon-btn" title="Utöka detaljer" onclick="adjustDetail('plus')">${SVG_PLUS}</button>
-                    <button class="action-icon-btn" title="Spara till Dagbok" onclick="saveToDiary(this)">${SVG_SAVE}</button>
-                `;
+                toolbarDiv.innerHTML = `<button class="action-icon-btn" title="Läs upp" onclick="speakText(this)">${SVG_SPEAKER}</button>`;
                 wrapperDiv.appendChild(toolbarDiv);
             }
 
@@ -820,65 +515,26 @@
             main.scrollTop = main.scrollHeight;
         }
 
-        // Action Toolbar Controllers
         function speakText(btn) {
             const msgBody = btn.closest(".message-wrapper").querySelector(".message");
             if (!msgBody) return;
 
             if ('speechSynthesis' in window) {
-                // Om ljud redan spelas och denna knapp är aktiv: STOPPA
                 if (window.speechSynthesis.speaking && btn.classList.contains("active")) {
                     window.speechSynthesis.cancel();
                     btn.classList.remove("active");
                     return;
                 }
 
-                // Återställ alla andra aktiva högtalarknappar
-                document.querySelectorAll(".action-icon-btn.active").forEach(b => {
-                    if (b.getAttribute("onclick") && b.getAttribute("onclick").includes("speakText")) {
-                        b.classList.remove("active");
-                    }
-                });
-
                 window.speechSynthesis.cancel();
-
                 const utterance = new SpeechSynthesisUtterance(msgBody.innerText);
                 utterance.lang = 'sv-SE';
-
                 utterance.onend = () => btn.classList.remove("active");
                 utterance.onerror = () => btn.classList.remove("active");
 
                 window.speechSynthesis.speak(utterance);
                 btn.classList.add("active");
-            } else {
-                alert("Uppläsning stöds inte i denna webbläsare.");
             }
-        }
-
-        function regenerateLastResponse() {
-            const cached = JSON.parse(localStorage.getItem("falk_chat_history") || "[]");
-            if (cached.length > 0) {
-                const lastUserMsg = cached[cached.length - 1].user_message;
-                if (lastUserMsg) {
-                    document.getElementById("chat-message").value = lastUserMsg;
-                    sendMessage();
-                }
-            }
-        }
-
-        function toggleFeedback(btn, type) {
-            btn.classList.toggle("active");
-        }
-
-        function adjustDetail(direction) {
-            const msg = direction === 'plus' ? "Kan du utveckla ditt förra svar lite mer?" : "Kan du sammanfatta förra svaret kortare?";
-            document.getElementById("chat-message").value = msg;
-            sendMessage();
-        }
-
-        function saveToDiary(btn) {
-            btn.classList.add("active");
-            alert("Svaret har sparats till din kognitiva dagbok!");
         }
 
         async function sendMessage() {
@@ -897,11 +553,9 @@
                 return;
             }
 
-            // 1. Inaktivera input men behåll texten "Skicka" på knappen
             input.disabled = true;
             sendBtn.disabled = true;
 
-            // 2. Skapa ett transparent inline-meddelande för laddning
             const thinkingDiv = document.createElement("div");
             thinkingDiv.className = "message ai-thinking";
             thinkingDiv.id = "active-thinking-bubble";
@@ -928,7 +582,6 @@
 
                 clearTimeout(timeoutId);
 
-                // Ta bort den transparenta laddningsbubblan
                 const activeThinking = document.getElementById("active-thinking-bubble");
                 if (activeThinking) activeThinking.remove();
 
@@ -937,7 +590,6 @@
                 const data = await res.json();
                 if (data.response) {
                     appendMessage(data.response, "ai");
-                    
                     const cached = JSON.parse(localStorage.getItem("falk_chat_history") || "[]");
                     cached.push({ user_message: message, ai_response: data.response });
                     localStorage.setItem("falk_chat_history", JSON.stringify(cached));
@@ -971,7 +623,6 @@
             }
         }
 
-        /* DRAWER CONTROLLERS */
         function openDagbok() {
             closeProfile();
             document.getElementById("dagbok-drawer").classList.add("active");
@@ -1004,16 +655,6 @@
             document.getElementById("nav-falk-btn").classList.add("active");
         }
 
-        function clearCognitiveMemory() {
-            if (confirm("Vill du rensa den kognitiva profilens minne?")) {
-                localStorage.removeItem("falk_chat_history");
-                document.getElementById("chat-messages").innerHTML = "";
-                document.getElementById("prompt-grid").classList.remove("hidden");
-                closeProfile();
-                alert("Kognitivt minne rensat.");
-            }
-        }
-
         if ('serviceWorker' in navigator) {
             let refreshing = false;
             navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -1025,35 +666,11 @@
 
             window.addEventListener('load', async () => {
                 try {
-                    const reg = await navigator.serviceWorker.register('/sw.js');
-                    if (reg.waiting) showUpdateBanner(reg.waiting);
-                    reg.addEventListener('updatefound', () => {
-                        const newWorker = reg.installing;
-                        if (!newWorker) return;
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                showUpdateBanner(newWorker);
-                            }
-                        });
-                    });
-                    document.addEventListener('visibilitychange', () => {
-                        if (document.visibilityState === 'visible') reg.update();
-                    });
+                    await navigator.serviceWorker.register('/sw.js');
                 } catch (err) {
                     console.warn('SW Registreringsfel:', err);
                 }
             });
-        }
-
-        function showUpdateBanner(worker) {
-            const banner = document.getElementById('pwa-update-banner');
-            const btn = document.getElementById('pwa-update-btn');
-            if (!banner || !btn) return;
-            banner.classList.remove('hidden');
-            btn.onclick = () => {
-                worker.postMessage({ type: 'SKIP_WAITING' });
-                banner.classList.add('hidden');
-            };
         }
     </script>
 </body>
