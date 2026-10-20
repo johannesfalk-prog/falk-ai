@@ -1,4 +1,4 @@
-const CACHE_NAME = 'falk-v6';
+const CACHE_NAME = 'falk-v7';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -9,56 +9,37 @@ const STATIC_ASSETS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
 ];
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
-      .then(() => self.skipWaiting())
+self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(c => c.addAll(STATIC_ASSETS)).then(() => self.skipWaiting())
   );
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) return caches.delete(key);
-        })
-      );
-    }).then(() => self.clients.claim())
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.map(k => k !== CACHE_NAME && caches.delete(k))))
+      .then(() => self.clients.claim())
   );
 });
 
-self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
+self.addEventListener('fetch', (e) => {
+  if (e.request.method !== 'GET') return;
 
-  // Ignorera favicon-förfrågningar om de saknas
-  if (event.request.url.includes('favicon.ico')) {
-    event.respondWith(
-      caches.match(event.request).then((cached) => {
-        return cached || new Response('', { status: 200, headers: { 'Content-Type': 'image/x-icon' } });
-      })
-    );
-    return;
-  }
+  e.respondWith(
+    caches.match(e.request).then(cached => {
+      if (cached) return cached;
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) return cachedResponse;
-
-      return fetch(event.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+      return fetch(e.request).then(res => {
+        if (res && res.status === 200 && res.type === 'basic') {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
         }
-        return networkResponse;
+        return res;
       }).catch(() => {
-        if (event.request.mode === 'navigate') {
+        if (e.request.mode === 'navigate') {
           return caches.match('/index.html');
         }
-        return new Response(JSON.stringify({ error: "Offline" }), {
-          status: 503,
-          headers: new Headers({ 'Content-Type': 'application/json' })
-        });
+        return new Response('', { status: 503, statusText: 'Offline' });
       });
     })
   );
