@@ -2,14 +2,17 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
     <title>FALK – Kognitiv Dagbok</title>
     
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦅</text></svg>">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0f172a">
 
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self' https: data: blob:;
-        script-src 'self' 'unsafe-inline'; worker-src 'self';
+        script-src 'self' 'unsafe-inline';
+        worker-src 'self';
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
         font-src 'self' https://fonts.gstatic.com data:;
         connect-src 'self' https://dmerwpgvepkjirugnfzy.supabase.co https://falk-ai.onrender.com wss://dmerwpgvepkjirugnfzy.supabase.co;
@@ -19,9 +22,6 @@
         form-action 'self';
     ">
 
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#0f172a">
-    
     <script src="/js/purify.min.js"></script>
     <script src="/js/marked.min.js"></script>
     <script src="/js/supabase.js"></script>
@@ -290,7 +290,7 @@
 
 <script>
     const SUPABASE_URL = "https://dmerwpgvepkjirugnfzy.supabase.co";
-    const SUPABASE_ANON_KEY = "DeyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZXJ3cGd2ZXBramlydWduZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MjM3NjksImV4cCI6MjEwNzk5OTc2OX0.UNX_fozGEsKKMrQpn-8VP3g3r1boegX5jl5B8oW69Ww";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtZXJ3cGd2ZXBramlydWduZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MjM3NjksImV4cCI6MjEwNzk5OTc2OX0.UNX_fozGEsKKMrQpn-8VP3g3r1boegX5jl5B8oW69Ww";
     const BACKEND_URL = "https://falk-ai.onrender.com";
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -299,9 +299,6 @@
         document.getElementById("auth-form").addEventListener("submit", handleAuth);
         document.getElementById("logout-btn").addEventListener("click", handleLogout);
         document.getElementById("send-btn").addEventListener("click", sendMessage);
-
-        // Lyssna på när nätverket kommer tillbaka för auto-sync
-        window.addEventListener('online', syncPendingMessages);
 
         try {
             const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: { session: null } }));
@@ -325,7 +322,7 @@
         });
 
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js?v=13').catch(() => {});
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
         }
     });
 
@@ -384,7 +381,6 @@
             const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: { session: null } }));
             if (!session) return;
 
-            if (!navigator.onLine) return;
             const res = await fetch(`${BACKEND_URL}/history`, {
                 headers: { "Authorization": `Bearer ${session.access_token}` }
             }).catch(() => null);
@@ -446,15 +442,7 @@
             } else {
                 throw new Error("Tomt svar");
             }
-        } catch (err) {
-            input.value = message;
-            appendMessage("Kunna inte nå servern. Ditt meddelande ligger kvar i textfältet.", "system-error");
-        }
-    }
-
-    async function syncPendingMessages() {
-        // Automatisk synkronisering när täckningen återvänder
-        await loadHistory();
+        } catch (err) {}
     }
 
     function appendMessage(text, sender) {
