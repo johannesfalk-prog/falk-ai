@@ -198,7 +198,6 @@
             border-color: var(--soft-sage);
         }
 
-        /* ORAMAD FALK TITEL I HEADER (+2px storlek: 1.1rem, ingen ram) */
         .header-brand-title {
             font-size: 1.1rem;
             font-weight: 800;
@@ -217,14 +216,8 @@
         }
 
         @keyframes sweepTitleIn {
-            0% {
-                opacity: 0;
-                transform: translateY(20px) scale(1.15);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
+            0% { opacity: 0; transform: translateY(20px) scale(1.15); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
         }
 
         /* Main Scroll Area */
@@ -391,7 +384,7 @@
 </head>
 <body>
 
-    <!-- SPA Auth Overlay (MED "FALK" & UNDERRUBRIK) -->
+    <!-- SPA Auth Overlay -->
     <div id="auth-overlay" class="auth-overlay-screen">
         <div class="auth-card">
             <h2>FALK</h2>
@@ -421,7 +414,7 @@
         </div>
     </div>
 
-    <!-- Main Header (ORAMAD FALK RUBRIK) -->
+    <!-- Main Header -->
     <header class="header-nav">
         <button class="nav-pill" id="nav-dagbok-btn" onclick="openDagbok()">📓 Dagbok</button>
         <div class="header-brand-title" id="header-falk-title" onclick="startNewChat()">FALK</div>
@@ -436,7 +429,6 @@
             <p>Vad vill du utforska idag?</p>
         </div>
 
-        <!-- 9 STARTKORT -->
         <section class="prompt-grid" id="prompt-grid">
             <div class="prompt-card" onclick="selectPrompt('Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det.')">
                 <div class="prompt-title">✨ Mening & livsriktning</div>
@@ -619,14 +611,68 @@
 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let activeAuthMode = 'login';
+        const TEN_MINUTES_MS = 10 * 60 * 1000; // 10 minuter i ms
 
         const SVG_SPEAKER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
 
         window.addEventListener("DOMContentLoaded", () => {
             initAuthCheck();
             loadFocusSettings();
-            startNewChat();
+            evaluateSessionLifecycle();
         });
+
+        /* 10-MINUTERS LIFECYCLE CONTROLLER */
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "hidden") {
+                localStorage.setItem("falk_last_active_timestamp", Date.now().toString());
+            } else if (document.visibilityState === "visible") {
+                evaluateSessionLifecycle();
+            }
+        });
+
+        window.addEventListener("pagehide", () => {
+            localStorage.setItem("falk_last_active_timestamp", Date.now().toString());
+        });
+
+        function evaluateSessionLifecycle() {
+            const lastActiveStr = localStorage.getItem("falk_last_active_timestamp");
+            const activeSessionStream = localStorage.getItem("falk_active_session_stream");
+            const now = Date.now();
+
+            if (!lastActiveStr) {
+                // Första appstarten någonsin eller efter rensning
+                if (!activeSessionStream) startNewChat();
+                return;
+            }
+
+            const lastActiveTime = parseInt(lastActiveStr, 10);
+            const elapsed = now - lastActiveTime;
+
+            if (elapsed > TEN_MINUTES_MS) {
+                // Mer än 10 minuter har gått -> Återställ till Ny Chatt
+                localStorage.removeItem("falk_active_session_stream");
+                startNewChat();
+            } else {
+                // Mindre än 10 minuter har gått -> Återuppta exakt där användaren var
+                restoreActiveSessionStream();
+            }
+        }
+
+        function restoreActiveSessionStream() {
+            const activeStream = JSON.parse(localStorage.getItem("falk_active_session_stream") || "[]");
+            const messagesContainer = document.getElementById("chat-messages");
+            const promptGrid = document.getElementById("prompt-grid");
+
+            if (activeStream.length > 0) {
+                promptGrid.classList.add("hidden");
+                messagesContainer.innerHTML = "";
+                activeStream.forEach(msg => {
+                    appendMessageToDOM(msg.text, msg.type);
+                });
+                scrollToBottom();
+            }
+            loadDagbokHistoryOnly();
+        }
 
         async function initAuthCheck() {
             const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: { session: null } }));
@@ -685,7 +731,6 @@
             }
         }
 
-        // SVEP-ANIMATION NÄR INLOGGNING GODKÄNNS
         function dismissAuthOverlayWithSweep() {
             const overlay = document.getElementById("auth-overlay");
             const headerTitle = document.getElementById("header-falk-title");
@@ -697,7 +742,7 @@
                 overlay.classList.add("hidden");
                 overlay.classList.remove("dismissing");
                 headerTitle.classList.remove("animating-in");
-                startNewChat();
+                evaluateSessionLifecycle();
             }, 450);
         }
 
@@ -705,6 +750,8 @@
             if (confirm("Vill du logga ut från FALK?")) {
                 await supabaseClient.auth.signOut().catch(() => {});
                 localStorage.removeItem("falk_chat_history");
+                localStorage.removeItem("falk_active_session_stream");
+                localStorage.removeItem("falk_last_active_timestamp");
                 closeProfile();
                 const overlay = document.getElementById("auth-overlay");
                 overlay.classList.remove("hidden", "dismissing");
@@ -712,6 +759,7 @@
         }
 
         function startNewChat() {
+            localStorage.removeItem("falk_active_session_stream");
             document.getElementById("chat-messages").innerHTML = "";
             document.getElementById("prompt-grid").classList.remove("hidden");
             closeDagbok();
@@ -796,7 +844,7 @@
             sendMessage();
         }
 
-        function appendMessage(text, type) {
+        function appendMessageToDOM(text, type) {
             const messagesContainer = document.getElementById("chat-messages");
             const promptGrid = document.getElementById("prompt-grid");
             promptGrid.classList.add("hidden");
@@ -825,6 +873,15 @@
 
             messagesContainer.appendChild(wrapperDiv);
             scrollToBottom();
+        }
+
+        function appendMessage(text, type) {
+            appendMessageToDOM(text, type);
+
+            // Spara det aktiva chattskicket lokalt för snabb återställning inom 10 minuter
+            const activeStream = JSON.parse(localStorage.getItem("falk_active_session_stream") || "[]");
+            activeStream.push({ text, type });
+            localStorage.setItem("falk_active_session_stream", JSON.stringify(activeStream));
         }
 
         function scrollToBottom() {
@@ -960,6 +1017,8 @@
         function clearCognitiveMemory() {
             if (confirm("Vill du rensa den kognitiva profilens minne?")) {
                 localStorage.removeItem("falk_chat_history");
+                localStorage.removeItem("falk_active_session_stream");
+                localStorage.removeItem("falk_last_active_timestamp");
                 startNewChat();
                 alert("Kognitivt minne rensat.");
             }
