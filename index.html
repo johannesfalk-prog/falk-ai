@@ -384,6 +384,7 @@
             const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: { session: null } }));
             if (!session) return;
 
+            if (!navigator.onLine) return;
             const res = await fetch(`${BACKEND_URL}/history`, {
                 headers: { "Authorization": `Bearer ${session.access_token}` }
             }).catch(() => null);
