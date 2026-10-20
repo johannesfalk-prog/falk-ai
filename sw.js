@@ -1,4 +1,4 @@
-const CACHE_NAME = "falk-v21";
+const CACHE_NAME = "falk-v22";
 const STATIC_ASSETS = [
   "/",
   "/index.html",
@@ -19,7 +19,7 @@ self.addEventListener("install", (event) => {
           console.warn("Asset-varning vid install:", asset, err);
         }
       }
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 
@@ -31,16 +31,20 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
   event.respondWith(
     (async () => {
-      // 1. Sök i cachen efter exakt matchning
       const cachedResponse = await caches.match(event.request);
       if (cachedResponse) return cachedResponse;
 
-      // 2. Försök hämta via nätverket
       try {
         const networkResponse = await fetch(event.request);
         if (networkResponse && networkResponse.status === 200 && networkResponse.type === "basic") {
@@ -49,13 +53,11 @@ self.addEventListener("fetch", (event) => {
         }
         return networkResponse;
       } catch (networkError) {
-        // 3. Vid offline: försök hitta fallback i cachen
         if (event.request.mode === "navigate") {
           const fallbackIndex = await caches.match("/index.html") || await caches.match("/");
           if (fallbackIndex) return fallbackIndex;
         }
 
-        // 4. GARANTERAT RESPONSE-OBJEKT (Säkrar mot TypeError)
         return new Response(
           "<html><body><h2>FALK Offline Mode</h2><p>Applikationen laddades utan sparad cache.</p></body></html>",
           {

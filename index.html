@@ -250,7 +250,35 @@
         }
 
         .hidden { display: none !important; }
-    </style>
+    
+        /* PWA Update Banner */
+        .update-banner {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--accent);
+            color: #0f172a;
+            padding: 12px 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 9999;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .update-banner button {
+            background-color: #0f172a;
+            color: #fff;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+</style>
 </head>
 <body>
 
@@ -322,7 +350,57 @@
         });
 
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register("/sw.js").catch(() => {});
+            let refreshing = false;
+
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    refreshing = true;
+                    window.location.reload();
+                }
+            });
+
+            window.addEventListener('load', async () => {
+                try {
+                    const reg = await navigator.serviceWorker.register('/sw.js');
+                    
+                    if (reg.waiting) {
+                        showUpdateBanner(reg.waiting);
+                    }
+
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        if (!newWorker) return;
+
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                showUpdateBanner(newWorker);
+                            }
+                        });
+                    });
+
+                    document.addEventListener('visibilitychange', () => {
+                        if (document.visibilityState === 'visible') {
+                            reg.update();
+                        }
+                    });
+
+                } catch (err) {
+                    console.warn('SW Registreringsfel:', err);
+                }
+            });
+        }
+
+        function showUpdateBanner(worker) {
+            const banner = document.getElementById('pwa-update-banner');
+            const btn = document.getElementById('pwa-update-btn');
+            if (!banner || !btn) return;
+
+            banner.classList.remove('hidden');
+            btn.onclick = () => {
+                worker.postMessage({ type: 'SKIP_WAITING' });
+                banner.classList.add('hidden');
+            };
+        }
         }
     });
 
@@ -470,5 +548,10 @@
         chatView.scrollTop = chatView.scrollHeight;
     }
 </script>
+
+    <div id="pwa-update-banner" class="update-banner hidden">
+        <span>Ny version av FALK finns tillgänglig!</span>
+        <button id="pwa-update-btn">Uppdatera</button>
+    </div>
 </body>
 </html>
