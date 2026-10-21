@@ -1,7 +1,5 @@
-.DS_Store
-.env
 venv/
-*.pdf
-Modelfile
-test_groq.py
-falk-backend/
+.env
+*.pyc
+__pycache__/
+.DS_Store
