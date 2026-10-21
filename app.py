@@ -12,7 +12,7 @@ app = Flask(__name__)
 CORS(app)
 
 groq_api_key = os.getenv("GROQ_API_KEY")
-groq_client = Groq(api_key=groq_api_key, timeout=12.0) if groq_api_key else None
+groq_client = Groq(api_key=groq_api_key, timeout=10.0) if groq_api_key else None
 
 RATE_LIMIT_STORE = defaultdict(list)
 LIGHT_LIMIT_PER_MINUTE = 5
@@ -58,12 +58,15 @@ def index():
         supabase_anon_key=os.getenv("SUPABASE_ANON_KEY", "")
     )
 
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "healthy", "service": "falk-backend"}), 200
+
 @app.route("/chat", methods=["POST"])
 def chat():
     client_ip = request.remote_addr or "127.0.0.1"
     auth_header = request.headers.get("Authorization", "")
     
-    # Om auth_header saknas eller är ogiltig blir authenticated_user_id = None (faller tillbaka till LIGHT)
     authenticated_user_id = verify_supabase_jwt(auth_header)
     is_pro = bool(authenticated_user_id)
 
@@ -76,7 +79,6 @@ def chat():
         return jsonify({"error": "Message exceeds maximum length of 2000 characters"}), 400
 
     if not is_pro and is_rate_limited(client_ip):
-        print(f"[SECURITY]: IP {client_ip} rate-limited på LIGHT tier.", flush=True)
         return jsonify({
             "error": "Minutkvot uppnådd för gratisversionen. Vänta 60 sekunder eller logga in på PRO.",
             "retry_after_seconds": 60
@@ -86,26 +88,22 @@ def chat():
     
     if is_pro:
         user_id = authenticated_user_id
-        print(f"\n[PRO TIER VERIFIERAD VIA JWT]: User UUID: {user_id}", flush=True)
         try:
             memories = get_relevant_memories(user_id, message)
-            print(f" -> [PRO MEMORY]: Hämtade {len(memories)} minnen via HF API.", flush=True)
         except Exception as e:
-            print(f" -> [PRO MEMORY ERROR]: {e}", flush=True)
+            print(f"[PRO MEMORY ERROR]: {e}", flush=True)
 
         if should_store_memory(message):
             try:
                 store_memory(user_id, message, category="reflection")
-                print(" -> [PRO MEMORY]: Minne sparat till Supabase via HF API.", flush=True)
             except Exception as e:
-                print(f" -> [PRO STORE ERROR]: {e}", flush=True)
+                print(f"[PRO STORE ERROR]: {e}", flush=True)
 
         memory_context = "\n".join([f"- {m}" for m in memories]) if memories else "Inga tidigare minnen."
         full_system_prompt = f"{SYSTEM_PROMPT_PRO}\n\n[RELEVANT USER MEMORIES]:\n{memory_context}"
         models_to_try = ["openai/gpt-oss-20b", "gemma2-9b-it"]
 
     else:
-        print(f"\n[LIGHT TIER]: IP: {client_ip} (Anonym förfrågan)", flush=True)
         full_system_prompt = SYSTEM_PROMPT_LIGHT
         models_to_try = ["openai/gpt-oss-20b", "gemma2-9b-it", "mixtral-8x7b-32768"]
 
@@ -117,7 +115,6 @@ def chat():
 
     for model in models_to_try:
         try:
-            print(f" -> Exekverar LLM ({model})...", flush=True)
             completion = groq_client.chat.completions.create(
                 model=model,
                 messages=[
@@ -128,10 +125,9 @@ def chat():
                 max_tokens=512
             )
             response_text = completion.choices[0].message.content
-            print(f" -> [SUCCESS]: Svar genererat från {model}.", flush=True)
             break
         except Exception as e:
-            print(f" -> [LLM ERROR] {model}: {e}", flush=True)
+            print(f"[LLM ERROR] {model}: {e}", flush=True)
             errors.append(f"{model}: {str(e)}")
 
     if not response_text:
