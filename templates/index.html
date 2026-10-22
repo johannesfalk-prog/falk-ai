@@ -71,15 +71,22 @@
     <script>
         const SUPABASE_URL = "{{ supabase_url }}";
         const SUPABASE_ANON_KEY = "{{ supabase_anon_key }}";
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Korrekt initiering för att undvika namnkollision
+        let supabaseClient = null;
+        if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
 
         let userToken = null;
 
         async function initAuth() {
-            const { data: { session } } = await supabase.auth.getSession();
+            if (!supabaseClient) return;
+
+            const { data: { session } } = await supabaseClient.auth.getSession();
             updateAuthUI(session);
 
-            supabase.auth.onAuthStateChange((_event, session) => {
+            supabaseClient.auth.onAuthStateChange((_event, session) => {
                 updateAuthUI(session);
             });
         }
@@ -107,11 +114,15 @@
         }
 
         async function loginWithGoogle() {
-            await supabase.auth.signInWithOAuth({ provider: 'google' });
+            if (supabaseClient) {
+                await supabaseClient.auth.signInWithOAuth({ provider: 'google' });
+            }
         }
 
         async function logout() {
-            await supabase.auth.signOut();
+            if (supabaseClient) {
+                await supabaseClient.auth.signOut();
+            }
         }
 
         async function sendMessage(e) {
