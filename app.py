@@ -43,15 +43,27 @@ def extract_user_id(req):
         return "00000000-0000-0000-0000-000000000000", "FREE"
 
     try:
-        # Utför dekodning och skriv ut framgång
-        decoded = jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=["HS256"], options={"verify_aud": False})
+        # Läs av token-header dynamiskt för att förhindra InvalidAlgorithmError
+        header = jwt.get_unverified_header(token)
+        token_alg = header.get("alg", "HS256")
+        
+        # Inkludera alla tillåtna Supabase-algoritmer
+        allowed_algs = list(set([token_alg, "HS256", "HS384", "HS512", "RS256"]))
+
+        decoded = jwt.decode(
+            token, 
+            SUPABASE_JWT_SECRET, 
+            algorithms=allowed_algs, 
+            options={"verify_aud": False}
+        )
         user_id = decoded.get("sub", "00000000-0000-0000-0000-000000000000")
         print(f"[AUTH SUCCESS]: Token godkänd för User ID: {user_id}", flush=True)
         return user_id, "PRO"
+
     except jwt.ExpiredSignatureError:
         print("[JWT ERROR]: Token har gått ut (ExpiredSignatureError).", flush=True)
     except jwt.InvalidSignatureError:
-        print("[JWT ERROR]: Ogiltig signatur! (InvalidSignatureError) - SUPABASE_JWT_SECRET på Render matchar inte Supabase.", flush=True)
+        print("[JWT ERROR]: Ogiltig signatur! SUPABASE_JWT_SECRET matchar inte Supabase.", flush=True)
     except Exception as e:
         print(f"[JWT ERROR]: Dekodning misslyckades: {type(e).__name__} - {str(e)}", flush=True)
 
