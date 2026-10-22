@@ -1,7 +1,7 @@
 import os
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
-import jwt
+from supabase import create_client, Client
 from groq import Groq
 from openai import OpenAI
 from memory_engine import store_memory, get_relevant_memories, should_store_memory
@@ -12,13 +12,13 @@ CORS(app)
 # Rensa miljövariabler
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip().strip('"').strip("'")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip().strip('"').strip("'")
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "").strip().strip('"').strip("'")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "").strip()
 
 # Initiera klienter
 groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+supabase_client: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY) if SUPABASE_URL and SUPABASE_ANON_KEY else None
 
 SYSTEM_PROMPT = """You are FALK, an elite Socratic Cognitive Behavioral Therapy (CBT) AI guide.
 YOUR CORE RULE: Never lecture, never give numbered lists, and never preach generic self-help advice.
@@ -38,34 +38,19 @@ def extract_user_id(req):
     
     token = auth_header.split(" ")[1]
     
-    if not SUPABASE_JWT_SECRET:
-        print("[AUTH DEBUG]: SUPABASE_JWT_SECRET saknas helt i miljövariabler!", flush=True)
+    if not supabase_client:
+        print("[AUTH DEBUG]: Supabase-klient inte initierad.", flush=True)
         return "00000000-0000-0000-0000-000000000000", "FREE"
 
     try:
-        # Läs av token-header dynamiskt för att förhindra InvalidAlgorithmError
-        header = jwt.get_unverified_header(token)
-        token_alg = header.get("alg", "HS256")
-        
-        # Inkludera alla tillåtna Supabase-algoritmer
-        allowed_algs = list(set([token_alg, "HS256", "HS384", "HS512", "RS256"]))
-
-        decoded = jwt.decode(
-            token, 
-            SUPABASE_JWT_SECRET, 
-            algorithms=allowed_algs, 
-            options={"verify_aud": False}
-        )
-        user_id = decoded.get("sub", "00000000-0000-0000-0000-000000000000")
-        print(f"[AUTH SUCCESS]: Token godkänd för User ID: {user_id}", flush=True)
-        return user_id, "PRO"
-
-    except jwt.ExpiredSignatureError:
-        print("[JWT ERROR]: Token har gått ut (ExpiredSignatureError).", flush=True)
-    except jwt.InvalidSignatureError:
-        print("[JWT ERROR]: Ogiltig signatur! SUPABASE_JWT_SECRET matchar inte Supabase.", flush=True)
+        # Validera token direkt via Supabase Auth Engine (Hanterar HS256, RS256 och JWKS automatiskt)
+        user_response = supabase_client.auth.get_user(token)
+        if user_response and user_response.user:
+            user_id = user_response.user.id
+            print(f"[AUTH SUCCESS]: Token validerad via Supabase SDK. User ID: {user_id}", flush=True)
+            return user_id, "PRO"
     except Exception as e:
-        print(f"[JWT ERROR]: Dekodning misslyckades: {type(e).__name__} - {str(e)}", flush=True)
+        print(f"[AUTH ERROR]: SDK Token-validering misslyckades: {type(e).__name__} - {str(e)}", flush=True)
 
     return "00000000-0000-0000-0000-000000000000", "FREE"
 
