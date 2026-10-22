@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="sv" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FALK - Sokratisk CBT Guide</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
+<body class="bg-slate-900 text-slate-100 h-screen max-h-screen flex flex-col font-sans overflow-hidden">
 
-    <!-- Header -->
-    <header class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+    <!-- Header (Låst i toppen) -->
+    <header class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950 flex-shrink-0">
         <div class="flex items-center space-x-3">
             <h1 class="text-2xl font-bold tracking-wider text-amber-500">FALK</h1>
             <span id="tier-badge" class="text-xs font-semibold px-2.5 py-0.5 rounded bg-slate-800 text-slate-400">FREE</span>
@@ -28,17 +28,18 @@
         </div>
     </header>
 
-    <!-- Main Chat Container -->
-    <main class="flex-1 max-w-3xl w-full mx-auto p-4 flex flex-col justify-between">
-        <div id="chat-box" class="flex-1 overflow-y-auto space-y-4 pr-2 mb-4">
+    <!-- Main Chat Container (Låst höjd, isolerad chatt-scroll) -->
+    <main class="flex-1 max-w-3xl w-full mx-auto p-4 flex flex-col min-h-0 overflow-hidden">
+        <!-- Chat Box (Enda elementet som får scrolla) -->
+        <div id="chat-box" class="flex-1 overflow-y-auto space-y-4 pr-2 mb-4 min-h-0">
             <div class="bg-slate-800/60 border border-slate-700/50 p-4 rounded-xl text-slate-300 text-sm">
                 <p class="font-semibold text-amber-400 mb-1">FALK READY</p>
                 <p>Välkommen. Beskriv vad du bär på just nu.</p>
             </div>
         </div>
 
-        <!-- Input Box -->
-        <form id="chat-form" onsubmit="sendMessage(event)" class="flex space-x-2">
+        <!-- Input Form (Låst i botten) -->
+        <form id="chat-form" onsubmit="sendMessage(event)" class="flex space-x-2 flex-shrink-0">
             <input type="text" id="message-input" placeholder="Beskriv din tanke..." 
                    class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-amber-500 text-sm transition">
             <button type="submit" id="send-btn" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold px-6 py-3 rounded-xl text-sm transition disabled:opacity-50">
@@ -58,7 +59,6 @@
                 Du har nått din dagliga gräns på 5 meddelanden. Uppgradera till PRO för obegränsade samtalsstunder och personligt minne.
             </p>
             
-            <!-- Auth form if not logged in -->
             <div id="modal-auth-form" class="hidden space-y-3 text-left">
                 <p class="text-xs text-amber-400 font-semibold text-center">Ange e-post för att skapa konto/logga in och fortsätta:</p>
                 <input type="email" id="modal-email" placeholder="Din e-postadress" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
@@ -169,6 +169,16 @@
             }
         }
 
+        async function logout() {
+            if (supabaseClient) {
+                await supabaseClient.auth.signOut();
+            }
+            userToken = null;
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.reload();
+        }
+
         async function sendMessage(e) {
             e.preventDefault();
             const input = document.getElementById('message-input');
@@ -258,7 +268,6 @@
                 upgradeBtn.disabled = true;
                 upgradeBtn.textContent = "Skapar konto...";
 
-                // Försök logga in, om misslyckat -> skapa konto
                 let authRes = await supabaseClient.auth.signInWithPassword({ email, password });
                 if (authRes.error) {
                     authRes = await supabaseClient.auth.signUp({ email, password });
