@@ -1,7 +1,6 @@
 import os
 import traceback
-import stripe
-from flask import Flask, request, jsonify, render_template, redirect
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -19,13 +18,6 @@ SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip().strip('"').strip("'")
 if not SUPABASE_SERVICE_KEY:
     SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_ANON_KEY", "").strip().strip('"').strip("'")
-
-STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "").strip().strip('"').strip("'")
-STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "").strip().strip('"').strip("'")
-STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID", "").strip().strip('"').strip("'")
-
-if STRIPE_SECRET_KEY:
-    stripe.api_key = STRIPE_SECRET_KEY
 
 groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
@@ -67,11 +59,19 @@ def extract_user_tier(req):
 
     return "00000000-0000-0000-0000-000000000000", "FREE"
 
+# 1. Identifiera användaren/IP för Limiter
 def get_rate_limit_key():
     user_id, _ = extract_user_tier(request)
     if user_id != "00000000-0000-0000-0000-000000000000":
         return user_id
     return get_remote_address()
+
+# 2. Dynamisk gräns baserat på Tier: PRO (60/dag), FREE (5/dag)
+def get_rate_limit_val():
+    _, tier = extract_user_tier(request)
+    if tier == "PRO":
+        return "60 per day"
+    return "5 per day"
 
 limiter = Limiter(
     get_remote_address,
@@ -80,12 +80,23 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
+# Custom handler för HTTP 429 så att frontend får JSON
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    user_id, tier = extract_user_tier(request)
+    limit_str = "60 meddelanden" if tier == "PRO" else "5 meddelanden"
+    return jsonify({
+        "error": f"Du har nått din dagliga gräns på {limit_str}. Välkommen tillbaka imorgon eller uppgradera till PRO.",
+        "limit_reached": True,
+        "tier": tier
+    }), 429
+
 @app.route("/")
 def index():
     return render_template("index.html", supabase_url=SUPABASE_URL, supabase_anon_key=SUPABASE_ANON_KEY)
 
 @app.route("/chat", methods=["POST"])
-@limiter.limit("5 per day", key_func=get_rate_limit_key) # Strict 5/day limit for FREE
+@limiter.limit(get_rate_limit_val, key_func=get_rate_limit_key)
 def chat():
     try:
         data = request.json or {}
@@ -158,70 +169,6 @@ def chat():
 
     except Exception as e:
         return jsonify({"error": f"Internt serverfel: {str(e)}"}), 500
-
-@app.route("/create-checkout-session", methods=["POST"])
-def create_checkout_session():
-    try:
-        user_id, _ = extract_user_tier(request)
-        if user_id == "00000000-0000-0000-0000-000000000000":
-            return jsonify({"error": "Du måste vara inloggad för att uppgradera."}), 401
-
-        domain_url = request.host_url.rstrip('/')
-        checkout_session = stripe.checkout.Session.create(
-            client_reference_id=user_id,
-            payment_method_types=['card'],
-            line_items=[{
-                'price': STRIPE_PRICE_ID,
-                'quantity': 1,
-            }],
-            mode='subscription',
-            success_url=domain_url + '/?success=true',
-            cancel_url=domain_url + '/?canceled=true',
-        )
-        return jsonify({'url': checkout_session.url})
-    except Exception as e:
-        print(f"[STRIPE CHECKOUT ERROR]: {e}", flush=True)
-        return jsonify({'error': str(e)}), 500
-
-@app.route("/stripe-webhook", methods=["POST"])
-def stripe_webhook():
-    payload = request.get_data(as_text=True)
-    sig_header = request.headers.get('Stripe-Signature')
-
-    try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, STRIPE_WEBHOOK_SECRET
-        )
-    except ValueError as e:
-        return 'Invalid payload', 400
-    except stripe.error.SignatureVerificationError as e:
-        return 'Invalid signature', 400
-
-    # Hantera lyckad betalning
-    if event['type'] == 'checkout.session.completed':
-        session = event['data']['object']
-        user_id = session.get('client_reference_id')
-        customer_id = session.get('customer')
-
-        if user_id and supabase_client:
-            supabase_client.table("profiles").update({
-                "tier": "PRO",
-                "stripe_customer_id": customer_id
-            }).eq("id", user_id).execute()
-            print(f"[STRIPE SUCCESS]: User {user_id} uppgraderad till PRO!", flush=True)
-
-    # Hantera avslutad prenumeration
-    elif event['type'] == 'customer.subscription.deleted':
-        subscription = event['data']['object']
-        customer_id = subscription.get('customer')
-
-        if customer_id and supabase_client:
-            supabase_client.table("profiles").update({
-                "tier": "FREE"
-            }).eq("stripe_customer_id", customer_id).execute()
-            print(f"[STRIPE REVOKED]: Customer {customer_id} nedgraderad till FREE.", flush=True)
-
-    return jsonify({'status': 'success'}), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)
