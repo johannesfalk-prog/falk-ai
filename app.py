@@ -58,7 +58,7 @@ def chat():
                 if should_store_memory(user_message):
                     store_memory(user_id, user_message)
             except Exception as mem_err:
-                print(f"[MEMORY RETRIEVAL SAFELY ISOLATED]: {mem_err}", flush=True)
+                print(f"[MEMORY SAFELY ISOLATED]: {mem_err}", flush=True)
 
         memory_context = ""
         if memories:
@@ -67,10 +67,10 @@ def chat():
         if not GROQ_API_KEY:
             return jsonify({"error": "GROQ_API_KEY saknas i Render Environment."}), 500
 
-        # Lista på modeller att testa i ordning
-        models_to_try = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "llama3-70b-8192"]
+        # Enbart aktiva modeller
+        models_to_try = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+        errors_log = []
         ai_response = None
-        last_error = ""
 
         for model_name in models_to_try:
             res = requests.post(
@@ -92,8 +92,9 @@ def chat():
                 ai_response = res.json()["choices"][0]["message"]["content"]
                 break
             else:
-                last_error = f"Model {model_name} failed ({res.status_code}): {res.text}"
-                print(f"[GROQ MODEL FAIL]: {last_error}", flush=True)
+                err_msg = f"[{model_name} HTTP {res.status_code}]: {res.text}"
+                errors_log.append(err_msg)
+                print(f"[GROQ FAIL]: {err_msg}", flush=True)
 
         if ai_response:
             return jsonify({
@@ -102,7 +103,7 @@ def chat():
                 "memories_retrieved": len(memories)
             })
         else:
-            return jsonify({"error": f"Groq anrop misslyckades på alla modeller. Sista fel: {last_error}"}), 500
+            return jsonify({"error": f"Groq anrop misslyckades. Detaljer: {' | '.join(errors_log)}"}), 500
 
     except Exception as e:
         print(f"[CHAT EXCEPTION]: {e}", flush=True)
