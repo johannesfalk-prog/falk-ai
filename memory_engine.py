@@ -1,82 +1,55 @@
 import os
-import requests
+from openai import OpenAI
+from supabase import create_client, Client
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip().strip('"').strip("'")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "").strip()
 
-def get_embedding(text):
-    if not OPENAI_API_KEY:
-        return None
-    try:
-        res = requests.post(
-            "https://api.openai.com/v1/embeddings",
-            headers={
-                "Authorization": f"Bearer {OPENAI_API_KEY}",
-                "Content-Type": "application/json"
-            },
-            json={"model": "text-embedding-3-small", "input": text},
-            timeout=4.0
-        )
-        if res.status_code == 200:
-            return res.json()["data"][0]["embedding"]
-        return None
-    except Exception as e:
-        print(f"[EMBEDDING EXCEPTION]: {e}", flush=True)
-        return None
+openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+supabase_client: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY) if SUPABASE_URL and SUPABASE_ANON_KEY else None
 
-def store_memory(user_id, text, category="general"):
-    try:
-        embedding = get_embedding(text)
-        if not embedding or not SUPABASE_URL or not SUPABASE_ANON_KEY:
-            return False
+def get_embedding(text: str):
+    if not openai_client:
+        raise ValueError("OpenAI API key saknas för embeddings.")
+    response = openai_client.embeddings.create(
+        model="text-embedding-3-small",
+        input=text
+    )
+    return response.data[0].embedding
 
-        res = requests.post(
-            f"{SUPABASE_URL}/rest/v1/user_memories",
-            headers={
-                "apikey": SUPABASE_ANON_KEY,
-                "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
-                "Content-Type": "application/json",
-                "Prefer": "return=minimal"
-            },
-            json={"user_id": user_id, "content": text, "category": category, "embedding": embedding},
-            timeout=4.0
-        )
-        return res.status_code in [200, 201]
-    except Exception as e:
-        print(f"[STORE MEMORY EXCEPTION]: {e}", flush=True)
-        return False
+def should_store_memory(text: str) -> bool:
+    # Tvinga lagring för alla meddelanden som är längre än 10 tecken under testfasen
+    return len(text.strip()) > 10
 
-def get_relevant_memories(user_id, query, threshold=0.3, limit=3):
-    try:
-        embedding = get_embedding(query)
-        if not embedding or not SUPABASE_URL or not SUPABASE_ANON_KEY:
-            return []
+def store_memory(user_id: str, content: str):
+    if not supabase_client:
+        raise ValueError("Supabase-klient inte initierad.")
+    
+    embedding = get_embedding(content)
+    data = {
+        "user_id": user_id,
+        "content": content,
+        "embedding": embedding
+    }
+    res = supabase_client.table("memories").insert(data).execute()
+    print(f"[RAG STORE SUCCESS]: Minne sparat för user {user_id}", flush=True)
+    return res
 
-        res = requests.post(
-            f"{SUPABASE_URL}/rest/v1/rpc/match_memories",
-            headers={
-                "apikey": SUPABASE_ANON_KEY,
-                "Authorization": f"Bearer {SUPABASE_ANON_KEY}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "query_embedding": embedding,
-                "match_threshold": threshold,
-                "match_count": limit,
-                "p_user_id": user_id
-            },
-            timeout=4.0
-        )
-        if res.status_code == 200:
-            data = res.json()
-            return [m["content"] for m in data if "content" in m]
-        return []
-    except Exception as e:
-        print(f"[RPC MATCH EXCEPTION]: {e}", flush=True)
-        return []
-
-def should_store_memory(text):
-    text_lower = text.lower()
-    triggers = ["mål", "namn", "heter", "jobbar", "känner", "problem", "ångest", "vision", "vill", "min"]
-    return any(t in text_lower for t in triggers)
+def get_relevant_memories(user_id: str, query: str, threshold: float = 0.3, limit: int = 3):
+    if not supabase_client:
+        raise ValueError("Supabase-klient inte initierad.")
+    
+    query_embedding = get_embedding(query)
+    
+    params = {
+        "query_embedding": query_embedding,
+        "match_threshold": threshold,
+        "match_count": limit,
+        "p_user_id": user_id
+    }
+    
+    res = supabase_client.rpc("match_memories", params).execute()
+    memories = [item["content"] for item in res.data] if res.data else []
+    print(f"[RAG RETRIEVE SUCCESS]: Hittade {len(memories)} minnen för query '{query}'", flush=True)
+    return memories
