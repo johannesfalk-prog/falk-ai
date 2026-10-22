@@ -8,10 +8,13 @@ from memory_engine import store_memory, get_relevant_memories, should_store_memo
 app = Flask(__name__)
 CORS(app)
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+# Sanitera nycklar för att ta bort eventuella osynliga mellanslag eller citattecken från Render Environment
+raw_groq_key = os.getenv("GROQ_API_KEY", "")
+GROQ_API_KEY = raw_groq_key.strip().strip('"').strip("'")
+
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "").strip().strip('"').strip("'")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "").strip()
 
 SYSTEM_PROMPT = """You are FALK, an elite Socratic Cognitive Behavioral Therapy (CBT) AI guide.
 YOUR CORE RULE: Never lecture, never give numbered lists, and never preach generic self-help advice.
@@ -65,9 +68,12 @@ def chat():
             memory_context = "\nRelevant historisk kontext om användaren:\n" + "\n".join([f"- {m}" for m in memories])
 
         if not GROQ_API_KEY:
-            return jsonify({"error": "GROQ_API_KEY saknas i Render Environment."}), 500
+            return jsonify({"error": "GROQ_API_KEY saknas eller är tom i Render Environment."}), 500
 
-        # Enbart aktiva modeller
+        # Maskerad loggning för felsökning i Render Logs
+        key_preview = f"{GROQ_API_KEY[:4]}...{GROQ_API_KEY[-4:]}" if len(GROQ_API_KEY) > 8 else "INVALID_LENGTH"
+        print(f"[GROQ REQUEST]: Använder nyckel: {key_preview} (Längd: {len(GROQ_API_KEY)})", flush=True)
+
         models_to_try = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
         errors_log = []
         ai_response = None
