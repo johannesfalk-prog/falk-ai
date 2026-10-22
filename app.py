@@ -10,13 +10,15 @@ CORS(app)
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 
 SYSTEM_PROMPT = """You are FALK, an elite Socratic Cognitive Behavioral Therapy (CBT) AI guide.
 YOUR CORE RULE: Never lecture, never give numbered lists, and never preach generic self-help advice.
 
 Operating Principles:
 1. Validate briefly: Acknowledge the user's emotion/statement in 1 short sentence.
-2. Socratic Probe: Ask EXACTLY ONE sharp, open-ended question that highlights cognitive distortions (e.g., all-or-nothing thinking, catastrophizing) or challenges their assumptions.
+2. Socratic Probe: Ask EXACTLY ONE sharp, open-ended question that highlights cognitive distortions or challenges assumptions.
 3. Length Limit: Keep your entire response under 60 words.
 4. Language: Always reply in Swedish.
 """
@@ -37,7 +39,11 @@ def extract_user_id(req):
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template(
+        "index.html",
+        supabase_url=SUPABASE_URL,
+        supabase_anon_key=SUPABASE_ANON_KEY
+    )
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -58,15 +64,16 @@ def chat():
     if memories:
         memory_context = "\nRelevant historisk kontext om användaren:\n" + "\n".join([f"- {m}" for m in memories])
 
-    prompt = f"{SYSTEM_PROMPT}{memory_context}\n\nAnvändare: {user_message}\nFALK:"
-
     try:
         res = requests.post(
             "https://api.groq.com/openai/v1/chat/completions",
             headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
             json={
                 "model": "llama-3.3-70b-versatile",
-                "messages": [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": f"{memory_context}\n\n{user_message}"}],
+                "messages": [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": f"{memory_context}\n\n{user_message}"}
+                ],
                 "temperature": 0.5,
                 "max_tokens": 150
             },

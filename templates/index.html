@@ -3,285 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FALK - Kognitiv Mentor</title>
+    <title>FALK AI</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --text-main: #f8fafc;
-            --text-sub: #94a3b8;
-            --accent-light: #38bdf8;
-            --accent-pro: #f59e0b;
-            --danger: #ef4444;
-            --user-msg: #334155;
-            --bot-msg: #1e293b;
-            --border: #334155;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-
-        header {
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--border);
-            background-color: var(--card-bg);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .brand-zone { display: flex; align-items: center; gap: 0.75rem; }
-        h1 { margin: 0; font-size: 1.1rem; letter-spacing: 2px; }
-        
-        .tier-badge {
-            font-size: 0.65rem;
-            font-weight: 800;
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .tier-badge.light { background-color: var(--accent-light); color: #0f172a; }
-        .tier-badge.pro { background-color: var(--accent-pro); color: #0f172a; }
-
-        .auth-zone { display: flex; align-items: center; gap: 0.5rem; }
-        input.auth-input {
-            padding: 0.4rem 0.6rem;
-            border-radius: 4px;
-            border: 1px solid var(--border);
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            font-size: 0.8rem;
-            width: 130px;
-        }
-
-        #chat-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .message {
-            max-width: 80%;
-            padding: 1rem 1.25rem;
-            border-radius: 8px;
-            line-height: 1.5;
-            font-size: 0.95rem;
-        }
-
-        .message.user { align-self: flex-end; background-color: var(--user-msg); }
-        .message.falk { align-self: flex-start; background-color: var(--bot-msg); border: 1px solid var(--border); }
-        .message.error { align-self: center; background-color: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); color: var(--danger); }
-
-        .meta-info {
-            font-size: 0.7rem;
-            color: var(--accent-light);
-            margin-bottom: 0.4rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        .meta-info.pro-meta { color: var(--accent-pro); }
-
-        #input-form {
-            padding: 1.25rem 1.5rem;
-            border-top: 1px solid var(--border);
-            background-color: var(--card-bg);
-            display: flex;
-            gap: 0.75rem;
-        }
-
-        input[type="text"] {
-            flex: 1;
-            padding: 0.85rem 1rem;
-            border-radius: 6px;
-            border: 1px solid var(--border);
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            font-size: 1rem;
-            outline: none;
-        }
-
-        button {
-            padding: 0.85rem 1.2rem;
-            border-radius: 6px;
-            border: none;
-            background-color: var(--accent-light);
-            color: #0f172a;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        * { box-sizing: border-box; }
+        body { background-color: #0b1120; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 650px; display: flex; flex-direction: column; gap: 15px; }
+        .header { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: #1e293b; padding: 12px 16px; border-radius: 8px; border: 1px solid #334155; }
+        .badge { background: #0284c7; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge.pro { background: #eab308; color: #0f172a; }
+        .auth-inputs { display: flex; gap: 8px; flex: 1; justify-content: flex-end; }
+        input[type="text"], input[type="password"], input[type="email"] { background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; width: 140px; }
+        input:focus { outline: 1px solid #38bdf8; }
+        button { background: #0284c7; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; transition: background 0.2s; }
+        button:hover { background: #0369a1; }
+        .chat-box { background: #1e293b; border-radius: 8px; border: 1px solid #334155; padding: 16px; height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        .message { padding: 12px 16px; border-radius: 8px; max-width: 85%; line-height: 1.5; font-size: 0.95rem; }
+        .message.user { background: #0284c7; align-self: flex-end; color: white; }
+        .message.ai { background: #0f172a; align-self: flex-start; color: #f8fafc; border: 1px solid #334155; }
+        .input-area { display: flex; gap: 10px; }
+        .input-area textarea { flex: 1; background: #1e293b; border: 1px solid #334155; color: white; padding: 12px; border-radius: 8px; resize: none; height: 55px; font-family: inherit; font-size: 0.95rem; }
+        .input-area textarea:focus { outline: 1px solid #38bdf8; }
     </style>
 </head>
 <body>
-
-    <header>
-        <div class="brand-zone">
-            <h1>FALK</h1>
-            <span id="tier-badge" class="tier-badge light">LIGHT (GRATIS)</span>
+    <div class="container">
+        <div class="header">
+            <span id="tier-badge" class="badge">LIGHT (GRATIS)</span>
+            <div class="auth-inputs" id="auth-box">
+                <input type="email" id="email" placeholder="E-post...">
+                <input type="password" id="password" placeholder="Lösenord...">
+                <button onclick="handleAuth()">Logga in / Skapa</button>
+            </div>
+            <button id="logout-btn" onclick="handleLogout()" style="display:none; background:#ef4444;">Logga ut</button>
         </div>
-        <div class="auth-zone" id="auth-controls">
-            <input type="email" id="email-input" class="auth-input" placeholder="E-post...">
-            <input type="password" id="pass-input" class="auth-input" placeholder="Lösenord...">
-            <button type="button" id="login-btn" style="padding: 0.4rem 0.6rem; font-size: 0.75rem;">Logga in / Skapa</button>
-        </div>
-    </header>
 
-    <div id="chat-container">
-        <div class="message falk">
-            <div class="meta-info">FALK READY</div>
-            Jag är FALK. Logga in ovan för att låsa upp PRO och ditt personliga vektorminne.
+        <div class="chat-box" id="chat-box">
+            <div class="message ai">
+                <strong>FALK READY</strong><br>
+                Jag är FALK. Logga in ovan för att låsa upp PRO och ditt personliga vektorminne.
+            </div>
+        </div>
+
+        <div class="input-area">
+            <textarea id="user-input" placeholder="Beskriv din tanke..."></textarea>
+            <button onclick="sendMessage()">Skicka</button>
         </div>
     </div>
 
-    <form id="input-form">
-        <input type="text" id="message-input" placeholder="Beskriv din tanke..." autocomplete="off" required>
-        <button type="submit" id="send-btn">Skicka</button>
-    </form>
-
     <script>
-        // Dynamisk inläsning från Flask render_template:
         const SUPABASE_URL = "{{ supabase_url }}";
-        const SUPABASE_ANON_KEY = "{{ supabase_anon_key }}"; 
-        
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const SUPABASE_ANON_KEY = "{{ supabase_anon_key }}";
 
-        const chatContainer = document.getElementById('chat-container');
-        const form = document.getElementById('input-form');
-        const input = document.getElementById('message-input');
-        const sendBtn = document.getElementById('send-btn');
-        const tierBadge = document.getElementById('tier-badge');
-        const authControls = document.getElementById('auth-controls');
+        let supabaseClient = null;
 
-        let currentSession = null;
+        if (SUPABASE_URL && SUPABASE_ANON_KEY && SUPABASE_URL.startsWith("http")) {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } else {
+            console.error("CRITICAL ERROR: SUPABASE_URL saknas eller är ogiltig i Flask-kontexten.");
+        }
 
-        _supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) setSessionUI(session);
-        });
-
-        function setSessionUI(session) {
-            currentSession = session;
-            if (session) {
-                tierBadge.textContent = 'PRO (INLOGGAD)';
-                tierBadge.className = 'tier-badge pro';
-                authControls.innerHTML = `<span style="font-size:0.75rem; color:var(--text-sub);">${session.user.email}</span>
-                    <button type="button" onclick="logout()" style="padding:0.3rem 0.5rem; font-size:0.75rem; background:var(--danger); color:white;">Logga ut</button>`;
-            } else {
-                tierBadge.textContent = 'LIGHT (GRATIS)';
-                tierBadge.className = 'tier-badge light';
+        async function handleAuth() {
+            if (!supabaseClient) {
+                alert("Supabase är inte korrekt konfigurerat. Kontrollera Render Environment.");
+                return;
             }
-        }
-
-        async function logout() {
-            await _supabase.auth.signOut();
-            location.reload();
-        }
-
-        document.getElementById('login-btn')?.addEventListener('click', async () => {
-            const email = document.getElementById('email-input').value.trim();
-            const password = document.getElementById('pass-input').value.trim();
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value.trim();
 
             if (!email || !password) {
-                alert('Fyll i både e-post och lösenord.');
+                alert("Fyll i både e-post och lösenord.");
                 return;
             }
 
-            let { data, error } = await _supabase.auth.signInWithPassword({ email, password });
-            
-            if (error && error.message.includes("Invalid login credentials")) {
-                const signup = await _supabase.auth.signUp({ email, password });
-                if (signup.error) {
-                    alert(`[FEL]: ${signup.error.message}`);
+            let { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                const signUp = await supabaseClient.auth.signUp({ email, password });
+                if (signUp.error) {
+                    alert("Auth-fel: " + signUp.error.message);
                     return;
                 }
-                data = signup.data;
-                alert('Konto skapat och inloggad!');
-            } else if (error) {
-                alert(`[INLOGGNINGSFEL]: ${error.message}`);
-                return;
+                data = signUp.data;
             }
 
             if (data.session) {
-                setSessionUI(data.session);
+                localStorage.setItem("falk_token", data.session.access_token);
+                updateUIState(true);
             }
-        });
-
-        function appendMessage(sender, text, metaText = null) {
-            const msgDiv = document.createElement('div');
-            msgDiv.classList.add('message', sender);
-            
-            if (metaText) {
-                const meta = document.createElement('div');
-                meta.classList.add('meta-info');
-                if (metaText.includes('PRO')) meta.classList.add('pro-meta');
-                meta.textContent = metaText;
-                msgDiv.appendChild(meta);
-            }
-
-            const textDiv = document.createElement('div');
-            textDiv.textContent = text;
-            msgDiv.appendChild(textDiv);
-
-            chatContainer.appendChild(msgDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const message = input.value.trim();
-            if (!message) return;
+        function handleLogout() {
+            if (supabaseClient) supabaseClient.auth.signOut();
+            localStorage.removeItem("falk_token");
+            updateUIState(false);
+        }
 
-            appendMessage('user', message);
-            input.value = '';
-            input.disabled = true;
-            sendBtn.disabled = true;
+        function updateUIState(isLoggedIn) {
+            const badge = document.getElementById("tier-badge");
+            const authBox = document.getElementById("auth-box");
+            const logoutBtn = document.getElementById("logout-btn");
 
-            const headers = { 'Content-Type': 'application/json' };
-            if (currentSession?.access_token) {
-                headers['Authorization'] = `Bearer ${currentSession.access_token}`;
+            if (isLoggedIn) {
+                badge.innerText = "PRO INLOGGAD";
+                badge.classList.add("pro");
+                authBox.style.display = "none";
+                logoutBtn.style.display = "block";
+            } else {
+                badge.innerText = "LIGHT (GRATIS)";
+                badge.classList.remove("pro");
+                authBox.style.display = "flex";
+                logoutBtn.style.display = "none";
             }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById("user-input");
+            const text = input.value.trim();
+            if (!text) return;
+
+            appendMessage("user", text);
+            input.value = "";
+
+            const token = localStorage.getItem("falk_token");
+            const headers = { "Content-Type": "application/json" };
+            if (token) headers["Authorization"] = `Bearer ${token}`;
 
             try {
-                const response = await fetch('/chat', {
-                    method: 'POST',
+                const res = await fetch("/chat", {
+                    method: "POST",
                     headers: headers,
-                    body: JSON.stringify({ message: message })
+                    body: JSON.stringify({ message: text })
                 });
 
-                const data = await response.json();
-
-                if (response.status === 429) {
-                    appendMessage('error', `[RATE LIMIT]: ${data.error}`);
-                    return;
-                }
-
-                if (response.ok) {
-                    const meta = data.tier === 'PRO' 
-                        ? `FALK PRO (Minnen hämtade: ${data.memories_retrieved})`
-                        : 'FALK LIGHT';
-                    appendMessage('falk', data.response, meta);
+                const data = await res.json();
+                if (res.ok) {
+                    appendMessage("ai", data.response);
                 } else {
-                    appendMessage('error', `[SYSTEMFEL]: ${data.error || 'Okänt fel.'}`);
+                    appendMessage("ai", "Fel: " + (data.error || "Serverfel"));
                 }
-            } catch (err) {
-                appendMessage('error', `[NÄTVERKSFEL]: Kunde inte ansluta till FALK backend.`);
-            } finally {
-                input.disabled = false;
-                sendBtn.disabled = false;
-                input.focus();
+            } catch (e) {
+                appendMessage("ai", "Kunde inte ansluta till servern.");
             }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const token = localStorage.getItem("falk_token");
+            if (token) updateUIState(true);
         });
+
+        function appendMessage(sender, text) {
+            const box = document.getElementById("chat-box");
+            const msg = document.createElement("div");
+            msg.className = `message ${sender}`;
+            msg.innerText = text;
+            box.appendChild(msg);
+            box.scrollTop = box.scrollHeight;
+        }
     </script>
 </body>
 </html>
