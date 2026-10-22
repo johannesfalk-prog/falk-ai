@@ -16,7 +16,7 @@
             <span id="tier-badge" class="text-xs px-2 py-1 rounded font-semibold bg-slate-800 text-slate-400">FREE</span>
         </div>
         <div id="auth-buttons">
-            <button onclick="loginWithMagicLink()" class="bg-amber-600 hover:bg-amber-500 text-white text-sm px-4 py-2 rounded-lg font-medium transition">
+            <button onclick="loginWithMagicLink()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-3 py-1.5 rounded font-medium transition">
                 Logga in med Magic Link
             </button>
         </div>
@@ -44,10 +44,10 @@
     <script>
         const SUPABASE_URL = "{{ supabase_url }}";
         const SUPABASE_ANON_KEY = "{{ supabase_anon_key }}";
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         async function updateAuthUI() {
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await supabaseClient.auth.getSession();
             const badge = document.getElementById("tier-badge");
             const authBtns = document.getElementById("auth-buttons");
 
@@ -62,7 +62,7 @@
                 badge.textContent = "FREE";
                 badge.className = "text-xs px-2 py-1 rounded font-semibold bg-slate-800 text-slate-400";
                 authBtns.innerHTML = `
-                    <button onclick="loginWithMagicLink()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-3 py-1.5 rounded font-medium transition">Logga in</button>
+                    <button onclick="loginWithMagicLink()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-3 py-1.5 rounded font-medium transition">Logga in med Magic Link</button>
                 `;
             }
         }
@@ -70,13 +70,13 @@
         async function loginWithMagicLink() {
             const email = prompt("Skriv in din e-post för Magic Link:");
             if (!email) return;
-            const { error } = await supabase.auth.signInWithOtp({ email });
+            const { error } = await supabaseClient.auth.signInWithOtp({ email });
             if (error) alert("Fel: " + error.message);
             else alert("Kolla din e-post efter inloggningslänken!");
         }
 
         async function logout() {
-            await supabase.auth.signOut();
+            await supabaseClient.auth.signOut();
             updateAuthUI();
         }
 
@@ -89,10 +89,9 @@
             appendMessage("user", msg);
             input.value = "";
 
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await supabaseClient.auth.getSession();
             const headers = { "Content-Type": "application/json" };
             
-            // BIFOGA SUPABASE JWT TOKEN OM ANVÄNDAREN ÄR INLOGGAD
             if (session && session.access_token) {
                 headers["Authorization"] = `Bearer ${session.access_token}`;
             }
@@ -128,7 +127,7 @@
             win.scrollTop = win.scrollHeight;
         }
 
-        supabase.auth.onAuthStateChange(() => updateAuthUI());
+        supabaseClient.auth.onAuthStateChange(() => updateAuthUI());
         updateAuthUI();
     </script>
 </body>
