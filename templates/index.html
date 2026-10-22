@@ -3,132 +3,190 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FALK - Sokratisk AI-Guide</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>FALK - Sokratisk CBT Guide</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
 
-    <!-- Top Navigation -->
-    <header class="border-b border-slate-800 bg-slate-950/50 p-4 flex justify-between items-center">
-        <div class="flex items-center gap-3">
-            <h1 class="text-xl font-bold tracking-wider text-amber-500">FALK</h1>
-            <span id="tier-badge" class="text-xs px-2 py-1 rounded font-semibold bg-slate-800 text-slate-400">FREE</span>
+    <!-- Header -->
+    <header class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+        <div class="flex items-center space-x-3">
+            <h1 class="text-2xl font-bold tracking-wider text-amber-500">FALK</h1>
+            <span id="tier-badge" class="text-xs font-semibold px-2.5 py-0.5 rounded bg-slate-800 text-slate-400">FREE</span>
         </div>
-        <div id="auth-buttons">
-            <button onclick="loginWithMagicLink()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-3 py-1.5 rounded font-medium transition">
-                Logga in med Magic Link
+        <div id="auth-section">
+            <button id="login-btn" onclick="loginWithGoogle()" class="bg-amber-600 hover:bg-amber-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
+                Logga in
             </button>
+            <div id="user-info" class="hidden flex items-center space-x-3">
+                <span id="user-email" class="text-sm text-slate-400"></span>
+                <button onclick="logout()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm px-3 py-1.5 rounded-lg border border-slate-700 transition">
+                    Logga ut
+                </button>
+            </div>
         </div>
     </header>
 
-    <!-- Chat Area -->
-    <main class="flex-1 max-w-3xl w-full mx-auto p-4 flex flex-col">
-        <div id="chat-window" class="flex-1 space-y-4 overflow-y-auto mb-4 p-4 rounded-xl bg-slate-950/30 border border-slate-800/80">
-            <div class="bg-slate-800/50 p-4 rounded-lg max-w-[85%] border border-slate-700/50">
-                <p class="text-xs font-semibold text-amber-500 mb-1">FALK READY</p>
-                <p class="text-sm">Jag är FALK. Logga in ovan för att låsa upp PRO och ditt personliga vektorminne.</p>
+    <!-- Main Chat Container -->
+    <main class="flex-1 max-w-3xl w-full mx-auto p-4 flex flex-col justify-between">
+        <div id="chat-box" class="flex-1 overflow-y-auto space-y-4 pr-2 mb-4">
+            <div class="bg-slate-800/60 border border-slate-700/50 p-4 rounded-xl text-slate-300 text-sm">
+                <p class="font-semibold text-amber-400 mb-1">FALK READY</p>
+                <p>Välkommen. Beskriv vad du bär på just nu.</p>
             </div>
         </div>
 
-        <!-- Input Form -->
-        <form id="chat-form" onsubmit="sendMessage(event)" class="flex gap-2">
-            <input type="text" id="user-input" placeholder="Beskriv din tanke..." 
-                   class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 transition">
-            <button type="submit" id="send-btn" class="bg-amber-600 hover:bg-amber-500 text-white font-medium px-6 py-3 rounded-xl text-sm transition">
+        <!-- Input Box -->
+        <form id="chat-form" onsubmit="sendMessage(event)" class="flex space-x-2">
+            <input type="text" id="message-input" placeholder="Beskriv din tanke..." 
+                   class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-amber-500 text-sm transition">
+            <button type="submit" id="send-btn" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold px-6 py-3 rounded-xl text-sm transition disabled:opacity-50">
                 Skicka
             </button>
         </form>
     </main>
 
+    <!-- Paywall Modal (Visas vid HTTP 429) -->
+    <div id="paywall-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-slate-900 border border-amber-500/30 p-6 rounded-2xl max-w-md w-full shadow-2xl text-center space-y-4">
+            <div class="w-12 h-12 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
+                🔒
+            </div>
+            <h2 class="text-xl font-bold text-white">Daglig gräns nådd</h2>
+            <p id="paywall-message" class="text-slate-300 text-sm">
+                Du har nått din dagliga gräns på 5 meddelanden. Uppgradera till PRO för obegränsade samtalsstunder och personligt minne.
+            </p>
+            <div class="pt-2 flex flex-col space-y-2">
+                <button onclick="upgradeToPro()" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-xl transition text-sm">
+                    Uppgradera till PRO (199 SEK/mån)
+                </button>
+                <button onclick="closePaywall()" class="text-slate-400 hover:text-slate-200 text-xs py-2 transition">
+                    Jag väntar till imorgon
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const SUPABASE_URL = "{{ supabase_url }}";
         const SUPABASE_ANON_KEY = "{{ supabase_anon_key }}";
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        async function updateAuthUI() {
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            const badge = document.getElementById("tier-badge");
-            const authBtns = document.getElementById("auth-buttons");
+        let userToken = null;
+
+        async function initAuth() {
+            const { data: { session } } = await supabase.auth.getSession();
+            updateAuthUI(session);
+
+            supabase.auth.onAuthStateChange((_event, session) => {
+                updateAuthUI(session);
+            });
+        }
+
+        function updateAuthUI(session) {
+            const loginBtn = document.getElementById('login-btn');
+            const userInfo = document.getElementById('user-info');
+            const userEmail = document.getElementById('user-email');
+            const tierBadge = document.getElementById('tier-badge');
 
             if (session) {
-                badge.textContent = "PRO INLOGGAD";
-                badge.className = "text-xs px-2 py-1 rounded font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30";
-                authBtns.innerHTML = `
-                    <span class="text-xs text-slate-400 mr-3">${session.user.email}</span>
-                    <button onclick="logout()" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded transition">Logga ut</button>
-                `;
+                userToken = session.access_token;
+                loginBtn.classList.add('hidden');
+                userInfo.classList.remove('hidden');
+                userEmail.textContent = session.user.email;
+                tierBadge.textContent = "INLOGGAD";
+                tierBadge.className = "text-xs font-semibold px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30";
             } else {
-                badge.textContent = "FREE";
-                badge.className = "text-xs px-2 py-1 rounded font-semibold bg-slate-800 text-slate-400";
-                authBtns.innerHTML = `
-                    <button onclick="loginWithMagicLink()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-3 py-1.5 rounded font-medium transition">Logga in med Magic Link</button>
-                `;
+                userToken = null;
+                loginBtn.classList.remove('hidden');
+                userInfo.classList.add('hidden');
+                tierBadge.textContent = "FREE";
+                tierBadge.className = "text-xs font-semibold px-2.5 py-0.5 rounded bg-slate-800 text-slate-400";
             }
         }
 
-        async function loginWithMagicLink() {
-            const email = prompt("Skriv in din e-post för Magic Link:");
-            if (!email) return;
-            const { error } = await supabaseClient.auth.signInWithOtp({ email });
-            if (error) alert("Fel: " + error.message);
-            else alert("Kolla din e-post efter inloggningslänken!");
+        async function loginWithGoogle() {
+            await supabase.auth.signInWithOAuth({ provider: 'google' });
         }
 
         async function logout() {
-            await supabaseClient.auth.signOut();
-            updateAuthUI();
+            await supabase.auth.signOut();
         }
 
         async function sendMessage(e) {
             e.preventDefault();
-            const input = document.getElementById("user-input");
-            const msg = input.value.trim();
-            if (!msg) return;
+            const input = document.getElementById('message-input');
+            const btn = document.getElementById('send-btn');
+            const message = input.value.trim();
 
-            appendMessage("user", msg);
-            input.value = "";
+            if (!message) return;
 
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            const headers = { "Content-Type": "application/json" };
-            
-            if (session && session.access_token) {
-                headers["Authorization"] = `Bearer ${session.access_token}`;
-            }
+            appendMessage('Du', message, 'user');
+            input.value = '';
+            btn.disabled = true;
 
             try {
-                const res = await fetch("/chat", {
-                    method: "POST",
+                const headers = { 'Content-Type': 'application/json' };
+                if (userToken) headers['Authorization'] = `Bearer ${userToken}`;
+
+                const res = await fetch('/chat', {
+                    method: 'POST',
                     headers: headers,
-                    body: JSON.stringify({ message: msg })
+                    body: JSON.stringify({ message: message })
                 });
 
                 const data = await res.json();
-                if (res.ok) {
-                    appendMessage("assistant", data.response);
+
+                if (res.status === 429) {
+                    showPaywall(data.error);
+                    btn.disabled = false;
+                    return;
+                }
+
+                if (!res.ok) {
+                    appendMessage('FALK', data.error || 'Ett fel uppstod.', 'error');
                 } else {
-                    appendMessage("assistant", "Fel: " + (data.error || "Okänt fel uppstod"));
+                    appendMessage('FALK', data.response, 'bot');
                 }
             } catch (err) {
-                appendMessage("assistant", "Kommunikationsfel med servern.");
+                appendMessage('FALK', 'Kunde inte ansluta till servern.', 'error');
+            } finally {
+                btn.disabled = false;
             }
         }
 
-        function appendMessage(role, text) {
-            const win = document.getElementById("chat-window");
-            const div = document.createElement("div");
-            if (role === "user") {
-                div.className = "bg-amber-600/20 text-slate-100 p-3 rounded-lg max-w-[85%] ml-auto border border-amber-500/30 text-sm";
+        function appendMessage(sender, text, type) {
+            const box = document.getElementById('chat-box');
+            const div = document.createElement('div');
+            
+            if (type === 'user') {
+                div.className = "bg-amber-950/40 border border-amber-800/40 p-4 rounded-xl text-amber-100 text-sm ml-8";
+            } else if (type === 'bot') {
+                div.className = "bg-slate-800/80 border border-slate-700/80 p-4 rounded-xl text-slate-200 text-sm mr-8";
             } else {
-                div.className = "bg-slate-800/50 text-slate-100 p-3 rounded-lg max-w-[85%] border border-slate-700/50 text-sm";
+                div.className = "bg-rose-950/40 border border-rose-800/40 p-4 rounded-xl text-rose-200 text-sm";
             }
-            div.textContent = text;
-            win.appendChild(div);
-            win.scrollTop = win.scrollHeight;
+
+            div.innerHTML = `<p class="font-semibold text-xs mb-1 opacity-70">${sender}</p><p>${text}</p>`;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
         }
 
-        supabaseClient.auth.onAuthStateChange(() => updateAuthUI());
-        updateAuthUI();
+        function showPaywall(msg) {
+            if (msg) document.getElementById('paywall-message').textContent = msg;
+            document.getElementById('paywall-modal').classList.remove('hidden');
+        }
+
+        function closePaywall() {
+            document.getElementById('paywall-modal').classList.add('hidden');
+        }
+
+        async function upgradeToPro() {
+            alert("Nästa steg: Vi ska koppla Stripe Checkout till denna knapp!");
+        }
+
+        initAuth();
     </script>
 </body>
 </html>
