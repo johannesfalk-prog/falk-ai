@@ -52,7 +52,6 @@ def chat():
         user_id, tier = extract_user_id(request)
         memories = []
 
-        # Isolerad minneshämtning – kraschar aldrig chatten
         if tier == "PRO" and user_id != "00000000-0000-0000-0000-000000000000":
             try:
                 memories = get_relevant_memories(user_id, user_message)
@@ -66,37 +65,47 @@ def chat():
             memory_context = "\nRelevant historisk kontext om användaren:\n" + "\n".join([f"- {m}" for m in memories])
 
         if not GROQ_API_KEY:
-            print("[CRITICAL ERROR]: GROQ_API_KEY saknas i Environment!", flush=True)
-            return jsonify({"error": "Serverkonfiguration saknas (Groq Key)."}), 500
+            return jsonify({"error": "GROQ_API_KEY saknas i Render Environment."}), 500
 
-        res = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
-            json={
-                "model": "llama-3.3-70b-versatile",
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": f"{memory_context}\n\n{user_message}"}
-                ],
-                "temperature": 0.5,
-                "max_tokens": 150
-            },
-            timeout=8.0
-        )
+        # Lista på modeller att testa i ordning
+        models_to_try = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "llama3-70b-8192"]
+        ai_response = None
+        last_error = ""
 
-        if res.status_code == 200:
-            ai_response = res.json()["choices"][0]["message"]["content"]
+        for model_name in models_to_try:
+            res = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+                json={
+                    "model": model_name,
+                    "messages": [
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": f"{memory_context}\n\n{user_message}"}
+                    ],
+                    "temperature": 0.5,
+                    "max_tokens": 150
+                },
+                timeout=8.0
+            )
+
+            if res.status_code == 200:
+                ai_response = res.json()["choices"][0]["message"]["content"]
+                break
+            else:
+                last_error = f"Model {model_name} failed ({res.status_code}): {res.text}"
+                print(f"[GROQ MODEL FAIL]: {last_error}", flush=True)
+
+        if ai_response:
             return jsonify({
                 "response": ai_response,
                 "tier": tier,
                 "memories_retrieved": len(memories)
             })
         else:
-            print(f"[GROQ ERROR]: {res.status_code} - {res.text}", flush=True)
-            return jsonify({"error": f"Groq API svarade med felkod {res.status_code}"}), 500
+            return jsonify({"error": f"Groq anrop misslyckades på alla modeller. Sista fel: {last_error}"}), 500
 
     except Exception as e:
-        print(f"[CHAT CRITICAL EXCEPTION]: {e}", flush=True)
+        print(f"[CHAT EXCEPTION]: {e}", flush=True)
         return jsonify({"error": f"Internt serverfel: {str(e)}"}), 500
 
 if __name__ == "__main__":
