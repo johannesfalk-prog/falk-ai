@@ -26,6 +26,8 @@ if not SUPABASE_SERVICE_KEY:
 
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "").strip().strip('"').strip("'")
 STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID", "").strip().strip('"').strip("'")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "").strip().strip('"').strip("'")
+
 stripe.api_key = STRIPE_SECRET_KEY
 
 groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
@@ -139,6 +141,42 @@ def create_checkout_session():
     except Exception as e:
         print(f"[STRIPE ERROR]: {e}", flush=True)
         return jsonify({"error": str(e)}), 500
+
+@app.route("/stripe-webhook", methods=["POST"])
+def stripe_webhook():
+    payload = request.get_data(as_text=True)
+    sig_header = request.headers.get("Stripe-Signature")
+
+    try:
+        if STRIPE_WEBHOOK_SECRET:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, STRIPE_WEBHOOK_SECRET
+            )
+        else:
+            event = request.json
+    except Exception as e:
+        print(f"[WEBHOOK VERIFY ERROR]: {e}", flush=True)
+        return jsonify({"error": "Invalid payload/signature"}), 400
+
+    event_type = event.get("type") if isinstance(event, dict) else event.type
+
+    if event_type == "checkout.session.completed":
+        session = event["data"]["object"] if isinstance(event, dict) else event.data.object
+        user_id = session.get("client_reference_id")
+        customer_id = session.get("customer")
+
+        if user_id and supabase_client:
+            try:
+                supabase_client.table("profiles").update({
+                    "tier": "PRO",
+                    "stripe_customer_id": customer_id
+                }).eq("id", user_id).execute()
+                print(f"[SUCCESS]: User {user_id} upgraded to PRO in database!", flush=True)
+            except Exception as db_err:
+                print(f"[DB PROVISION ERROR]: {db_err}", flush=True)
+                return jsonify({"error": "Database update failed"}), 500
+
+    return jsonify({"status": "success"}), 200
 
 @app.route("/chat", methods=["POST"])
 @limiter.limit(get_rate_limit_val, key_func=get_rate_limit_key)
