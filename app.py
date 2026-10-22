@@ -1,144 +1,90 @@
-import os, time
-from collections import defaultdict
-from dotenv import load_dotenv
+import os
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
-from groq import Groq
-from memory_engine import store_memory, get_relevant_memories, should_store_memory, supabase
-
-load_dotenv()
+import requests
+import jwt
+from memory_engine import store_memory, get_relevant_memories, should_store_memory
 
 app = Flask(__name__)
 CORS(app)
 
-groq_api_key = os.getenv("GROQ_API_KEY")
-groq_client = Groq(api_key=groq_api_key, timeout=10.0) if groq_api_key else None
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
-RATE_LIMIT_STORE = defaultdict(list)
-LIGHT_LIMIT_PER_MINUTE = 5
+SYSTEM_PROMPT = """You are FALK, an elite Socratic Cognitive Behavioral Therapy (CBT) AI guide.
+YOUR CORE RULE: Never lecture, never give numbered lists, and never preach generic self-help advice.
 
-def is_rate_limited(ip_address: str) -> bool:
-    now = time.time()
-    RATE_LIMIT_STORE[ip_address] = [t for t in RATE_LIMIT_STORE[ip_address] if now - t < 60]
-    if len(RATE_LIMIT_STORE[ip_address]) >= LIGHT_LIMIT_PER_MINUTE:
-        return True
-    RATE_LIMIT_STORE[ip_address].append(now)
-    return False
+Operating Principles:
+1. Validate briefly: Acknowledge the user's emotion/statement in 1 short sentence.
+2. Socratic Probe: Ask EXACTLY ONE sharp, open-ended question that highlights cognitive distortions (e.g., all-or-nothing thinking, catastrophizing) or challenges their assumptions.
+3. Length Limit: Keep your entire response under 60 words.
+4. Language: Always reply in Swedish.
+"""
 
-def verify_supabase_jwt(auth_header: str):
+def extract_user_id(req):
+    auth_header = req.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
-        return None
+        return "00000000-0000-0000-0000-000000000000", "FREE"
     token = auth_header.split(" ")[1]
-    try:
-        user_response = supabase.auth.get_user(token)
-        if user_response and user_response.user:
-            return user_response.user.id
-    except Exception as e:
-        print(f"[AUTH ERROR]: Ogiltigt JWT: {e}", flush=True)
-    return None
-
-SYSTEM_PROMPT_PRO = """You are FALK PRO, an autonomous cognitive mentor grounded in Socratic dialogue and Cognitive Behavioral Therapy (CBT).
-You have access to the user's long-term memory.
-1. SILENTLY AUDIT FOR COGNITIVE DISTORTIONS (Catastrophizing, All-or-Nothing, Mind Reading, Emotional Reasoning, Overgeneralization).
-2. IF DISTORTION IS PRESENT: Ask EXACTLY ONE sharp, challenging Socratic question.
-3. IF NO DISTORTION: Provide a concise, grounded response integrating retrieved context memories.
-4. TONE: Grounded, direct, clear Swedish."""
-
-SYSTEM_PROMPT_LIGHT = """You are FALK LIGHT, a fast Socratic CBT auditor.
-1. SILENTLY AUDIT FOR COGNITIVE DISTORTIONS in the user's input.
-2. IF DISTORTION IS PRESENT: Ask EXACTLY ONE sharp Socratic question examining their assumption.
-3. IF NO DISTORTION: Provide a concise 1-2 sentence response.
-4. TONE: Grounded, direct, clear Swedish."""
+    if SUPABASE_JWT_SECRET:
+        try:
+            decoded = jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=["HS256"], options={"verify_aud": False})
+            user_id = decoded.get("sub", "00000000-0000-0000-0000-000000000000")
+            return user_id, "PRO"
+        except Exception as e:
+            print(f"[JWT DECODE ERROR]: {e}", flush=True)
+    return "00000000-0000-0000-0000-000000000000", "FREE"
 
 @app.route("/")
 def index():
-    return render_template(
-        "index.html",
-        supabase_url=os.getenv("SUPABASE_URL", ""),
-        supabase_anon_key=os.getenv("SUPABASE_ANON_KEY", "")
-    )
-
-@app.route("/health", methods=["GET"])
-def health():
-    return jsonify({"status": "healthy", "service": "falk-backend"}), 200
+    return render_template("index.html")
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    client_ip = request.remote_addr or "127.0.0.1"
-    auth_header = request.headers.get("Authorization", "")
-    
-    authenticated_user_id = verify_supabase_jwt(auth_header)
-    is_pro = bool(authenticated_user_id)
+    data = request.json or {}
+    user_message = data.get("message", "").strip()
+    if not user_message:
+        return jsonify({"error": "Meddelandet kan inte vara tomt"}), 400
 
-    data = request.get_json() or {}
-    message = data.get("message", "").strip()
-
-    if not message:
-        return jsonify({"error": "Message is required"}), 400
-    if len(message) > 2000:
-        return jsonify({"error": "Message exceeds maximum length of 2000 characters"}), 400
-
-    if not is_pro and is_rate_limited(client_ip):
-        return jsonify({
-            "error": "Minutkvot uppnådd för gratisversionen. Vänta 60 sekunder eller logga in på PRO.",
-            "retry_after_seconds": 60
-        }), 429
-
+    user_id, tier = extract_user_id(request)
     memories = []
     
-    if is_pro:
-        user_id = authenticated_user_id
-        try:
-            memories = get_relevant_memories(user_id, message)
-        except Exception as e:
-            print(f"[PRO MEMORY ERROR]: {e}", flush=True)
+    if tier == "PRO" and user_id != "00000000-0000-0000-0000-000000000000":
+        memories = get_relevant_memories(user_id, user_message)
+        if should_store_memory(user_message):
+            store_memory(user_id, user_message)
 
-        if should_store_memory(message):
-            try:
-                store_memory(user_id, message, category="reflection")
-            except Exception as e:
-                print(f"[PRO STORE ERROR]: {e}", flush=True)
+    memory_context = ""
+    if memories:
+        memory_context = "\nRelevant historisk kontext om användaren:\n" + "\n".join([f"- {m}" for m in memories])
 
-        memory_context = "\n".join([f"- {m}" for m in memories]) if memories else "Inga tidigare minnen."
-        full_system_prompt = f"{SYSTEM_PROMPT_PRO}\n\n[RELEVANT USER MEMORIES]:\n{memory_context}"
-        models_to_try = ["openai/gpt-oss-20b", "gemma2-9b-it"]
+    prompt = f"{SYSTEM_PROMPT}{memory_context}\n\nAnvändare: {user_message}\nFALK:"
 
-    else:
-        full_system_prompt = SYSTEM_PROMPT_LIGHT
-        models_to_try = ["openai/gpt-oss-20b", "gemma2-9b-it", "mixtral-8x7b-32768"]
-
-    if not groq_client:
-        return jsonify({"error": "GROQ_API_KEY missing from server environment"}), 500
-
-    response_text = None
-    errors = []
-
-    for model in models_to_try:
-        try:
-            completion = groq_client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": full_system_prompt},
-                    {"role": "user", "content": message}
-                ],
-                temperature=0.6,
-                max_tokens=512
-            )
-            response_text = completion.choices[0].message.content
-            break
-        except Exception as e:
-            print(f"[LLM ERROR] {model}: {e}", flush=True)
-            errors.append(f"{model}: {str(e)}")
-
-    if not response_text:
-        return jsonify({"error": "All LLM model attempts failed", "details": errors}), 500
-
-    return jsonify({
-        "response": response_text,
-        "tier": "PRO" if is_pro else "LIGHT",
-        "memories_retrieved": len(memories)
-    })
+    try:
+        res = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+            json={
+                "model": "llama-3.3-70b-versatile",
+                "messages": [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": f"{memory_context}\n\n{user_message}"}],
+                "temperature": 0.5,
+                "max_tokens": 150
+            },
+            timeout=8.0
+        )
+        if res.status_code == 200:
+            ai_response = res.json()["choices"][0]["message"]["content"]
+            return jsonify({
+                "response": ai_response,
+                "tier": tier,
+                "memories_retrieved": len(memories)
+            })
+        else:
+            print(f"[GROQ ERROR]: {res.status_code} - {res.text}", flush=True)
+            return jsonify({"error": "Kunde inte generera svar från AI."}), 500
+    except Exception as e:
+        print(f"[CHAT EXCEPTION]: {e}", flush=True)
+        return jsonify({"error": "Internt serverfel."}), 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5001))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="0.0.0.0", port=5001, debug=True)
