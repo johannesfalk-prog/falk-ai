@@ -16,8 +16,8 @@
             <span id="tier-badge" class="text-xs font-semibold px-2.5 py-0.5 rounded bg-slate-800 text-slate-400">FREE</span>
         </div>
         <div id="auth-section">
-            <button id="login-btn" onclick="loginWithGoogle()" class="bg-amber-600 hover:bg-amber-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
-                Logga in
+            <button id="login-btn" onclick="openAuthModal()" class="bg-amber-600 hover:bg-amber-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
+                Logga in / Skapa konto
             </button>
             <div id="user-info" class="hidden flex items-center space-x-3">
                 <span id="user-email" class="text-sm text-slate-400"></span>
@@ -57,6 +57,14 @@
             <p id="paywall-message" class="text-slate-300 text-sm">
                 Du har nått din dagliga gräns på 5 meddelanden. Uppgradera till PRO för obegränsade samtalsstunder och personligt minne.
             </p>
+            
+            <!-- Auth form if not logged in -->
+            <div id="modal-auth-form" class="hidden space-y-3 text-left">
+                <p class="text-xs text-amber-400 font-semibold text-center">Ange e-post för att skapa konto/logga in och fortsätta:</p>
+                <input type="email" id="modal-email" placeholder="Din e-postadress" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
+                <input type="password" id="modal-password" placeholder="Välj ett lösenord (minst 6 tecken)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
+            </div>
+
             <div class="pt-2 flex flex-col space-y-2">
                 <button onclick="upgradeToPro()" id="upgrade-btn" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-xl transition text-sm">
                     Uppgradera till PRO (199 SEK/mån)
@@ -65,6 +73,22 @@
                     Jag väntar till imorgon
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal (standalone) -->
+    <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl max-w-sm w-full space-y-4">
+            <h2 class="text-lg font-bold text-white text-center">Logga in / Skapa konto</h2>
+            <div class="space-y-3">
+                <input type="email" id="auth-email" placeholder="E-post" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
+                <input type="password" id="auth-password" placeholder="Lösenord" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
+            </div>
+            <div class="flex space-x-2 pt-2">
+                <button onclick="handleAuth('login')" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-semibold py-2 rounded-xl text-sm transition">Logga in</button>
+                <button onclick="handleAuth('signup')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-2 rounded-xl text-sm border border-slate-700 transition">Skapa konto</button>
+            </div>
+            <button onclick="closeAuthModal()" class="w-full text-center text-slate-500 text-xs mt-2 hover:text-slate-300">Avbryt</button>
         </div>
     </div>
 
@@ -95,6 +119,7 @@
             const userInfo = document.getElementById('user-info');
             const userEmail = document.getElementById('user-email');
             const tierBadge = document.getElementById('tier-badge');
+            const modalAuthForm = document.getElementById('modal-auth-form');
 
             if (session) {
                 userToken = session.access_token;
@@ -103,6 +128,7 @@
                 userEmail.textContent = session.user.email;
                 tierBadge.textContent = "INLOGGAD";
                 tierBadge.className = "text-xs font-semibold px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30";
+                if (modalAuthForm) modalAuthForm.classList.add('hidden');
             } else {
                 userToken = null;
                 loginBtn.classList.remove('hidden');
@@ -112,15 +138,34 @@
             }
         }
 
-        async function loginWithGoogle() {
-            if (supabaseClient) {
-                await supabaseClient.auth.signInWithOAuth({ provider: 'google' });
-            }
+        function openAuthModal() {
+            document.getElementById('auth-modal').classList.remove('hidden');
         }
 
-        async function logout() {
-            if (supabaseClient) {
-                await supabaseClient.auth.signOut();
+        function closeAuthModal() {
+            document.getElementById('auth-modal').classList.add('hidden');
+        }
+
+        async function handleAuth(type) {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value.trim();
+
+            if (!email || !password) {
+                alert("Fyll i både e-post och lösenord.");
+                return;
+            }
+
+            let res;
+            if (type === 'signup') {
+                res = await supabaseClient.auth.signUp({ email, password });
+            } else {
+                res = await supabaseClient.auth.signInWithPassword({ email, password });
+            }
+
+            if (res.error) {
+                alert("Fel: " + res.error.message);
+            } else {
+                closeAuthModal();
             }
         }
 
@@ -185,6 +230,12 @@
 
         function showPaywall(msg) {
             if (msg) document.getElementById('paywall-message').textContent = msg;
+            const modalAuthForm = document.getElementById('modal-auth-form');
+            if (!userToken) {
+                modalAuthForm.classList.remove('hidden');
+            } else {
+                modalAuthForm.classList.add('hidden');
+            }
             document.getElementById('paywall-modal').classList.remove('hidden');
         }
 
@@ -196,9 +247,34 @@
             const upgradeBtn = document.getElementById('upgrade-btn');
 
             if (!userToken) {
-                alert("Du måste vara inloggad för att kunna uppgradera till PRO. Loggar in med Google...");
-                loginWithGoogle();
-                return;
+                const email = document.getElementById('modal-email').value.trim();
+                const password = document.getElementById('modal-password').value.trim();
+
+                if (!email || !password) {
+                    alert("Fyll i e-post och lösenord för att skapa ditt konto och fortsätta till betalning.");
+                    return;
+                }
+
+                upgradeBtn.disabled = true;
+                upgradeBtn.textContent = "Skapar konto...";
+
+                // Försök logga in, om misslyckat -> skapa konto
+                let authRes = await supabaseClient.auth.signInWithPassword({ email, password });
+                if (authRes.error) {
+                    authRes = await supabaseClient.auth.signUp({ email, password });
+                }
+
+                if (authRes.error) {
+                    alert("Kunde inte autentisera: " + authRes.error.message);
+                    upgradeBtn.disabled = false;
+                    upgradeBtn.textContent = "Uppgradera till PRO (199 SEK/mån)";
+                    return;
+                }
+
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session) {
+                    userToken = session.access_token;
+                }
             }
 
             upgradeBtn.disabled = true;
