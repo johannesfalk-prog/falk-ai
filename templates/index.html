@@ -3,163 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FALK AI</title>
+    <title>FALK - Sokratisk AI-Guide</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        * { box-sizing: border-box; }
-        body { background-color: #0b1120; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; }
-        .container { width: 100%; max-width: 650px; display: flex; flex-direction: column; gap: 15px; }
-        .header { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: #1e293b; padding: 12px 16px; border-radius: 8px; border: 1px solid #334155; }
-        .badge { background: #0284c7; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
-        .badge.pro { background: #eab308; color: #0f172a; }
-        .auth-inputs { display: flex; gap: 8px; flex: 1; justify-content: flex-end; }
-        input[type="text"], input[type="password"], input[type="email"] { background: #0f172a; border: 1px solid #334155; color: white; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; width: 140px; }
-        input:focus { outline: 1px solid #38bdf8; }
-        button { background: #0284c7; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; transition: background 0.2s; }
-        button:hover { background: #0369a1; }
-        .chat-box { background: #1e293b; border-radius: 8px; border: 1px solid #334155; padding: 16px; height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-        .message { padding: 12px 16px; border-radius: 8px; max-width: 85%; line-height: 1.5; font-size: 0.95rem; }
-        .message.user { background: #0284c7; align-self: flex-end; color: white; }
-        .message.ai { background: #0f172a; align-self: flex-start; color: #f8fafc; border: 1px solid #334155; }
-        .input-area { display: flex; gap: 10px; }
-        .input-area textarea { flex: 1; background: #1e293b; border: 1px solid #334155; color: white; padding: 12px; border-radius: 8px; resize: none; height: 55px; font-family: inherit; font-size: 0.95rem; }
-        .input-area textarea:focus { outline: 1px solid #38bdf8; }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <span id="tier-badge" class="badge">LIGHT (GRATIS)</span>
-            <div class="auth-inputs" id="auth-box">
-                <input type="email" id="email" placeholder="E-post...">
-                <input type="password" id="password" placeholder="Lösenord...">
-                <button onclick="handleAuth()">Logga in / Skapa</button>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
+
+    <!-- Top Navigation -->
+    <header class="border-b border-slate-800 bg-slate-950/50 p-4 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <h1 class="text-xl font-bold tracking-wider text-amber-500">FALK</h1>
+            <span id="tier-badge" class="text-xs px-2 py-1 rounded font-semibold bg-slate-800 text-slate-400">FREE</span>
+        </div>
+        <div id="auth-buttons">
+            <button onclick="loginWithMagicLink()" class="bg-amber-600 hover:bg-amber-500 text-white text-sm px-4 py-2 rounded-lg font-medium transition">
+                Logga in med Magic Link
+            </button>
+        </div>
+    </header>
+
+    <!-- Chat Area -->
+    <main class="flex-1 max-w-3xl w-full mx-auto p-4 flex flex-col">
+        <div id="chat-window" class="flex-1 space-y-4 overflow-y-auto mb-4 p-4 rounded-xl bg-slate-950/30 border border-slate-800/80">
+            <div class="bg-slate-800/50 p-4 rounded-lg max-w-[85%] border border-slate-700/50">
+                <p class="text-xs font-semibold text-amber-500 mb-1">FALK READY</p>
+                <p class="text-sm">Jag är FALK. Logga in ovan för att låsa upp PRO och ditt personliga vektorminne.</p>
             </div>
-            <button id="logout-btn" onclick="handleLogout()" style="display:none; background:#ef4444;">Logga ut</button>
         </div>
 
-        <div class="chat-box" id="chat-box">
-            <div class="message ai">
-                <strong>FALK READY</strong><br>
-                Jag är FALK. Logga in ovan för att låsa upp PRO och ditt personliga vektorminne.
-            </div>
-        </div>
-
-        <div class="input-area">
-            <textarea id="user-input" placeholder="Beskriv din tanke..."></textarea>
-            <button onclick="sendMessage()">Skicka</button>
-        </div>
-    </div>
+        <!-- Input Form -->
+        <form id="chat-form" onsubmit="sendMessage(event)" class="flex gap-2">
+            <input type="text" id="user-input" placeholder="Beskriv din tanke..." 
+                   class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 transition">
+            <button type="submit" id="send-btn" class="bg-amber-600 hover:bg-amber-500 text-white font-medium px-6 py-3 rounded-xl text-sm transition">
+                Skicka
+            </button>
+        </form>
+    </main>
 
     <script>
         const SUPABASE_URL = "{{ supabase_url }}";
         const SUPABASE_ANON_KEY = "{{ supabase_anon_key }}";
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        let supabaseClient = null;
-
-        if (SUPABASE_URL && SUPABASE_ANON_KEY && SUPABASE_URL.startsWith("http")) {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        } else {
-            console.error("CRITICAL ERROR: SUPABASE_URL saknas eller är ogiltig i Flask-kontexten.");
-        }
-
-        async function handleAuth() {
-            if (!supabaseClient) {
-                alert("Supabase är inte korrekt konfigurerat. Kontrollera Render Environment.");
-                return;
-            }
-            const email = document.getElementById("email").value.trim();
-            const password = document.getElementById("password").value.trim();
-
-            if (!email || !password) {
-                alert("Fyll i både e-post och lösenord.");
-                return;
-            }
-
-            let { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-
-            if (error) {
-                const signUp = await supabaseClient.auth.signUp({ email, password });
-                if (signUp.error) {
-                    alert("Auth-fel: " + signUp.error.message);
-                    return;
-                }
-                data = signUp.data;
-            }
-
-            if (data.session) {
-                localStorage.setItem("falk_token", data.session.access_token);
-                updateUIState(true);
-            }
-        }
-
-        function handleLogout() {
-            if (supabaseClient) supabaseClient.auth.signOut();
-            localStorage.removeItem("falk_token");
-            updateUIState(false);
-        }
-
-        function updateUIState(isLoggedIn) {
+        async function updateAuthUI() {
+            const { data: { session } } = await supabase.auth.getSession();
             const badge = document.getElementById("tier-badge");
-            const authBox = document.getElementById("auth-box");
-            const logoutBtn = document.getElementById("logout-btn");
+            const authBtns = document.getElementById("auth-buttons");
 
-            if (isLoggedIn) {
-                badge.innerText = "PRO INLOGGAD";
-                badge.classList.add("pro");
-                authBox.style.display = "none";
-                logoutBtn.style.display = "block";
+            if (session) {
+                badge.textContent = "PRO INLOGGAD";
+                badge.className = "text-xs px-2 py-1 rounded font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30";
+                authBtns.innerHTML = `
+                    <span class="text-xs text-slate-400 mr-3">${session.user.email}</span>
+                    <button onclick="logout()" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded transition">Logga ut</button>
+                `;
             } else {
-                badge.innerText = "LIGHT (GRATIS)";
-                badge.classList.remove("pro");
-                authBox.style.display = "flex";
-                logoutBtn.style.display = "none";
+                badge.textContent = "FREE";
+                badge.className = "text-xs px-2 py-1 rounded font-semibold bg-slate-800 text-slate-400";
+                authBtns.innerHTML = `
+                    <button onclick="loginWithMagicLink()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-3 py-1.5 rounded font-medium transition">Logga in</button>
+                `;
             }
         }
 
-        async function sendMessage() {
-            const input = document.getElementById("user-input");
-            const text = input.value.trim();
-            if (!text) return;
+        async function loginWithMagicLink() {
+            const email = prompt("Skriv in din e-post för Magic Link:");
+            if (!email) return;
+            const { error } = await supabase.auth.signInWithOtp({ email });
+            if (error) alert("Fel: " + error.message);
+            else alert("Kolla din e-post efter inloggningslänken!");
+        }
 
-            appendMessage("user", text);
+        async function logout() {
+            await supabase.auth.signOut();
+            updateAuthUI();
+        }
+
+        async function sendMessage(e) {
+            e.preventDefault();
+            const input = document.getElementById("user-input");
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            appendMessage("user", msg);
             input.value = "";
 
-            const token = localStorage.getItem("falk_token");
+            const { data: { session } } = await supabase.auth.getSession();
             const headers = { "Content-Type": "application/json" };
-            if (token) headers["Authorization"] = `Bearer ${token}`;
+            
+            // BIFOGA SUPABASE JWT TOKEN OM ANVÄNDAREN ÄR INLOGGAD
+            if (session && session.access_token) {
+                headers["Authorization"] = `Bearer ${session.access_token}`;
+            }
 
             try {
                 const res = await fetch("/chat", {
                     method: "POST",
                     headers: headers,
-                    body: JSON.stringify({ message: text })
+                    body: JSON.stringify({ message: msg })
                 });
 
                 const data = await res.json();
                 if (res.ok) {
-                    appendMessage("ai", data.response);
+                    appendMessage("assistant", data.response);
                 } else {
-                    appendMessage("ai", "Fel: " + (data.error || "Serverfel"));
+                    appendMessage("assistant", "Fel: " + (data.error || "Okänt fel uppstod"));
                 }
-            } catch (e) {
-                appendMessage("ai", "Kunde inte ansluta till servern.");
+            } catch (err) {
+                appendMessage("assistant", "Kommunikationsfel med servern.");
             }
         }
 
-        document.addEventListener("DOMContentLoaded", () => {
-            const token = localStorage.getItem("falk_token");
-            if (token) updateUIState(true);
-        });
-
-        function appendMessage(sender, text) {
-            const box = document.getElementById("chat-box");
-            const msg = document.createElement("div");
-            msg.className = `message ${sender}`;
-            msg.innerText = text;
-            box.appendChild(msg);
-            box.scrollTop = box.scrollHeight;
+        function appendMessage(role, text) {
+            const win = document.getElementById("chat-window");
+            const div = document.createElement("div");
+            if (role === "user") {
+                div.className = "bg-amber-600/20 text-slate-100 p-3 rounded-lg max-w-[85%] ml-auto border border-amber-500/30 text-sm";
+            } else {
+                div.className = "bg-slate-800/50 text-slate-100 p-3 rounded-lg max-w-[85%] border border-slate-700/50 text-sm";
+            }
+            div.textContent = text;
+            win.appendChild(div);
+            win.scrollTop = win.scrollHeight;
         }
+
+        supabase.auth.onAuthStateChange(() => updateAuthUI());
+        updateAuthUI();
     </script>
 </body>
 </html>
