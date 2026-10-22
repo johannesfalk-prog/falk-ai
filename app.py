@@ -1,5 +1,6 @@
 import os
 import traceback
+import stripe
 from flask import Flask, request, jsonify, render_template, g
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -13,7 +14,6 @@ from memory_engine import store_memory, get_relevant_memories, should_store_memo
 app = Flask(__name__)
 CORS(app)
 
-# Korrekt proxy-hantering för Renders edge-nätverk (2 lager proxys)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=2, x_proto=1, x_host=1, x_prefix=1)
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip().strip('"').strip("'")
@@ -23,6 +23,10 @@ SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "").strip().strip('"').strip(
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip().strip('"').strip("'")
 if not SUPABASE_SERVICE_KEY:
     SUPABASE_SERVICE_KEY = SUPABASE_ANON_KEY
+
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "").strip().strip('"').strip("'")
+STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID", "").strip().strip('"').strip("'")
+stripe.api_key = STRIPE_SECRET_KEY
 
 groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
@@ -78,7 +82,6 @@ def get_rate_limit_key():
     if user_id != "00000000-0000-0000-0000-000000000000":
         return user_id
     
-    # Hämta den äkta publika klient-IP-adressen via X-Forwarded-For
     forwarded_for = request.headers.get("X-Forwarded-For")
     if forwarded_for:
         return forwarded_for.split(",")[0].strip()
@@ -110,6 +113,32 @@ def ratelimit_handler(e):
 @app.route("/")
 def index():
     return render_template("index.html", supabase_url=SUPABASE_URL, supabase_anon_key=SUPABASE_ANON_KEY)
+
+@app.route("/create-checkout-session", methods=["POST"])
+def create_checkout_session():
+    try:
+        user_id, _ = get_current_user_context()
+        if user_id == "00000000-0000-0000-0000-000000000000":
+            return jsonify({"error": "Du måste vara inloggad för att uppgradera till PRO."}), 401
+
+        if not STRIPE_SECRET_KEY or not STRIPE_PRICE_ID:
+            return jsonify({"error": "Stripe-konfiguration saknas på servern."}), 500
+
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price': STRIPE_PRICE_ID,
+                'quantity': 1,
+            }],
+            mode='subscription',
+            client_reference_id=user_id,
+            success_url=request.host_url + '?payment=success',
+            cancel_url=request.host_url + '?payment=cancelled',
+        )
+        return jsonify({"url": checkout_session.url})
+    except Exception as e:
+        print(f"[STRIPE ERROR]: {e}", flush=True)
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/chat", methods=["POST"])
 @limiter.limit(get_rate_limit_val, key_func=get_rate_limit_key)

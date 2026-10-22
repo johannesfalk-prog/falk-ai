@@ -47,7 +47,7 @@
         </form>
     </main>
 
-    <!-- Paywall Modal (Visas vid HTTP 429) -->
+    <!-- Paywall Modal -->
     <div id="paywall-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-slate-900 border border-amber-500/30 p-6 rounded-2xl max-w-md w-full shadow-2xl text-center space-y-4">
             <div class="w-12 h-12 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
@@ -58,7 +58,7 @@
                 Du har nått din dagliga gräns på 5 meddelanden. Uppgradera till PRO för obegränsade samtalsstunder och personligt minne.
             </p>
             <div class="pt-2 flex flex-col space-y-2">
-                <button onclick="upgradeToPro()" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-xl transition text-sm">
+                <button onclick="upgradeToPro()" id="upgrade-btn" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-xl transition text-sm">
                     Uppgradera till PRO (199 SEK/mån)
                 </button>
                 <button onclick="closePaywall()" class="text-slate-400 hover:text-slate-200 text-xs py-2 transition">
@@ -72,7 +72,6 @@
         const SUPABASE_URL = "{{ supabase_url }}";
         const SUPABASE_ANON_KEY = "{{ supabase_anon_key }}";
         
-        // Korrekt initiering för att undvika namnkollision
         let supabaseClient = null;
         if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -194,7 +193,40 @@
         }
 
         async function upgradeToPro() {
-            alert("Nästa steg: Vi ska koppla Stripe Checkout till denna knapp!");
+            const upgradeBtn = document.getElementById('upgrade-btn');
+
+            if (!userToken) {
+                alert("Du måste vara inloggad för att kunna uppgradera till PRO. Loggar in med Google...");
+                loginWithGoogle();
+                return;
+            }
+
+            upgradeBtn.disabled = true;
+            upgradeBtn.textContent = "Förbereder betalning...";
+
+            try {
+                const res = await fetch('/create-checkout-session', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${userToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await res.json();
+
+                if (data.url) {
+                    window.location.href = data.url;
+                } else {
+                    alert("Kunde inte starta betalningen: " + (data.error || "Okänt fel"));
+                    upgradeBtn.disabled = false;
+                    upgradeBtn.textContent = "Uppgradera till PRO (199 SEK/mån)";
+                }
+            } catch (e) {
+                alert("Nätverksfel vid kontakt med betaltjänsten.");
+                upgradeBtn.disabled = false;
+                upgradeBtn.textContent = "Uppgradera till PRO (199 SEK/mån)";
+            }
         }
 
         initAuth();
