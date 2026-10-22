@@ -13,8 +13,8 @@ from memory_engine import store_memory, get_relevant_memories, should_store_memo
 app = Flask(__name__)
 CORS(app)
 
-# Tvinga Flask att läsa klientens riktiga IP bakom Renders proxy
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+# Korrekt proxy-hantering för Renders edge-nätverk (2 lager proxys)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=2, x_proto=1, x_host=1, x_prefix=1)
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip().strip('"').strip("'")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip().strip('"').strip("'")
@@ -40,7 +40,6 @@ Operating Principles:
 """
 
 def get_current_user_context():
-    """Cachar användarkontexten i Flask 'g' så att Supabase bara anropas 1 gång per request."""
     if 'user_context' in g:
         return g.user_context
 
@@ -78,6 +77,11 @@ def get_rate_limit_key():
     user_id, _ = get_current_user_context()
     if user_id != "00000000-0000-0000-0000-000000000000":
         return user_id
+    
+    # Hämta den äkta publika klient-IP-adressen via X-Forwarded-For
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
     return request.remote_addr or get_remote_address()
 
 def get_rate_limit_val():
@@ -87,7 +91,7 @@ def get_rate_limit_val():
     return "5 per day"
 
 limiter = Limiter(
-    get_remote_address,
+    get_rate_limit_key,
     app=app,
     default_limits=["100 per day"],
     storage_uri="memory://"
