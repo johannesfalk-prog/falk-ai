@@ -6,3 +6,4 @@ supabase
 openai
 groq
 gunicorn
+stripe>=8.0.0
