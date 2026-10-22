@@ -4,10 +4,13 @@ from supabase import create_client, Client
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip().strip('"').strip("'")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "").strip()
+# Använd SERVICE_ROLE_KEY i backend för att garantera fullskrivningsrättigheter
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip().strip('"').strip("'")
+if not SUPABASE_SERVICE_KEY:
+    SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_ANON_KEY", "").strip().strip('"').strip("'")
 
 openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
-supabase_client: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY) if SUPABASE_URL and SUPABASE_ANON_KEY else None
+supabase_client: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY) if SUPABASE_URL and SUPABASE_SERVICE_KEY else None
 
 def get_embedding(text: str):
     if not openai_client:
@@ -19,7 +22,6 @@ def get_embedding(text: str):
     return response.data[0].embedding
 
 def should_store_memory(text: str) -> bool:
-    # Tvinga lagring för alla meddelanden som är längre än 10 tecken under testfasen
     return len(text.strip()) > 10
 
 def store_memory(user_id: str, content: str):
