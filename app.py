@@ -8,13 +8,15 @@ from memory_engine import store_memory, get_relevant_memories, should_store_memo
 app = Flask(__name__)
 CORS(app)
 
-# Sanitera nycklar för att ta bort eventuella osynliga mellanslag eller citattecken från Render Environment
-raw_groq_key = os.getenv("GROQ_API_KEY", "")
-GROQ_API_KEY = raw_groq_key.strip().strip('"').strip("'")
+# Rensa bort eventuella citattecken, mellanslag och osynliga Unicode-BOM-tecken
+def clean_env(var_name):
+    val = os.getenv(var_name, "").strip().strip('"').strip("'")
+    return val.encode("ascii", "ignore").decode("ascii")
 
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "").strip().strip('"').strip("'")
-SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "").strip()
+GROQ_API_KEY = clean_env("GROQ_API_KEY")
+SUPABASE_JWT_SECRET = clean_env("SUPABASE_JWT_SECRET")
+SUPABASE_URL = clean_env("SUPABASE_URL")
+SUPABASE_ANON_KEY = clean_env("SUPABASE_ANON_KEY")
 
 SYSTEM_PROMPT = """You are FALK, an elite Socratic Cognitive Behavioral Therapy (CBT) AI guide.
 YOUR CORE RULE: Never lecture, never give numbered lists, and never preach generic self-help advice.
@@ -70,9 +72,15 @@ def chat():
         if not GROQ_API_KEY:
             return jsonify({"error": "GROQ_API_KEY saknas eller är tom i Render Environment."}), 500
 
-        # Maskerad loggning för felsökning i Render Logs
-        key_preview = f"{GROQ_API_KEY[:4]}...{GROQ_API_KEY[-4:]}" if len(GROQ_API_KEY) > 8 else "INVALID_LENGTH"
-        print(f"[GROQ REQUEST]: Använder nyckel: {key_preview} (Längd: {len(GROQ_API_KEY)})", flush=True)
+        key_preview = f"{GROQ_API_KEY[:4]}...{GROQ_API_KEY[-4:]}" if len(GROQ_API_KEY) > 8 else "INVALID"
+        print(f"[GROQ REQUEST]: Nyckel={key_preview} (Längd: {len(GROQ_API_KEY)})", flush=True)
+
+        # Inkludera User-Agent för att undvika Cloudflare/Datacenter-blockering
+        headers = {
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
 
         models_to_try = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
         errors_log = []
@@ -81,7 +89,7 @@ def chat():
         for model_name in models_to_try:
             res = requests.post(
                 "https://api.groq.com/openai/v1/chat/completions",
-                headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+                headers=headers,
                 json={
                     "model": model_name,
                     "messages": [
@@ -91,7 +99,7 @@ def chat():
                     "temperature": 0.5,
                     "max_tokens": 150
                 },
-                timeout=8.0
+                timeout=10.0
             )
 
             if res.status_code == 200:
