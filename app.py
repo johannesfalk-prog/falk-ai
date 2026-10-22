@@ -127,7 +127,6 @@ def create_checkout_session():
             return jsonify({"error": "Stripe-konfiguration saknas på servern."}), 500
 
         checkout_session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
             line_items=[{
                 'price': STRIPE_PRICE_ID,
                 'quantity': 1,
