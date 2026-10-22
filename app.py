@@ -33,15 +33,28 @@ Operating Principles:
 def extract_user_id(req):
     auth_header = req.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
+        print("[AUTH DEBUG]: Ingen Bearer-header hittades.", flush=True)
         return "00000000-0000-0000-0000-000000000000", "FREE"
+    
     token = auth_header.split(" ")[1]
-    if SUPABASE_JWT_SECRET:
-        try:
-            decoded = jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=["HS256"], options={"verify_aud": False})
-            user_id = decoded.get("sub", "00000000-0000-0000-0000-000000000000")
-            return user_id, "PRO"
-        except Exception as e:
-            print(f"[JWT DECODE ERROR]: {e}", flush=True)
+    
+    if not SUPABASE_JWT_SECRET:
+        print("[AUTH DEBUG]: SUPABASE_JWT_SECRET saknas helt i miljövariabler!", flush=True)
+        return "00000000-0000-0000-0000-000000000000", "FREE"
+
+    try:
+        # Utför dekodning och skriv ut framgång
+        decoded = jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=["HS256"], options={"verify_aud": False})
+        user_id = decoded.get("sub", "00000000-0000-0000-0000-000000000000")
+        print(f"[AUTH SUCCESS]: Token godkänd för User ID: {user_id}", flush=True)
+        return user_id, "PRO"
+    except jwt.ExpiredSignatureError:
+        print("[JWT ERROR]: Token har gått ut (ExpiredSignatureError).", flush=True)
+    except jwt.InvalidSignatureError:
+        print("[JWT ERROR]: Ogiltig signatur! (InvalidSignatureError) - SUPABASE_JWT_SECRET på Render matchar inte Supabase.", flush=True)
+    except Exception as e:
+        print(f"[JWT ERROR]: Dekodning misslyckades: {type(e).__name__} - {str(e)}", flush=True)
+
     return "00000000-0000-0000-0000-000000000000", "FREE"
 
 @app.route("/")
@@ -94,10 +107,10 @@ def chat():
                 except Exception as g_err:
                     print(f"[GROQ FAIL {model_name}]: {g_err}", flush=True)
 
-        # 2. Resilient Fallback till OpenAI (gpt-4o-mini) om Groq misslyckades
+        # 2. Resilient Fallback till OpenAI (gpt-4o-mini)
         if not ai_response and openai_client:
             try:
-                print("[FALLBACK]: Groq misslyckades. Kopplar om till OpenAI gpt-4o-mini...", flush=True)
+                print("[FALLBACK]: Kopplar om till OpenAI gpt-4o-mini...", flush=True)
                 completion = openai_client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
@@ -120,7 +133,7 @@ def chat():
                 "provider": used_provider
             })
         else:
-            return jsonify({"error": "Både Groq och OpenAI fallback misslyckades. Kontrollera API-nycklar i Render."}), 500
+            return jsonify({"error": "Både Groq och OpenAI fallback misslyckades."}), 500
 
     except Exception as e:
         print(f"[CHAT EXCEPTION]: {e}", flush=True)
