@@ -1,9 +1,10 @@
 import os
 import traceback
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, g
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from werkzeug.middleware.proxy_fix import ProxyFix
 from supabase import create_client, Client
 from groq import Groq
 from openai import OpenAI
@@ -11,6 +12,9 @@ from memory_engine import store_memory, get_relevant_memories, should_store_memo
 
 app = Flask(__name__)
 CORS(app)
+
+# Tvinga Flask att läsa klientens riktiga IP bakom Renders proxy
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip().strip('"').strip("'")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip().strip('"').strip("'")
@@ -35,14 +39,20 @@ Operating Principles:
 5. Language: Always reply in Swedish.
 """
 
-def extract_user_tier(req):
-    auth_header = req.headers.get("Authorization")
+def get_current_user_context():
+    """Cachar användarkontexten i Flask 'g' så att Supabase bara anropas 1 gång per request."""
+    if 'user_context' in g:
+        return g.user_context
+
+    auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
-        return "00000000-0000-0000-0000-000000000000", "FREE"
-    
+        g.user_context = ("00000000-0000-0000-0000-000000000000", "FREE")
+        return g.user_context
+
     token = auth_header.split(" ")[1]
     if not supabase_client:
-        return "00000000-0000-0000-0000-000000000000", "FREE"
+        g.user_context = ("00000000-0000-0000-0000-000000000000", "FREE")
+        return g.user_context
 
     try:
         user_response = supabase_client.auth.get_user(token)
@@ -51,24 +61,27 @@ def extract_user_tier(req):
             try:
                 prof = supabase_client.table("profiles").select("tier").eq("id", user_id).single().execute()
                 if prof.data and prof.data.get("tier") == "PRO":
-                    return user_id, "PRO"
+                    g.user_context = (user_id, "PRO")
+                    return g.user_context
             except Exception as e:
                 print(f"[PROFILE LOOKUP FAIL]: {e}", flush=True)
 
-            return user_id, "FREE"
+            g.user_context = (user_id, "FREE")
+            return g.user_context
     except Exception as e:
         print(f"[AUTH ERROR]: {e}", flush=True)
 
-    return "00000000-0000-0000-0000-000000000000", "FREE"
+    g.user_context = ("00000000-0000-0000-0000-000000000000", "FREE")
+    return g.user_context
 
 def get_rate_limit_key():
-    user_id, _ = extract_user_tier(request)
+    user_id, _ = get_current_user_context()
     if user_id != "00000000-0000-0000-0000-000000000000":
         return user_id
-    return get_remote_address()
+    return request.remote_addr or get_remote_address()
 
 def get_rate_limit_val():
-    _, tier = extract_user_tier(request)
+    _, tier = get_current_user_context()
     if tier == "PRO":
         return "60 per day"
     return "5 per day"
@@ -82,7 +95,7 @@ limiter = Limiter(
 
 @app.errorhandler(429)
 def ratelimit_handler(e):
-    user_id, tier = extract_user_tier(request)
+    _, tier = get_current_user_context()
     limit_str = "60 meddelanden" if tier == "PRO" else "5 meddelanden"
     return jsonify({
         "error": f"Du har nått din dagliga gräns på {limit_str}. Välkommen tillbaka imorgon eller uppgradera till PRO.",
@@ -103,7 +116,7 @@ def chat():
         if not user_message:
             return jsonify({"error": "Meddelandet kan inte vara tomt"}), 400
 
-        user_id, tier = extract_user_tier(request)
+        user_id, tier = get_current_user_context()
         memories = []
 
         if tier == "PRO" and user_id != "00000000-0000-0000-0000-000000000000":
