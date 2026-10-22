@@ -7,7 +7,6 @@ SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 
 def get_embedding(text):
     if not OPENAI_API_KEY:
-        print("[MEMORY ENGINE WARNING]: OPENAI_API_KEY saknas i Environment.", flush=True)
         return None
     try:
         res = requests.post(
@@ -16,28 +15,22 @@ def get_embedding(text):
                 "Authorization": f"Bearer {OPENAI_API_KEY}",
                 "Content-Type": "application/json"
             },
-            json={
-                "model": "text-embedding-3-small",
-                "input": text
-            },
-            timeout=5.0
+            json={"model": "text-embedding-3-small", "input": text},
+            timeout=4.0
         )
         if res.status_code == 200:
             return res.json()["data"][0]["embedding"]
-        else:
-            print(f"[OPENAI EMBEDDING ERROR]: {res.status_code} - {res.text}", flush=True)
-            return None
+        return None
     except Exception as e:
-        print(f"[OPENAI EMBEDDING EXCEPTION]: {e}", flush=True)
+        print(f"[EMBEDDING EXCEPTION]: {e}", flush=True)
         return None
 
 def store_memory(user_id, text, category="general"):
-    embedding = get_embedding(text)
-    if not embedding or not SUPABASE_URL or not SUPABASE_ANON_KEY:
-        print("[STORE MEMORY SKIPPED]: Saknar embedding eller Supabase-konfig.", flush=True)
-        return False
-
     try:
+        embedding = get_embedding(text)
+        if not embedding or not SUPABASE_URL or not SUPABASE_ANON_KEY:
+            return False
+
         res = requests.post(
             f"{SUPABASE_URL}/rest/v1/user_memories",
             headers={
@@ -46,13 +39,8 @@ def store_memory(user_id, text, category="general"):
                 "Content-Type": "application/json",
                 "Prefer": "return=minimal"
             },
-            json={
-                "user_id": user_id,
-                "content": text,
-                "category": category,
-                "embedding": embedding
-            },
-            timeout=5.0
+            json={"user_id": user_id, "content": text, "category": category, "embedding": embedding},
+            timeout=4.0
         )
         return res.status_code in [200, 201]
     except Exception as e:
@@ -60,11 +48,11 @@ def store_memory(user_id, text, category="general"):
         return False
 
 def get_relevant_memories(user_id, query, threshold=0.3, limit=3):
-    embedding = get_embedding(query)
-    if not embedding or not SUPABASE_URL or not SUPABASE_ANON_KEY:
-        return []
-
     try:
+        embedding = get_embedding(query)
+        if not embedding or not SUPABASE_URL or not SUPABASE_ANON_KEY:
+            return []
+
         res = requests.post(
             f"{SUPABASE_URL}/rest/v1/rpc/match_memories",
             headers={
@@ -78,14 +66,12 @@ def get_relevant_memories(user_id, query, threshold=0.3, limit=3):
                 "match_count": limit,
                 "p_user_id": user_id
             },
-            timeout=5.0
+            timeout=4.0
         )
         if res.status_code == 200:
             data = res.json()
             return [m["content"] for m in data if "content" in m]
-        else:
-            print(f"[RPC MATCH ERROR]: {res.status_code} - {res.text}", flush=True)
-            return []
+        return []
     except Exception as e:
         print(f"[RPC MATCH EXCEPTION]: {e}", flush=True)
         return []

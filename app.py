@@ -39,32 +39,36 @@ def extract_user_id(req):
 
 @app.route("/")
 def index():
-    return render_template(
-        "index.html",
-        supabase_url=SUPABASE_URL,
-        supabase_anon_key=SUPABASE_ANON_KEY
-    )
+    return render_template("index.html", supabase_url=SUPABASE_URL, supabase_anon_key=SUPABASE_ANON_KEY)
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    data = request.json or {}
-    user_message = data.get("message", "").strip()
-    if not user_message:
-        return jsonify({"error": "Meddelandet kan inte vara tomt"}), 400
-
-    user_id, tier = extract_user_id(request)
-    memories = []
-    
-    if tier == "PRO" and user_id != "00000000-0000-0000-0000-000000000000":
-        memories = get_relevant_memories(user_id, user_message)
-        if should_store_memory(user_message):
-            store_memory(user_id, user_message)
-
-    memory_context = ""
-    if memories:
-        memory_context = "\nRelevant historisk kontext om användaren:\n" + "\n".join([f"- {m}" for m in memories])
-
     try:
+        data = request.json or {}
+        user_message = data.get("message", "").strip()
+        if not user_message:
+            return jsonify({"error": "Meddelandet kan inte vara tomt"}), 400
+
+        user_id, tier = extract_user_id(request)
+        memories = []
+
+        # Isolerad minneshämtning – kraschar aldrig chatten
+        if tier == "PRO" and user_id != "00000000-0000-0000-0000-000000000000":
+            try:
+                memories = get_relevant_memories(user_id, user_message)
+                if should_store_memory(user_message):
+                    store_memory(user_id, user_message)
+            except Exception as mem_err:
+                print(f"[MEMORY RETRIEVAL SAFELY ISOLATED]: {mem_err}", flush=True)
+
+        memory_context = ""
+        if memories:
+            memory_context = "\nRelevant historisk kontext om användaren:\n" + "\n".join([f"- {m}" for m in memories])
+
+        if not GROQ_API_KEY:
+            print("[CRITICAL ERROR]: GROQ_API_KEY saknas i Environment!", flush=True)
+            return jsonify({"error": "Serverkonfiguration saknas (Groq Key)."}), 500
+
         res = requests.post(
             "https://api.groq.com/openai/v1/chat/completions",
             headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
@@ -79,6 +83,7 @@ def chat():
             },
             timeout=8.0
         )
+
         if res.status_code == 200:
             ai_response = res.json()["choices"][0]["message"]["content"]
             return jsonify({
@@ -88,10 +93,11 @@ def chat():
             })
         else:
             print(f"[GROQ ERROR]: {res.status_code} - {res.text}", flush=True)
-            return jsonify({"error": "Kunde inte generera svar från AI."}), 500
+            return jsonify({"error": f"Groq API svarade med felkod {res.status_code}"}), 500
+
     except Exception as e:
-        print(f"[CHAT EXCEPTION]: {e}", flush=True)
-        return jsonify({"error": "Internt serverfel."}), 500
+        print(f"[CHAT CRITICAL EXCEPTION]: {e}", flush=True)
+        return jsonify({"error": f"Internt serverfel: {str(e)}"}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)
