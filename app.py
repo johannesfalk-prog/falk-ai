@@ -28,9 +28,10 @@ YOUR CORE RULE: Never lecture, never give numbered lists, and never preach gener
 
 Operating Principles:
 1. Validate briefly: Acknowledge the user's emotion/statement in 1 short sentence.
-2. Socratic Probe: Ask EXACTLY ONE sharp, open-ended question that highlights cognitive distortions or challenges assumptions.
-3. Length Limit: Keep your entire response under 60 words.
-4. Language: Always reply in Swedish.
+2. Direct Clarity Safety Valve: If the user explicitly asks for clarification ("what perspective?", "what do you mean?", "who?"), answer directly in 1 sentence BEFORE asking your probe. Do NOT evade direct questions.
+3. Socratic Probe: Ask EXACTLY ONE sharp, open-ended question that highlights cognitive distortions or challenges assumptions.
+4. Length Limit: Keep your entire response under 60 words.
+5. Language: Always reply in Swedish.
 """
 
 def extract_user_tier(req):
@@ -59,14 +60,12 @@ def extract_user_tier(req):
 
     return "00000000-0000-0000-0000-000000000000", "FREE"
 
-# 1. Identifiera användaren/IP för Limiter
 def get_rate_limit_key():
     user_id, _ = extract_user_tier(request)
     if user_id != "00000000-0000-0000-0000-000000000000":
         return user_id
     return get_remote_address()
 
-# 2. Dynamisk gräns baserat på Tier: PRO (60/dag), FREE (5/dag)
 def get_rate_limit_val():
     _, tier = extract_user_tier(request)
     if tier == "PRO":
@@ -80,7 +79,6 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
-# Custom handler för HTTP 429 så att frontend får JSON
 @app.errorhandler(429)
 def ratelimit_handler(e):
     user_id, tier = extract_user_tier(request)
