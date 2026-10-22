@@ -1,7 +1,8 @@
 flask
 flask-cors
-groq
-supabase
 requests
-python-dotenv
+pyjwt
+supabase
+openai
+groq
 gunicorn

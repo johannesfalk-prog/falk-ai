@@ -1,22 +1,21 @@
 import os
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
-import requests
 import jwt
+from groq import Groq
 from memory_engine import store_memory, get_relevant_memories, should_store_memory
 
 app = Flask(__name__)
 CORS(app)
 
-# Rensa bort eventuella citattecken, mellanslag och osynliga Unicode-BOM-tecken
-def clean_env(var_name):
-    val = os.getenv(var_name, "").strip().strip('"').strip("'")
-    return val.encode("ascii", "ignore").decode("ascii")
+# Rensa miljövariabler från eventuella osynliga tecken
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip().strip('"').strip("'")
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "").strip().strip('"').strip("'")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "").strip()
 
-GROQ_API_KEY = clean_env("GROQ_API_KEY")
-SUPABASE_JWT_SECRET = clean_env("SUPABASE_JWT_SECRET")
-SUPABASE_URL = clean_env("SUPABASE_URL")
-SUPABASE_ANON_KEY = clean_env("SUPABASE_ANON_KEY")
+# Initiera officiell Groq-klient
+groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 SYSTEM_PROMPT = """You are FALK, an elite Socratic Cognitive Behavioral Therapy (CBT) AI guide.
 YOUR CORE RULE: Never lecture, never give numbered lists, and never preach generic self-help advice.
@@ -69,46 +68,31 @@ def chat():
         if memories:
             memory_context = "\nRelevant historisk kontext om användaren:\n" + "\n".join([f"- {m}" for m in memories])
 
-        if not GROQ_API_KEY:
-            return jsonify({"error": "GROQ_API_KEY saknas eller är tom i Render Environment."}), 500
-
-        key_preview = f"{GROQ_API_KEY[:4]}...{GROQ_API_KEY[-4:]}" if len(GROQ_API_KEY) > 8 else "INVALID"
-        print(f"[GROQ REQUEST]: Nyckel={key_preview} (Längd: {len(GROQ_API_KEY)})", flush=True)
-
-        # Inkludera User-Agent för att undvika Cloudflare/Datacenter-blockering
-        headers = {
-            "Authorization": f"Bearer {GROQ_API_KEY}",
-            "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
+        if not groq_client:
+            return jsonify({"error": "GROQ_API_KEY saknas eller kunde inte initieras."}), 500
 
         models_to_try = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
-        errors_log = []
         ai_response = None
+        errors_log = []
 
         for model_name in models_to_try:
-            res = requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers=headers,
-                json={
-                    "model": model_name,
-                    "messages": [
+            try:
+                completion = groq_client.chat.completions.create(
+                    model=model_name,
+                    messages=[
                         {"role": "system", "content": SYSTEM_PROMPT},
                         {"role": "user", "content": f"{memory_context}\n\n{user_message}"}
                     ],
-                    "temperature": 0.5,
-                    "max_tokens": 150
-                },
-                timeout=10.0
-            )
-
-            if res.status_code == 200:
-                ai_response = res.json()["choices"][0]["message"]["content"]
-                break
-            else:
-                err_msg = f"[{model_name} HTTP {res.status_code}]: {res.text}"
-                errors_log.append(err_msg)
-                print(f"[GROQ FAIL]: {err_msg}", flush=True)
+                    temperature=0.5,
+                    max_tokens=150
+                )
+                ai_response = completion.choices[0].message.content
+                if ai_response:
+                    break
+            except Exception as groq_err:
+                err_str = f"[{model_name} FAIL]: {str(groq_err)}"
+                errors_log.append(err_str)
+                print(err_str, flush=True)
 
         if ai_response:
             return jsonify({
@@ -117,7 +101,7 @@ def chat():
                 "memories_retrieved": len(memories)
             })
         else:
-            return jsonify({"error": f"Groq anrop misslyckades. Detaljer: {' | '.join(errors_log)}"}), 500
+            return jsonify({"error": f"Groq SDK anrop misslyckades: {' | '.join(errors_log)}"}), 500
 
     except Exception as e:
         print(f"[CHAT EXCEPTION]: {e}", flush=True)
