@@ -3,19 +3,22 @@ from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import jwt
 from groq import Groq
+from openai import OpenAI
 from memory_engine import store_memory, get_relevant_memories, should_store_memory
 
 app = Flask(__name__)
 CORS(app)
 
-# Rensa miljövariabler från eventuella osynliga tecken
+# Rensa miljövariabler
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip().strip('"').strip("'")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip().strip('"').strip("'")
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "").strip().strip('"').strip("'")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "").strip()
 
-# Initiera officiell Groq-klient
+# Initiera klienter
 groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
+openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
 SYSTEM_PROMPT = """You are FALK, an elite Socratic Cognitive Behavioral Therapy (CBT) AI guide.
 YOUR CORE RULE: Never lecture, never give numbered lists, and never preach generic self-help advice.
@@ -68,17 +71,35 @@ def chat():
         if memories:
             memory_context = "\nRelevant historisk kontext om användaren:\n" + "\n".join([f"- {m}" for m in memories])
 
-        if not groq_client:
-            return jsonify({"error": "GROQ_API_KEY saknas eller kunde inte initieras."}), 500
-
-        models_to_try = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
         ai_response = None
-        errors_log = []
+        used_provider = None
 
-        for model_name in models_to_try:
+        # 1. Försök med Groq SDK
+        if groq_client:
+            for model_name in ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]:
+                try:
+                    completion = groq_client.chat.completions.create(
+                        model=model_name,
+                        messages=[
+                            {"role": "system", "content": SYSTEM_PROMPT},
+                            {"role": "user", "content": f"{memory_context}\n\n{user_message}"}
+                        ],
+                        temperature=0.5,
+                        max_tokens=150
+                    )
+                    ai_response = completion.choices[0].message.content
+                    if ai_response:
+                        used_provider = f"Groq ({model_name})"
+                        break
+                except Exception as g_err:
+                    print(f"[GROQ FAIL {model_name}]: {g_err}", flush=True)
+
+        # 2. Resilient Fallback till OpenAI (gpt-4o-mini) om Groq misslyckades
+        if not ai_response and openai_client:
             try:
-                completion = groq_client.chat.completions.create(
-                    model=model_name,
+                print("[FALLBACK]: Groq misslyckades. Kopplar om till OpenAI gpt-4o-mini...", flush=True)
+                completion = openai_client.chat.completions.create(
+                    model="gpt-4o-mini",
                     messages=[
                         {"role": "system", "content": SYSTEM_PROMPT},
                         {"role": "user", "content": f"{memory_context}\n\n{user_message}"}
@@ -87,21 +108,19 @@ def chat():
                     max_tokens=150
                 )
                 ai_response = completion.choices[0].message.content
-                if ai_response:
-                    break
-            except Exception as groq_err:
-                err_str = f"[{model_name} FAIL]: {str(groq_err)}"
-                errors_log.append(err_str)
-                print(err_str, flush=True)
+                used_provider = "OpenAI (gpt-4o-mini)"
+            except Exception as o_err:
+                print(f"[OPENAI FALLBACK FAIL]: {o_err}", flush=True)
 
         if ai_response:
             return jsonify({
                 "response": ai_response,
                 "tier": tier,
-                "memories_retrieved": len(memories)
+                "memories_retrieved": len(memories),
+                "provider": used_provider
             })
         else:
-            return jsonify({"error": f"Groq SDK anrop misslyckades: {' | '.join(errors_log)}"}), 500
+            return jsonify({"error": "Både Groq och OpenAI fallback misslyckades. Kontrollera API-nycklar i Render."}), 500
 
     except Exception as e:
         print(f"[CHAT EXCEPTION]: {e}", flush=True)
