@@ -72,7 +72,6 @@
                 </button>
             </div>
 
-            <!-- NAVIGATION INKLUSIVE BIBLIOTEK -->
             <nav class="space-y-1 mb-5">
                 <button onclick="switchTab('chat')" id="nav-chat" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-deep-olive text-amber-50 flex items-center space-x-2 shadow-sm">
                     <span>💬</span> <span>Chatt</span>
@@ -155,41 +154,27 @@
                 <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wider">Aktiv Fokusprofil</h3>
                 <div class="space-y-2 text-xs">
                     <div>
-                        <div class="flex justify-between text-[11px] font-semibold text-stone-700 mb-1">
-                            <span>Självförtroende</span><span id="prog-confidence">50%</span>
-                        </div>
+                        <div class="flex justify-between text-[11px] font-semibold text-stone-700 mb-1"><span>Självförtroende</span><span id="prog-confidence">50%</span></div>
                         <div class="w-full bg-stone-200 h-2 rounded-full overflow-hidden"><div id="bar-confidence" class="bg-deep-olive h-full transition-all duration-500" style="width: 50%;"></div></div>
                     </div>
                     <div>
-                        <div class="flex justify-between text-[11px] font-semibold text-stone-700 mb-1">
-                            <span>Stresshantering</span><span id="prog-stress">50%</span>
-                        </div>
+                        <div class="flex justify-between text-[11px] font-semibold text-stone-700 mb-1"><span>Stresshantering</span><span id="prog-stress">50%</span></div>
                         <div class="w-full bg-stone-200 h-2 rounded-full overflow-hidden"><div id="bar-stress" class="bg-terracotta h-full transition-all duration-500" style="width: 50%;"></div></div>
                     </div>
                     <div>
-                        <div class="flex justify-between text-[11px] font-semibold text-stone-700 mb-1">
-                            <span>Handlingskraft</span><span id="prog-action">50%</span>
-                        </div>
+                        <div class="flex justify-between text-[11px] font-semibold text-stone-700 mb-1"><span>Handlingskraft</span><span id="prog-action">50%</span></div>
                         <div class="w-full bg-stone-200 h-2 rounded-full overflow-hidden"><div id="bar-action" class="bg-deep-olive h-full transition-all duration-500" style="width: 50%;"></div></div>
                     </div>
                     <div>
-                        <div class="flex justify-between text-[11px] font-semibold text-stone-700 mb-1">
-                            <span>Gränssättning</span><span id="prog-boundaries">50%</span>
-                        </div>
+                        <div class="flex justify-between text-[11px] font-semibold text-stone-700 mb-1"><span>Gränssättning</span><span id="prog-boundaries">50%</span></div>
                         <div class="w-full bg-stone-200 h-2 rounded-full overflow-hidden"><div id="bar-boundaries" class="bg-soft-sage h-full transition-all duration-500" style="width: 50%;"></div></div>
                     </div>
                 </div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
-                <div class="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 text-center">
-                    <p class="text-[10px] font-bold text-stone-400 uppercase">Reflektioner</p>
-                    <p id="stat-entries-count" class="text-xl font-bold text-deep-olive mt-1">0</p>
-                </div>
-                <div class="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 text-center">
-                    <p class="text-[10px] font-bold text-stone-400 uppercase">Aktiva Påminnelser</p>
-                    <p id="stat-reminders-count" class="text-xl font-bold text-terracotta mt-1">0</p>
-                </div>
+                <div class="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 text-center"><p class="text-[10px] font-bold text-stone-400 uppercase">Reflektioner</p><p id="stat-entries-count" class="text-xl font-bold text-deep-olive mt-1">0</p></div>
+                <div class="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 text-center"><p class="text-[10px] font-bold text-stone-400 uppercase">Aktiva Påminnelser</p><p id="stat-reminders-count" class="text-xl font-bold text-terracotta mt-1">0</p></div>
             </div>
         </div>
     </aside>
@@ -214,18 +199,51 @@
             </div>
 
             <div id="chat-container" class="flex-1 overflow-y-auto pr-1 mb-2 min-h-0 flex flex-col">
+                <!-- ALLA 9 ONBOARDING-KORT ÅTERSTÄLLDA -->
                 <div id="onboarding-cards" class="space-y-2.5 py-2 mb-4">
                     <div onclick="selectOnboarding('Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
                         <p class="text-xs font-bold text-stone-800">✨ Mening & livsriktning</p>
                         <p class="text-xs text-stone-600 italic">"Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det."</p>
                     </div>
+
                     <div onclick="selectOnboarding('Hjälp mig sortera tankarna och hitta klarhet.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
                         <p class="text-xs font-bold text-stone-800">💭 När tankarna tar över</p>
                         <p class="text-xs text-stone-600 italic">"Hjälp mig sortera tankarna och hitta klarhet."</p>
                     </div>
+
                     <div onclick="selectOnboarding('Hjälp mig hantera utmaningar och hitta nästa steg.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
                         <p class="text-xs font-bold text-stone-800">💼 Jobb, ansvar & ledarskap</p>
                         <p class="text-xs text-stone-600 italic">"Hjälp mig hantera utmaningar och hitta nästa steg."</p>
+                    </div>
+
+                    <div onclick="selectOnboarding('Jag känner mig stressad eller orolig och behöver landa.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
+                        <p class="text-xs font-bold text-stone-800">🌱 Hitta lugnet igen</p>
+                        <p class="text-xs text-stone-600 italic">"Jag känner mig stressad eller orolig och behöver landa."</p>
+                    </div>
+
+                    <div onclick="selectOnboarding('Hjälp mig komma vidare och få saker att hända.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
+                        <p class="text-xs font-bold text-stone-800">🎯 Från mål till handling</p>
+                        <p class="text-xs text-stone-600 italic">"Hjälp mig komma vidare och få saker att hända."</p>
+                    </div>
+
+                    <div onclick="selectOnboarding('Hjälp mig förstå en situation och kommunicera bättre.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
+                        <p class="text-xs font-bold text-stone-800">💬 Relationer & svåra samtal</p>
+                        <p class="text-xs text-stone-600 italic">"Hjälp mig förstå en situation och kommunicera bättre."</p>
+                    </div>
+
+                    <div onclick="selectOnboarding('Hjälp mig hitta hållbara vanor för sömn, energi och fokus.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
+                        <p class="text-xs font-bold text-stone-800">⚡ Mer energi & balans</p>
+                        <p class="text-xs text-stone-600 italic">"Hjälp mig hitta hållbara vanor för sömn, energi och fokus."</p>
+                    </div>
+
+                    <div onclick="selectOnboarding('Hjälp mig upptäcka mina behov, drivkrafter och mönster.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
+                        <p class="text-xs font-bold text-stone-800">🔍 Förstå mig själv bättre</p>
+                        <p class="text-xs text-stone-600 italic">"Hjälp mig upptäcka mina behov, drivkrafter och mönster."</p>
+                    </div>
+
+                    <div onclick="selectOnboarding('Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
+                        <p class="text-xs font-bold text-stone-800">🧩 Utmana mina tankar</p>
+                        <p class="text-xs text-stone-600 italic">"Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet."</p>
                     </div>
                 </div>
 
@@ -292,38 +310,25 @@
             </div>
             
             <div id="library-protocols-grid" class="grid grid-cols-1 gap-4">
-                <!-- PROTOKOLL LADDAS DYNAMISKT MÖJLIGGJORT VIA API -->
                 <div class="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm space-y-3">
-                    <div class="flex justify-between items-start">
-                        <span class="text-[10px] font-bold text-terracotta bg-amber-50 px-2 py-0.5 rounded-full uppercase">Kognitiv Sanering • 3 min</span>
-                    </div>
+                    <div class="flex justify-between items-start"><span class="text-[10px] font-bold text-terracotta bg-amber-50 px-2 py-0.5 rounded-full uppercase">Kognitiv Sanering • 3 min</span></div>
                     <h3 class="text-sm font-bold text-stone-900">Decatastrophizing (Katastrofrensaren)</h3>
                     <p class="text-xs text-stone-600 leading-relaxed">När hjärnan skenar iväg i värsta tänkbara scenario. Montera ned skräckbilden systematisk.</p>
-                    <button onclick="launchProtocol('Jag vill köra Decatastrophizing-protokollet. Hjälp mig att först identifiera mitt värsta scenario, skatta dess faktiska sannolikhet (0-100%), och därefter formulera min handlingsplan om det faktiskt händer.')" class="w-full bg-deep-olive hover:opacity-90 text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">
-                        Starta protokoll i chatten
-                    </button>
+                    <button onclick="launchProtocol('Jag vill köra Decatastrophizing-protokollet. Hjälp mig att först identifiera mitt värsta scenario, skatta dess faktiska sannolikhet (0-100%), och därefter formulera min handlingsplan om det faktiskt händer.')" class="w-full bg-deep-olive hover:opacity-90 text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Starta protokoll i chatten</button>
                 </div>
 
                 <div class="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm space-y-3">
-                    <div class="flex justify-between items-start">
-                        <span class="text-[10px] font-bold text-terracotta bg-amber-50 px-2 py-0.5 rounded-full uppercase">Relationer & Ansvar • 5 min</span>
-                    </div>
+                    <div class="flex justify-between items-start"><span class="text-[10px] font-bold text-terracotta bg-amber-50 px-2 py-0.5 rounded-full uppercase">Relationer & Ansvar • 5 min</span></div>
                     <h3 class="text-sm font-bold text-stone-900">Gränssättaren & Nej-Matrisen</h3>
                     <p class="text-xs text-stone-600 leading-relaxed">Förbered svåra samtal och sätt tydliga gränser utan att drabbas av skuld eller förklara bort dig.</p>
-                    <button onclick="launchProtocol('Jag vill köra Gränssättar-protokollet. Hjälp mig att formulera ett tydligt, lugnt och orubbligt \'nej\' eller en ny gräns gällande en situation som dränerar mig.')" class="w-full bg-deep-olive hover:opacity-90 text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">
-                        Starta protokoll i chatten
-                    </button>
+                    <button onclick="launchProtocol('Jag vill köra Gränssättar-protokollet. Hjälp mig att formulera ett tydligt, lugnt och orubbligt \'nej\' eller en ny gräns gällande en situation som dränerar mig.')" class="w-full bg-deep-olive hover:opacity-90 text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Starta protokoll i chatten</button>
                 </div>
 
                 <div class="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm space-y-3">
-                    <div class="flex justify-between items-start">
-                        <span class="text-[10px] font-bold text-terracotta bg-amber-50 px-2 py-0.5 rounded-full uppercase">Akut Stress • 2 min</span>
-                    </div>
+                    <div class="flex justify-between items-start"><span class="text-[10px] font-bold text-terracotta bg-amber-50 px-2 py-0.5 rounded-full uppercase">Akut Stress • 2 min</span></div>
                     <h3 class="text-sm font-bold text-stone-900">Stop-Thought & Control Triangulation</h3>
                     <p class="text-xs text-stone-600 leading-relaxed">Sortera direkt vad du kan påverka just nu och vad du måste släppa direkt.</p>
-                    <button onclick="launchProtocol('Jag vill köra Stop-Thought och Kontroll-trianguleringen. Hjälp mig att sortera situationen i tre delar: Det jag kontrollerar till 100%, det jag kan påverka delvis, och det jag måste släppa.')" class="w-full bg-deep-olive hover:opacity-90 text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">
-                        Starta protokoll i chatten
-                    </button>
+                    <button onclick="launchProtocol('Jag vill köra Stop-Thought och Kontroll-trianguleringen. Hjälp mig att sortera situationen i tre delar: Det jag kontrollerar till 100%, det jag kan påverka delvis, och det jag måste släppa.')" class="w-full bg-deep-olive hover:opacity-90 text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Starta protokoll i chatten</button>
                 </div>
             </div>
         </section>
@@ -339,7 +344,236 @@
         </section>
     </main>
 
+    <!-- ALLA MODALER ÅTERSTÄLLDA (6 ST) -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl text-center">
+            <div class="text-center pb-2 border-b border-stone-100"><h3 id="confirm-title" class="text-base font-bold text-deep-olive">Bekräfta åtgärd</h3></div>
+            <p id="confirm-msg" class="text-xs text-stone-700 leading-relaxed py-1"></p>
+            <div class="flex space-x-2 pt-2">
+                <button id="confirm-cancel-btn" onclick="closeConfirmModal(false)" class="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold py-2.5 rounded-xl text-xs transition">Avbryt</button>
+                <button id="confirm-ok-btn" onclick="closeConfirmModal(true)" class="flex-1 bg-rose-700 hover:bg-rose-800 text-white font-bold py-2.5 rounded-xl text-xs transition shadow">Radera</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="reminder-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl">
+            <div class="text-center pb-2 border-b border-stone-100 flex flex-col items-center">
+                <svg class="w-7 h-7 text-deep-olive mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <h3 class="text-base font-bold text-deep-olive">Skapa Påminnelse</h3>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div><label class="block font-bold text-stone-700 mb-1">Citat / Text att bli påmind om:</label><textarea id="reminder-quote-input" rows="3" class="w-full bg-stone-50 border border-stone-300 rounded-xl p-2.5 text-xs text-stone-800 focus:outline-none focus:border-deep-olive leading-relaxed font-normal"></textarea></div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block font-bold text-stone-700 mb-1">Tidpunkt:</label><input type="time" id="reminder-time" value="08:00" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-2.5 py-2 font-semibold"></div>
+                    <div><label class="block font-bold text-stone-700 mb-1">Frekvens:</label><select id="reminder-freq" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-2 py-2 font-semibold text-stone-800"><option value="daily">Varje dag</option><option value="weekly">Varje vecka</option><option value="indefinite">Tillsvidare (Löpande)</option></select></div>
+                </div>
+                <div class="pt-1"><label class="flex items-center space-x-2 text-[11px] text-stone-700 cursor-pointer"><input type="checkbox" id="reminder-save-journal" checked class="rounded border-stone-300 text-deep-olive focus:ring-deep-olive"><span>Spara även som ett inlägg i Reflektionsdagboken</span></label></div>
+            </div>
+            <div class="flex space-x-2 pt-2"><button onclick="closeReminderModal()" class="flex-1 bg-stone-100 text-stone-600 font-bold py-2.5 rounded-xl transition">Avbryt</button><button onclick="saveReminderModalSubmit()" class="flex-1 bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl transition shadow">Spara Påminnelse</button></div>
+        </div>
+    </div>
+
+    <div id="custom-alert-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl text-center">
+            <div class="text-center pb-2 border-b border-stone-100"><h3 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h3><p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p></div>
+            <p id="custom-alert-msg" class="text-xs text-stone-700 leading-relaxed py-2"></p>
+            <button onclick="closeCustomAlert()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Förstått</button>
+        </div>
+    </div>
+
+    <div id="focus-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-5 shadow-2xl">
+            <div class="text-center pb-2 border-b border-stone-100 relative"><h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2><p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p><div class="absolute right-0 top-0 flex items-center space-x-2"><button onclick="resetFocusSliders()" class="text-[11px] font-semibold text-deep-olive hover:underline">Återställ</button><button onclick="closeFocusModal()" class="text-stone-400 hover:text-stone-700 text-base font-bold">✕</button></div></div>
+            <p class="text-xs font-medium text-stone-500">FALK är inställd på att höja:</p>
+            <div class="space-y-4 text-xs">
+                <div><div class="flex justify-between font-bold text-stone-800 mb-1"><span>Självförtroende</span><span id="val-confidence">50%</span></div><input type="range" id="slider-confidence" min="0" max="100" value="50" oninput="updateFocusVal('confidence')" class="w-full h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer focus-slider"></div>
+                <div><div class="flex justify-between font-bold text-stone-800 mb-1"><span>Stresshantering</span><span id="val-stress">50%</span></div><input type="range" id="slider-stress" min="0" max="100" value="50" oninput="updateFocusVal('stress')" class="w-full h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer focus-slider"></div>
+                <div><div class="flex justify-between font-bold text-stone-800 mb-1"><span>Handlingskraft</span><span id="val-action">50%</span></div><input type="range" id="slider-action" min="0" max="100" value="50" oninput="updateFocusVal('action')" class="w-full h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer focus-slider"></div>
+                <div><div class="flex justify-between font-bold text-stone-800 mb-1"><span>Gränssättning</span><span id="val-boundaries">50%</span></div><input type="range" id="slider-boundaries" min="0" max="100" value="50" oninput="updateFocusVal('boundaries')" class="w-full h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer focus-slider"></div>
+            </div>
+            <button onclick="closeFocusModal()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-2xl text-xs transition shadow">Spara fokusinställning</button>
+        </div>
+    </div>
+
+    <div id="auth-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl">
+            <div class="text-center pb-2 border-b border-stone-100"><h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2><p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p></div>
+            <div class="flex border-b border-stone-200 pb-2"><button id="tab-btn-login" onclick="setAuthTab('login')" class="flex-1 text-center font-bold text-sm text-deep-olive border-b-2 border-deep-olive pb-1">Logga in</button><button id="tab-btn-signup" onclick="setAuthTab('signup')" class="flex-1 text-center font-bold text-sm text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600">Skapa konto</button></div>
+            <div class="space-y-3">
+                <div id="wrap-username" class="hidden"><input type="text" id="auth-username" placeholder="Välj Användarnamn" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive"></div>
+                <div id="wrap-identifier"><input type="text" id="auth-identifier" placeholder="E-post eller Användarnamn" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive"></div>
+                <div><input type="password" id="auth-password" placeholder="Lösenord" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive"></div>
+                <div id="wrap-gdpr" class="hidden pt-1"><label class="flex items-start space-x-2 text-[11px] text-stone-600 cursor-pointer"><input type="checkbox" id="auth-gdpr-check" class="mt-0.5 rounded border-stone-300 text-deep-olive focus:ring-deep-olive"><span>Jag samtycker till behandling av mina uppgifter och bekräftar att FALK är ett verktyg för självhjälp/personlig utveckling (ej sjukvård) enligt <button type="button" onclick="openPrivacyPolicyModal()" class="text-deep-olive underline">Integritetspolicyn</button>.</span></label></div>
+            </div>
+            <div class="pt-2"><button id="auth-submit-btn" onclick="submitAuth()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Logga in</button></div>
+            <button onclick="closeAuthModal()" class="w-full text-center text-stone-400 text-xs mt-1 hover:text-stone-600">Avbryt</button>
+        </div>
+    </div>
+
+    <div id="privacy-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-lg w-full space-y-4 max-h-[80vh] flex flex-col shadow-2xl">
+            <div class="text-center pb-2 border-b border-stone-100"><h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2><p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p></div>
+            <div class="flex-1 overflow-y-auto text-xs text-stone-600 space-y-3 pr-2 leading-relaxed">
+                <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 font-medium">MEDICINSK FRISKRIVNING: FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling. FALK tillhandahåller inte medicinsk diagnostik, psykoterapi eller hälso- och sjukvård.</div>
+                <p><strong>Personuppgiftsansvarig:</strong> FALK AI Services.</p>
+                <p><strong>Vilka data behandlas?</strong> E-postadress, användarnamn, samtalsloggar, krypterade minnesvektorer samt stämningsskattningar (hälsodata enligt Art. 9 GDPR).</p>
+                <p>Dina rättigheter att begära radering och dataportabilitet finns under Inställningar.</p>
+            </div>
+            <button onclick="closePrivacyPolicyModal()" class="w-full bg-deep-olive text-amber-50 font-semibold py-2 rounded-xl text-xs transition">Jag förstår</button>
+        </div>
+    </div>
+
+    <!-- HULTSTÄNDIG JAVASCRIPT-MOTOR ÅTERSTÄLLD -->
     <script>
+        const SUPABASE_URL = "{{ supabase_url }}";
+        const SUPABASE_ANON_KEY = "{{ supabase_anon_key }}";
+        
+        let supabaseClient = null;
+        if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+
+        let userToken = null;
+        let activeSessionId = null;
+        let selectedMood = 3;
+        let userProfile = null;
+        let currentAuthMode = 'login';
+        let pendingReminderText = '';
+        let confirmResolver = null;
+
+        let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motivation: 50 };
+        let pinnedSessions = JSON.parse(localStorage.getItem('falk_pinned_sessions') || '[]');
+
+        function customConfirm(msg, title = "Bekräfta åtgärd") {
+            return new Promise((resolve) => {
+                document.getElementById('confirm-title').textContent = title;
+                document.getElementById('confirm-msg').textContent = msg;
+                document.getElementById('confirm-modal').classList.remove('hidden');
+                confirmResolver = resolve;
+            });
+        }
+
+        function closeConfirmModal(result) {
+            document.getElementById('confirm-modal').classList.add('hidden');
+            if (confirmResolver) {
+                confirmResolver(result);
+                confirmResolver = null;
+            }
+        }
+
+        function initDisclaimer() {
+            const lang = (navigator.language || 'sv').toLowerCase();
+            const el = document.getElementById('disclaimer-text');
+            if (!el) return;
+            if (lang.startsWith('sv')) {
+                el.textContent = "FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling. Ej sjukvård. Vid akuta kriser, ring 112 eller 90101 (MIND).";
+            } else {
+                el.textContent = "FALK is an AI self-help & personal development tool (not medical care). In acute crisis, contact your local emergency service (112/911).";
+            }
+        }
+
+        function checkForCrisisKeywords(text) {
+            const lower = text.toLowerCase();
+            const crisisWords = ['suicid', 'ta mitt liv', 'skada mig', 'kill myself', 'end my life', 'suicide', 'self harm'];
+            for (let word of crisisWords) {
+                if (lower.includes(word)) {
+                    showAlert("Om du befinner dig i kris, sök hjälp direkt. Ring 112 eller 90101 (MIND Självmordslinjen).");
+                    break;
+                }
+            }
+        }
+
+        function showAlert(msg) {
+            const msgEl = document.getElementById('custom-alert-msg');
+            if (msgEl) msgEl.textContent = msg;
+            const modal = document.getElementById('custom-alert-modal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeCustomAlert() {
+            const modal = document.getElementById('custom-alert-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        async function initAuth() {
+            initDisclaimer();
+            loadJournal();
+            if (!supabaseClient) return;
+
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            await updateAuthUI(session);
+
+            supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+                await updateAuthUI(session);
+            });
+        }
+
+        async function updateAuthUI(session) {
+            const userDisplayBottom = document.getElementById('user-display-bottom');
+            const logoutBtnBottom = document.getElementById('logout-btn-bottom');
+            const loginBtnBottom = document.getElementById('login-btn-bottom');
+            const tierBadge = document.getElementById('tier-badge');
+            const settingsTier = document.getElementById('settings-tier');
+
+            if (session) {
+                userToken = session.access_token;
+                await fetchProfile();
+                const displayName = (userProfile && userProfile.username) ? userProfile.username : session.user.email;
+                if (userDisplayBottom) userDisplayBottom.textContent = displayName;
+                if (logoutBtnBottom) logoutBtnBottom.classList.remove('hidden');
+                if (loginBtnBottom) loginBtnBottom.classList.add('hidden');
+                if (tierBadge) tierBadge.textContent = "INLOGGAD";
+                if (settingsTier) settingsTier.textContent = "INLOGGAD";
+                loadSessions();
+                loadJournal();
+            } else {
+                userToken = null;
+                userProfile = null;
+                if (userDisplayBottom) userDisplayBottom.textContent = "Gäst";
+                if (logoutBtnBottom) logoutBtnBottom.classList.add('hidden');
+                if (loginBtnBottom) loginBtnBottom.classList.remove('hidden');
+                if (tierBadge) tierBadge.textContent = "GÄST";
+                if (settingsTier) settingsTier.textContent = "GÄST";
+                document.getElementById('session-list').innerHTML = `<p class="p-2 text-stone-400 italic">Logga in för samtalshistorik</p>`;
+                loadJournal();
+            }
+        }
+
+        async function fetchProfile() {
+            if (!userToken) return;
+            try {
+                const res = await fetch('/api/profile', { headers: { 'Authorization': `Bearer ${userToken}` } });
+                userProfile = await res.json();
+            } catch (err) { console.error("Profile fetch fail", err); }
+        }
+
+        function closeAllDrawers() {
+            document.getElementById('sidebar-drawer').classList.add('-translate-x-full');
+            document.getElementById('progress-drawer').classList.add('translate-x-full');
+            document.getElementById('sidebar-overlay').classList.add('hidden');
+        }
+
+        function toggleSidebar() {
+            const drawer = document.getElementById('sidebar-drawer');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (drawer.classList.contains('-translate-x-full')) {
+                closeAllDrawers();
+                drawer.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else closeAllDrawers();
+        }
+
+        function toggleProgressDrawer() {
+            const drawer = document.getElementById('progress-drawer');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (drawer.classList.contains('translate-x-full')) {
+                closeAllDrawers();
+                drawer.classList.remove('translate-x-full');
+                overlay.classList.remove('hidden');
+            } else closeAllDrawers();
+        }
+
         function switchTab(tab) {
             closeAllDrawers();
             document.getElementById('view-chat').classList.add('hidden');
@@ -353,12 +587,466 @@
             else if (tab === 'settings') document.getElementById('view-settings').classList.remove('hidden');
         }
 
+        function hidePrompts() {
+            const cards = document.getElementById('onboarding-cards');
+            if (cards) cards.classList.add('hidden');
+            const checkin = document.getElementById('daily-checkin-card');
+            if (checkin) checkin.classList.add('hidden');
+        }
+
+        function selectOnboarding(text) {
+            hidePrompts();
+            const input = document.getElementById('message-input');
+            if (input) input.value = text;
+            sendMessage(new Event('submit'));
+        }
+
         function launchProtocol(promptText) {
             switchTab('chat');
             const input = document.getElementById('message-input');
             if (input) input.value = promptText;
             sendMessage(new Event('submit'));
         }
+
+        async function loadSessions() {
+            if (!userToken) return;
+            const res = await fetch('/api/sessions', { headers: { 'Authorization': `Bearer ${userToken}` } });
+            let sessions = await res.json();
+            const list = document.getElementById('session-list');
+            if (!list) return;
+            list.innerHTML = '';
+
+            sessions.sort((a, b) => {
+                const isAPinned = pinnedSessions.includes(a.id);
+                const isBPinned = pinnedSessions.includes(b.id);
+                if (isAPinned && !isBPinned) return -1;
+                if (!isAPinned && isBPinned) return 1;
+                return 0;
+            });
+
+            sessions.forEach(s => {
+                const isPinned = pinnedSessions.includes(s.id);
+                const item = document.createElement('div');
+                item.className = `group flex items-center justify-between p-2 rounded-lg text-xs transition ${activeSessionId === s.id ? 'bg-stone-200 text-deep-olive font-bold' : 'hover:bg-stone-200/50 text-stone-700'}`;
+                
+                const titleBtn = document.createElement('button');
+                titleBtn.className = "truncate flex-1 text-left flex items-center space-x-1.5";
+                titleBtn.innerHTML = `${isPinned ? '<span class="text-terracotta">📌</span>' : ''}<span class="truncate">${s.title}</span>`;
+                titleBtn.onclick = () => selectSession(s.id);
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = "flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition";
+
+                const pinBtn = document.createElement('button');
+                pinBtn.className = "p-1 hover:text-terracotta text-stone-400 transition";
+                pinBtn.title = isPinned ? "Lossa samtal" : "Nåla samtal";
+                pinBtn.innerHTML = `<svg class="w-3.5 h-3.5" fill="${isPinned ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 5h14l-4 4v6l2 2v1H7v-1l2-2V9L5 5z"/></svg>`;
+                pinBtn.onclick = (e) => { e.stopPropagation(); togglePinSession(s.id); };
+
+                const delBtn = document.createElement('button');
+                delBtn.className = "p-1 hover:text-rose-600 text-stone-400 transition";
+                delBtn.title = "Radera samtal";
+                delBtn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`;
+                delBtn.onclick = (e) => { e.stopPropagation(); deleteSession(s.id); };
+
+                actionsDiv.appendChild(pinBtn);
+                actionsDiv.appendChild(delBtn);
+                item.appendChild(titleBtn);
+                item.appendChild(actionsDiv);
+                list.appendChild(item);
+            });
+        }
+
+        function togglePinSession(id) {
+            if (pinnedSessions.includes(id)) pinnedSessions = pinnedSessions.filter(item => item !== id);
+            else pinnedSessions.push(id);
+            localStorage.setItem('falk_pinned_sessions', JSON.stringify(pinnedSessions));
+            loadSessions();
+        }
+
+        async function deleteSession(id) {
+            const confirmed = await customConfirm("Vill du radera detta samtal permanent?", "Radera samtal");
+            if (!confirmed) return;
+            if (userToken) {
+                await fetch(`/api/sessions/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${userToken}` } });
+            }
+            if (activeSessionId === id) {
+                activeSessionId = null;
+                document.getElementById('chat-messages-list').innerHTML = '';
+            }
+            loadSessions();
+        }
+
+        async function createNewSession() {
+            if (!userToken) return openAuthModal();
+            const res = await fetch('/api/sessions', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: "Nytt samtalsrum" })
+            });
+            const s = await res.json();
+            if (s.id) {
+                activeSessionId = s.id;
+                document.getElementById('chat-messages-list').innerHTML = '';
+                const cards = document.getElementById('onboarding-cards');
+                if (cards) cards.classList.remove('hidden');
+                switchTab('chat');
+                loadSessions();
+            }
+        }
+
+        async function selectSession(id) {
+            activeSessionId = id;
+            loadSessions();
+            closeAllDrawers();
+            hidePrompts();
+
+            const res = await fetch(`/api/sessions/${id}/messages`, { headers: { 'Authorization': `Bearer ${userToken}` } });
+            const messages = await res.json();
+            const list = document.getElementById('chat-messages-list');
+            if (!list) return;
+            list.innerHTML = '';
+            
+            if (messages.length > 0) hidePrompts();
+            messages.forEach(m => appendMessage(m.sender === 'user' ? 'Du' : 'FALK', m.content, m.sender));
+        }
+
+        let isRecording = false;
+        let recognition = null;
+
+        function toggleSpeechRecognition() {
+            const micBtn = document.getElementById('mic-btn');
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                return showAlert("Tal-till-text stöds inte i din webbläsare.");
+            }
+
+            if (isRecording) {
+                if (recognition) recognition.stop();
+                isRecording = false;
+                micBtn.classList.remove('text-rose-600', 'animate-pulse');
+                micBtn.classList.add('text-stone-400');
+            } else {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.lang = 'sv-SE';
+                recognition.onstart = function() {
+                    isRecording = true;
+                    micBtn.classList.remove('text-stone-400');
+                    micBtn.classList.add('text-rose-600', 'animate-pulse');
+                };
+                recognition.onresult = function(event) {
+                    document.getElementById('message-input').value += event.results[0][0].transcript;
+                };
+                recognition.onend = function() {
+                    isRecording = false;
+                    micBtn.classList.remove('text-rose-600', 'animate-pulse');
+                    micBtn.classList.add('text-stone-400');
+                };
+                recognition.start();
+            }
+        }
+
+        function updateFocusVal(key) {
+            const val = document.getElementById(`slider-${key}`).value;
+            focusState[key] = parseInt(val);
+            document.getElementById(`val-${key}`).textContent = `${val}%`;
+            const prog = document.getElementById(`prog-${key}`);
+            const bar = document.getElementById(`bar-${key}`);
+            if (prog) prog.textContent = `${val}%`;
+            if (bar) bar.style.width = `${val}%`;
+        }
+
+        function resetFocusSliders() {
+            ['confidence', 'stress', 'action', 'boundaries', 'motivation'].forEach(k => {
+                document.getElementById(`slider-${k}`).value = 50;
+                updateFocusVal(k);
+            });
+        }
+
+        function openFocusModal() { document.getElementById('focus-modal').classList.remove('hidden'); }
+        function closeFocusModal() { document.getElementById('focus-modal').classList.add('hidden'); }
+
+        async function sendMessage(e) {
+            if (e && e.preventDefault) e.preventDefault();
+
+            const input = document.getElementById('message-input');
+            const btn = document.getElementById('send-btn');
+            const message = input ? input.value.trim() : '';
+
+            if (!message) return;
+            checkForCrisisKeywords(message);
+            hidePrompts();
+
+            if (!activeSessionId && userToken) {
+                await createNewSession();
+            }
+
+            appendMessage('Du', message, 'user');
+            if (input) input.value = '';
+            if (btn) btn.disabled = true;
+
+            const thinkingId = showThinkingIndicator();
+
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                if (userToken) headers['Authorization'] = `Bearer ${userToken}`;
+
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ 
+                        message: message, 
+                        session_id: activeSessionId,
+                        focus: focusState
+                    })
+                });
+
+                const data = await res.json();
+                removeThinkingIndicator(thinkingId);
+
+                if (res.ok) {
+                    appendMessage('FALK', data.response, 'bot');
+                    loadSessions();
+                } else {
+                    appendMessage('FALK', data.error || 'Ett fel uppstod.', 'error');
+                }
+            } catch (err) {
+                removeThinkingIndicator(thinkingId);
+                appendMessage('FALK', 'Kunde inte ansluta till servern.', 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        function showThinkingIndicator() {
+            const list = document.getElementById('chat-messages-list');
+            if (!list) return null;
+            const id = 'thinking-' + Math.random().toString(36).substr(2, 9);
+            const container = document.createElement('div');
+            container.id = id;
+            container.className = "flex flex-col items-start space-y-1.5 my-2";
+            container.innerHTML = `<div class="bg-white/90 border border-stone-200/80 px-4 py-3 rounded-2xl text-xs text-stone-600 shadow-sm flex items-center space-x-2"><span class="w-2 h-2 bg-deep-olive rounded-full animate-pulse"></span><span class="italic">FALK tänker...</span></div>`;
+            list.appendChild(container);
+            const containerBox = document.getElementById('chat-container');
+            if (containerBox) containerBox.scrollTop = containerBox.scrollHeight;
+            return id;
+        }
+
+        function removeThinkingIndicator(id) {
+            if (!id) return;
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        function appendMessage(sender, text, type) {
+            const list = document.getElementById('chat-messages-list');
+            if (!list) return;
+            hidePrompts();
+
+            const container = document.createElement('div');
+            if (type === 'user') {
+                container.className = "flex justify-end";
+                container.innerHTML = `<div class="bg-bubble-user text-amber-50 px-4 py-3 rounded-2xl max-w-[85%] text-xs shadow-sm">${text}</div>`;
+            } else {
+                container.className = "flex flex-col items-start space-y-1.5";
+                const msgId = 'msg-' + Math.random().toString(36).substr(2, 9);
+                container.innerHTML = `
+                    <div class="bg-white/90 border border-stone-200/80 text-stone-800 px-4 py-3 rounded-2xl max-w-[90%] text-xs shadow-sm leading-relaxed" id="${msgId}">${text}</div>
+                    <div class="flex items-center space-x-2 px-1 py-1 text-stone-400 text-xs">
+                        <button onclick="speakText('${msgId}')" class="p-1.5 hover:text-stone-800 hover:bg-stone-200/60 rounded-lg transition" title="Höguppläsning"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg></button>
+                        <button onclick="openReminderModal('${msgId}')" class="p-1.5 hover:text-stone-800 hover:bg-stone-200/60 rounded-lg transition ml-1 text-deep-olive" title="Skapa påminnelse"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+                    </div>`;
+            }
+            list.appendChild(container);
+            const containerBox = document.getElementById('chat-container');
+            if (containerBox) containerBox.scrollTop = containerBox.scrollHeight;
+        }
+
+        function speakText(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(el.textContent);
+                utterance.lang = 'sv-SE';
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function openReminderModal(textOrId) {
+            const el = document.getElementById(textOrId);
+            pendingReminderText = el ? el.textContent.trim() : textOrId;
+            const input = document.getElementById('reminder-quote-input');
+            if (input) input.value = pendingReminderText;
+            document.getElementById('reminder-modal').classList.remove('hidden');
+        }
+
+        function closeReminderModal() { document.getElementById('reminder-modal').classList.add('hidden'); }
+
+        async function saveReminderModalSubmit() {
+            const quoteInput = document.getElementById('reminder-quote-input');
+            const customText = quoteInput ? quoteInput.value.trim() : pendingReminderText;
+            const timeVal = document.getElementById('reminder-time').value;
+            const freqVal = document.getElementById('reminder-freq').value;
+            const saveJournal = document.getElementById('reminder-save-journal').checked;
+
+            if (saveJournal) await saveJournalEntryDirect(4, `Påminnelse [${freqVal} kl ${timeVal}]: ${customText}`);
+            closeReminderModal();
+            showAlert(`Påminnelse sparad klockan ${timeVal}!`);
+        }
+
+        function setMood(score) {
+            selectedMood = score;
+            document.querySelectorAll('.mood-btn').forEach(btn => btn.className = "mood-btn flex-1 py-2 bg-stone-100 border border-stone-300 rounded-xl text-sm font-semibold text-stone-800 transition");
+            const activeBtn = document.querySelector(`.mood-btn[data-score="${score}"]`);
+            if (activeBtn) activeBtn.className = "mood-btn flex-1 py-2 bg-deep-olive text-amber-50 border border-deep-olive rounded-xl text-sm font-bold transition shadow-sm";
+        }
+
+        async function saveJournalEntry(e) {
+            if (e && e.preventDefault) e.preventDefault();
+            const input = document.getElementById('journal-text');
+            const text = input ? input.value.trim() : '';
+            if (!text) return;
+            await saveJournalEntryDirect(selectedMood, text);
+            if (input) input.value = '';
+        }
+
+        async function saveJournalEntryDirect(score, text) {
+            if (userToken) {
+                try {
+                    await fetch('/api/journal', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mood_score: score, entry_text: text })
+                    });
+                } catch (err) { console.error("Kunde inte spara till backend", err); }
+            }
+            let localEntries = JSON.parse(localStorage.getItem('falk_guest_journal') || '[]');
+            localEntries.unshift({ id: 'local-' + Math.random().toString(36).substr(2, 9), mood_score: score, entry_text: text, created_at: new Date().toISOString() });
+            localStorage.setItem('falk_guest_journal', JSON.stringify(localEntries));
+            loadJournal();
+        }
+
+        async function loadJournal() {
+            let entries = [];
+            if (userToken) {
+                try {
+                    const res = await fetch('/api/journal', { headers: { 'Authorization': `Bearer ${userToken}` } });
+                    if (res.ok) entries = await res.json();
+                } catch (err) { console.error("API error", err); }
+            }
+            if (!entries || entries.length === 0) entries = JSON.parse(localStorage.getItem('falk_guest_journal') || '[]');
+            renderJournalList(entries);
+        }
+
+        function renderJournalList(entries) {
+            const list = document.getElementById('journal-list');
+            if (!list) return;
+            list.innerHTML = '';
+            const statCount = document.getElementById('stat-entries-count');
+            if (statCount) statCount.textContent = entries.length;
+            if (entries.length === 0) { list.innerHTML = `<p class="text-stone-400 text-xs italic">Inga reflektioner sparade ännu.</p>`; return; }
+
+            const moodEmojis = ['', '😞', '😐', '🙂', '😊', '🤩'];
+            entries.forEach(e => {
+                const div = document.createElement('div');
+                div.className = "bg-white p-3.5 rounded-xl border border-stone-200 text-xs space-y-1 shadow-sm flex justify-between items-start";
+                const safeText = e.entry_text.replace(/'/g, "\\'");
+                div.innerHTML = `
+                    <div class="space-y-1 flex-1 pr-2">
+                        <div class="flex justify-between items-center font-bold text-stone-500"><span>Status: ${moodEmojis[e.mood_score] || '🙂'} (${e.mood_score}/5)</span><span>${new Date(e.created_at).toLocaleDateString('sv-SE')}</span></div>
+                        <p class="text-stone-800 leading-relaxed">${e.entry_text}</p>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <button onclick="openReminderModal('${safeText}')" class="p-1 hover:text-deep-olive text-stone-400 transition" title="Sätt påminnelse"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+                        <button onclick="deleteJournalEntry('${e.id}')" class="p-1 hover:text-rose-600 text-stone-400 transition" title="Radera reflektion"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                    </div>`;
+                list.appendChild(div);
+            });
+        }
+
+        async function deleteJournalEntry(id) {
+            const confirmed = await customConfirm("Vill du radera denna reflektion permanent?", "Radera reflektion");
+            if (!confirmed) return;
+            if (userToken && !id.startsWith('local-')) {
+                await fetch(`/api/journal/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${userToken}` } });
+            }
+            let localEntries = JSON.parse(localStorage.getItem('falk_guest_journal') || '[]');
+            localEntries = localEntries.filter(e => e.id !== id);
+            localStorage.setItem('falk_guest_journal', JSON.stringify(localEntries));
+            loadJournal();
+        }
+
+        async function exportMyData() {
+            if (!userToken) return openAuthModal();
+            try {
+                const res = await fetch('/api/export-user-data', { headers: { 'Authorization': `Bearer ${userToken}` } });
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `falk_userdata_${new Date().toISOString().slice(0, 10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            } catch (err) { showAlert("Nätverksfel vid export."); }
+        }
+
+        async function deleteMyData() {
+            const confirmed = await customConfirm("Är du helt säker? Detta raderar permanent ditt konto och all din samtalshistorik.", "Radera konto");
+            if (!confirmed) return;
+            if (userToken) {
+                await fetch('/delete-user-data', { method: 'DELETE', headers: { 'Authorization': `Bearer ${userToken}` } });
+            }
+            localStorage.clear();
+            location.reload();
+        }
+
+        function openAuthModal() { document.getElementById('auth-modal').classList.remove('hidden'); }
+        function closeAuthModal() { document.getElementById('auth-modal').classList.add('hidden'); }
+        function openPrivacyPolicyModal() { document.getElementById('privacy-modal').classList.remove('hidden'); }
+        function closePrivacyPolicyModal() { document.getElementById('privacy-modal').classList.add('hidden'); }
+
+        async function submitAuth() {
+            const identifier = document.getElementById('auth-identifier').value.trim();
+            const password = document.getElementById('auth-password').value.trim();
+            if (!identifier || !password) return showAlert("Fyll i alla fält.");
+
+            if (currentAuthMode === 'signup') {
+                const username = document.getElementById('auth-username').value.trim();
+                const gdprCheck = document.getElementById('auth-gdpr-check').checked;
+                if (!username || !gdprCheck) return showAlert("Godkänn villkoren och fyll i användarnamn.");
+
+                let res = await supabaseClient.auth.signUp({ email: identifier, password });
+                if (res.error) return showAlert("Fel: " + res.error.message);
+                showAlert("Konto skapat! Logga in.");
+                setAuthTab('login');
+            } else {
+                let res = await supabaseClient.auth.signInWithPassword({ email: identifier, password });
+                if (res.error) showAlert("Fel: " + res.error.message);
+                else closeAuthModal();
+            }
+        }
+
+        function setAuthTab(mode) {
+            currentAuthMode = mode;
+            if (mode === 'login') {
+                document.getElementById('wrap-username').classList.add('hidden');
+                document.getElementById('wrap-gdpr').classList.add('hidden');
+                document.getElementById('auth-submit-btn').textContent = "Logga in";
+            } else {
+                document.getElementById('wrap-username').classList.remove('hidden');
+                document.getElementById('wrap-gdpr').classList.remove('hidden');
+                document.getElementById('auth-submit-btn').textContent = "Skapa konto";
+            }
+        }
+
+        async function logout() {
+            if (supabaseClient) await supabaseClient.auth.signOut();
+            localStorage.clear();
+            location.reload();
+        }
+
+        initAuth();
     </script>
 </body>
 </html>
