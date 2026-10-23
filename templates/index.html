@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FALK</title>
+    <title>FALK - En kompass med perspektiv</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22 font-weight=%22bold%22 fill=%22%234E5C4B%22>F</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -64,7 +64,7 @@
             <div class="flex justify-between items-center mb-6 border-b border-stone-200 pb-4">
                 <div>
                     <h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2>
-                    <p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv</p>
+                    <p class="text-[11px] text-stone-500 font-medium">FALK - En kompass med perspektiv</p>
                 </div>
                 <button onclick="toggleSidebar()" class="text-stone-400 hover:text-stone-700 p-1">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -176,13 +176,6 @@
 
             </div>
 
-            <!-- BOT TÄNKER INDIKATOR -->
-            <div id="thinking-indicator" class="hidden mb-3">
-                <div class="inline-block border border-dashed border-stone-400 bg-white/40 px-4 py-2 rounded-2xl text-xs text-stone-600 italic animate-pulse">
-                    FALK tänker...
-                </div>
-            </div>
-
             <!-- INPUT BAR -->
             <div class="flex-shrink-0 space-y-1.5 pb-2">
                 <form id="chat-form" onsubmit="sendMessage(event)" class="flex items-center space-x-2">
@@ -223,7 +216,9 @@
 
         <!-- VY 2: JOURNAL -->
         <section id="view-journal" class="hidden flex-1 flex flex-col h-full min-h-0 p-6 max-w-xl w-full mx-auto overflow-y-auto">
-            <h2 class="text-xl font-bold text-deep-olive mb-4">CBT Journal & Måendetracker</h2>
+            <h2 class="text-xl font-bold text-deep-olive mb-1">CBT Journal & Måendetracker</h2>
+            <p class="text-xs text-stone-500 mb-4 font-medium">FALK - En kompass med perspektiv</p>
+            
             <form onsubmit="saveJournalEntry(event)" class="bg-white p-5 rounded-2xl border border-stone-200 space-y-4 mb-6 shadow-sm">
                 <div>
                     <label class="block text-xs font-semibold text-stone-600 mb-2">Hur mår du just nu? (1-5)</label>
@@ -250,7 +245,8 @@
 
         <!-- VY 3: INSTÄLLNINGAR -->
         <section id="view-settings" class="hidden flex-1 flex flex-col h-full min-h-0 p-6 max-w-xl w-full mx-auto overflow-y-auto">
-            <h2 class="text-xl font-bold text-deep-olive mb-6">Inställningar & Dataskydd</h2>
+            <h2 class="text-xl font-bold text-deep-olive mb-1">Inställningar & Dataskydd</h2>
+            <p class="text-xs text-stone-500 mb-6 font-medium">FALK - En kompass med perspektiv</p>
             
             <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-3 mb-6 shadow-sm">
                 <h3 class="text-xs font-bold text-deep-olive uppercase tracking-wider">Kontostatus</h3>
@@ -280,15 +276,32 @@
 
     </main>
 
+    <!-- UNIFIERAD CUSTOM POPUP MODAL (ERSÄTTER BROWSER ALERTS) -->
+    <div id="custom-alert-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl text-center">
+            <div>
+                <h3 class="text-base font-bold text-deep-olive">FALK</h3>
+                <p class="text-[11px] text-stone-500 font-medium pt-0.5">FALK - En kompass med perspektiv</p>
+            </div>
+            <p id="custom-alert-msg" class="text-xs text-stone-700 leading-relaxed py-2"></p>
+            <button onclick="closeCustomAlert()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">
+                Förstått
+            </button>
+        </div>
+    </div>
+
     <!-- FOKUS MODAL -->
     <div id="focus-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-5 shadow-2xl">
-            <div class="flex justify-between items-center border-b border-stone-100 pb-3">
-                <h2 class="text-xl font-bold text-stone-900">Fokus</h2>
-                <div class="flex items-center space-x-3">
-                    <button onclick="resetFocusSliders()" class="text-xs font-semibold text-deep-olive hover:underline">Återställ</button>
-                    <button onclick="closeFocusModal()" class="text-stone-400 hover:text-stone-700 text-lg font-bold">✕</button>
+            <div class="border-b border-stone-100 pb-3">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-stone-900">Fokus</h2>
+                    <div class="flex items-center space-x-3">
+                        <button onclick="resetFocusSliders()" class="text-xs font-semibold text-deep-olive hover:underline">Återställ</button>
+                        <button onclick="closeFocusModal()" class="text-stone-400 hover:text-stone-700 text-lg font-bold">✕</button>
+                    </div>
                 </div>
+                <p class="text-[11px] text-stone-500 font-medium mt-0.5">FALK - En kompass med perspektiv</p>
             </div>
 
             <p class="text-xs font-medium text-stone-500">FALK är inställd på att höja:</p>
@@ -345,6 +358,11 @@
     <div id="auth-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl">
             
+            <div class="text-center pb-1 border-b border-stone-100">
+                <h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2>
+                <p class="text-[11px] text-stone-500 font-medium">FALK - En kompass med perspektiv</p>
+            </div>
+
             <div class="flex border-b border-stone-200 pb-2">
                 <button id="tab-btn-login" onclick="setAuthTab('login')" class="flex-1 text-center font-bold text-sm text-deep-olive border-b-2 border-deep-olive pb-1">
                     Logga in
@@ -388,7 +406,11 @@
     <!-- PRIVACY POLICY MODAL -->
     <div id="privacy-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-lg w-full space-y-4 max-h-[80vh] flex flex-col shadow-2xl">
-            <h2 class="text-lg font-bold text-stone-900">Integritetspolicy & Friskrivning</h2>
+            <div class="border-b border-stone-100 pb-2">
+                <h2 class="text-lg font-bold text-stone-900">Integritetspolicy & Friskrivning</h2>
+                <p class="text-[11px] text-stone-500 font-medium">FALK - En kompass med perspektiv</p>
+            </div>
+            
             <div class="flex-1 overflow-y-auto text-xs text-stone-600 space-y-3 pr-2 leading-relaxed">
                 <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 font-medium">
                     MEDICINSK FRISKRIVNING: FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling. FALK tillhandahåller inte medicinsk diagnostik, psykoterapi eller hälso- och sjukvård.
@@ -417,6 +439,18 @@
         let currentAuthMode = 'login';
 
         let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motivation: 50 };
+
+        function showAlert(msg) {
+            const msgEl = document.getElementById('custom-alert-msg');
+            if (msgEl) msgEl.textContent = msg;
+            const modal = document.getElementById('custom-alert-modal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeCustomAlert() {
+            const modal = document.getElementById('custom-alert-modal');
+            if (modal) modal.classList.add('hidden');
+        }
 
         async function initAuth() {
             if (!supabaseClient) return;
@@ -626,7 +660,7 @@
         function toggleSpeechRecognition() {
             const micBtn = document.getElementById('mic-btn');
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                return alert("Tal-till-text stöds inte i din webbläsare.");
+                return showAlert("Tal-till-text stöds inte i din webbläsare.");
             }
 
             if (isRecording) {
@@ -699,11 +733,13 @@
                 await createNewSession();
             }
 
+            // 1. Rendera användarens meddelande
             appendMessage('Du', message, 'user');
             if (input) input.value = '';
             if (btn) btn.disabled = true;
 
-            document.getElementById('thinking-indicator').classList.remove('hidden');
+            // 2. Visa DYNAMISK "FALK tänker..." bubbla på FALKs sida direkt under meddelandet
+            const thinkingId = showThinkingIndicator();
 
             try {
                 const headers = { 'Content-Type': 'application/json' };
@@ -720,18 +756,48 @@
                 });
 
                 const data = await res.json();
+                
+                // Ta bort den temporära tänker-bubblan
+                removeThinkingIndicator(thinkingId);
+
                 if (res.ok) {
                     appendMessage('FALK', data.response, 'bot');
                     loadSessions();
                 } else {
-                    appendMessage('FALK', data.error || 'Fel uppstod.', 'error');
+                    appendMessage('FALK', data.error || 'Ett fel uppstod vid kommunikationen.', 'error');
                 }
             } catch (err) {
+                removeThinkingIndicator(thinkingId);
                 appendMessage('FALK', 'Kunde inte ansluta till servern.', 'error');
             } finally {
-                document.getElementById('thinking-indicator').classList.add('hidden');
                 if (btn) btn.disabled = false;
             }
+        }
+
+        function showThinkingIndicator() {
+            const list = document.getElementById('chat-messages-list');
+            if (!list) return null;
+
+            const id = 'thinking-' + Math.random().toString(36).substr(2, 9);
+            const container = document.createElement('div');
+            container.id = id;
+            container.className = "flex flex-col items-start space-y-1.5 my-2";
+            container.innerHTML = `
+                <div class="border border-dashed border-stone-400 bg-white/50 px-4 py-2.5 rounded-2xl text-xs text-stone-600 italic animate-pulse">
+                    FALK tänker...
+                </div>
+            `;
+            list.appendChild(container);
+
+            const containerBox = document.getElementById('chat-container');
+            if (containerBox) containerBox.scrollTop = containerBox.scrollHeight;
+            return id;
+        }
+
+        function removeThinkingIndicator(id) {
+            if (!id) return;
+            const el = document.getElementById(id);
+            if (el) el.remove();
         }
 
         function appendMessage(sender, text, type) {
@@ -812,7 +878,7 @@
                 utterance.lang = 'sv-SE';
                 window.speechSynthesis.speak(utterance);
             } else {
-                alert("Röstuppläsning stöds inte i din webbläsare.");
+                showAlert("Röstuppläsning stöds inte i din webbläsare.");
             }
         }
 
@@ -844,7 +910,7 @@
                 headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ mood_score: 3, entry_text: "Påminnelse från FALK: " + text })
             });
-            alert("Sparat i din CBT-Journal!");
+            showAlert("Sparat i din CBT-Journal!");
         }
 
         function setMood(score) {
@@ -910,7 +976,7 @@
 
                 if (!res.ok) {
                     const err = await res.json();
-                    alert("Export misslyckades: " + (err.error || "Okänt fel"));
+                    showAlert("Export misslyckades: " + (err.error || "Okänt fel"));
                     return;
                 }
 
@@ -924,7 +990,7 @@
                 a.remove();
                 window.URL.revokeObjectURL(url);
             } catch (err) {
-                alert("Nätverksfel vid export: " + err.message);
+                showAlert("Nätverksfel vid export: " + err.message);
             } finally {
                 if (btn) {
                     btn.disabled = false;
@@ -936,7 +1002,7 @@
         async function deleteMyData() {
             if (!confirm("Är du helt säker? Detta raderar permanent ditt konto och all din samtalshistorik.")) return;
             await fetch('/delete-user-data', { method: 'DELETE', headers: { 'Authorization': `Bearer ${userToken}` } });
-            alert("Ditt konto har raderats.");
+            showAlert("Ditt konto har raderats.");
             location.reload();
         }
 
@@ -954,14 +1020,14 @@
             const password = document.getElementById('auth-password').value.trim();
             const gdprCheck = document.getElementById('auth-gdpr-check').checked;
 
-            if (!identifier || !password) return alert("Fyll i alla fält.");
+            if (!identifier || !password) return showAlert("Fyll i alla fält.");
 
             if (currentAuthMode === 'signup') {
-                if (!username) return alert("Ange ett användarnamn för kontot.");
-                if (!gdprCheck) return alert("Du måste bocka i samtyckesrutan.");
+                if (!username) return showAlert("Ange ett användarnamn för kontot.");
+                if (!gdprCheck) return showAlert("Du måste bocka i samtyckesrutan.");
 
                 let res = await supabaseClient.auth.signUp({ email: identifier, password });
-                if (res.error) return alert("Fel: " + res.error.message);
+                if (res.error) return showAlert("Fel: " + res.error.message);
 
                 if (res.data && res.data.user) {
                     userToken = res.data.session ? res.data.session.access_token : null;
@@ -973,7 +1039,7 @@
                         });
                     }
                 }
-                alert("Konto skapat! Du kan nu logga in.");
+                showAlert("Konto skapat! Du kan nu logga in.");
                 setAuthTab('login');
             } else {
                 let loginEmail = identifier;
@@ -987,12 +1053,12 @@
                     if (resolveData.email) {
                         loginEmail = resolveData.email;
                     } else {
-                        return alert("Hittade inget konto med det användarnamnet.");
+                        return showAlert("Hittade inget konto med det användarnamnet.");
                     }
                 }
 
                 let res = await supabaseClient.auth.signInWithPassword({ email: loginEmail, password });
-                if (res.error) alert("Fel: " + res.error.message);
+                if (res.error) showAlert("Fel: " + res.error.message);
                 else closeAuthModal();
             }
         }
