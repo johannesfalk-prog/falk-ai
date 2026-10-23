@@ -128,7 +128,6 @@ def ratelimit_handler(e):
 def index():
     return render_template("index.html", supabase_url=SUPABASE_URL, supabase_anon_key=SUPABASE_ANON_KEY)
 
-# --- CHAT SESSIONS & HISTORY ENDPOINTS ---
 @app.route("/api/sessions", methods=["GET", "POST"])
 def handle_sessions():
     user_id, _ = get_current_user_context()
@@ -153,7 +152,6 @@ def get_session_messages(session_id):
     res = supabase_client.table("chat_messages").select("*").eq("session_id", session_id).order("created_at", desc=False).execute()
     return jsonify(res.data or [])
 
-# --- JOURNAL & MOOD TRACKER ENDPOINTS ---
 @app.route("/api/journal", methods=["GET", "POST"])
 def handle_journal():
     user_id, _ = get_current_user_context()
@@ -178,7 +176,7 @@ def handle_journal():
     res = supabase_client.table("journal_entries").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
     return jsonify(res.data or [])
 
-# --- GDPR DATA DELETION ---
+# GDPR FULL ACCOUNT & DATA DELETION
 @app.route("/delete-user-data", methods=["DELETE"])
 def delete_user_data():
     user_id, _ = get_current_user_context()
@@ -186,10 +184,20 @@ def delete_user_data():
         return jsonify({"error": "Obehörig"}), 401
 
     try:
-        supabase_client.table("user_memories").delete().eq("user_id", user_id).execute()
-        supabase_client.table("journal_entries").delete().eq("user_id", user_id).execute()
-        supabase_client.table("chat_sessions").delete().eq("user_id", user_id).execute()
-        return jsonify({"status": "success", "message": "All din sparade data har raderats helt."}), 200
+        if supabase_client:
+            # 1. Radera applikationsdata
+            supabase_client.table("user_memories").delete().eq("user_id", user_id).execute()
+            supabase_client.table("journal_entries").delete().eq("user_id", user_id).execute()
+            supabase_client.table("chat_sessions").delete().eq("user_id", user_id).execute()
+            supabase_client.table("profiles").delete().eq("id", user_id).execute()
+            
+            # 2. Radera auth-konto via Admin API (Artikel 17)
+            try:
+                supabase_client.auth.admin.delete_user(user_id)
+            except Exception as admin_err:
+                print(f"[AUTH ADMIN DELETE FAIL]: {admin_err}", flush=True)
+
+        return jsonify({"status": "success", "message": "All data och ditt konto har raderats permanent."}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
