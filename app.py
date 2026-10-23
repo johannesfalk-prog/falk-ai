@@ -144,50 +144,59 @@ def create_checkout_session():
 
 @app.route("/stripe-webhook", methods=["POST"])
 def stripe_webhook():
+    payload = request.get_data(as_text=True)
+    sig_header = request.headers.get("Stripe-Signature")
+
+    if not STRIPE_WEBHOOK_SECRET or not sig_header:
+        print("[SECURITY ALERT]: Missing webhook secret or signature header", flush=True)
+        return jsonify({"error": "Unauthorized"}), 401
+
     try:
-        payload = request.get_data(as_text=True)
-        sig_header = request.headers.get("Stripe-Signature")
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, STRIPE_WEBHOOK_SECRET
+        )
+    except stripe.error.SignatureVerificationError as sig_err:
+        print(f"[WEBHOOK SIG FAIL]: Invalid signature - {sig_err}", flush=True)
+        return jsonify({"error": "Invalid signature"}), 400
+    except Exception as e:
+        print(f"[WEBHOOK PAYLOAD FAIL]: {e}", flush=True)
+        return jsonify({"error": "Invalid payload"}), 400
 
-        if STRIPE_WEBHOOK_SECRET and sig_header:
+    event_type = getattr(event, "type", None) or event.get("type")
+    data_object = getattr(getattr(event, "data", None), "object", {}) or event.get("data", {}).get("object", {})
+
+    if event_type == "checkout.session.completed":
+        user_id = getattr(data_object, "client_reference_id", None) or data_object.get("client_reference_id")
+        customer_id = getattr(data_object, "customer", None) or data_object.get("customer")
+
+        if user_id and supabase_client:
             try:
-                event = stripe.Webhook.construct_event(
-                    payload, sig_header, STRIPE_WEBHOOK_SECRET
-                )
-            except Exception as sig_err:
-                print(f"[WEBHOOK SIG FAIL]: {sig_err}", flush=True)
-                return jsonify({"error": "Invalid signature"}), 400
-        else:
-            event = request.get_json(silent=True) or {}
-
-        if not event:
-            return jsonify({"error": "Empty payload"}), 400
-
-        if isinstance(event, dict):
-            event_type = event.get("type")
-            data_object = event.get("data", {}).get("object", {})
-        else:
-            event_type = getattr(event, "type", None)
-            data_object = getattr(getattr(event, "data", None), "object", {})
-
-        if event_type == "checkout.session.completed":
-            if isinstance(data_object, dict):
-                user_id = data_object.get("client_reference_id")
-                customer_id = data_object.get("customer")
-            else:
-                user_id = getattr(data_object, "client_reference_id", None)
-                customer_id = getattr(data_object, "customer", None)
-
-            if user_id and supabase_client:
                 supabase_client.table("profiles").update({
                     "tier": "PRO",
                     "stripe_customer_id": customer_id
                 }).eq("id", user_id).execute()
+                print(f"[SUCCESS]: User {user_id} upgraded to PRO via verified webhook", flush=True)
+            except Exception as db_err:
+                print(f"[DB PROVISION ERROR]: {db_err}", flush=True)
+                return jsonify({"error": "Database update failed"}), 500
 
-        return jsonify({"status": "success"}), 200
+    return jsonify({"status": "success"}), 200
 
-    except Exception as crash_err:
-        print(f"[WEBHOOK CRASH]: {crash_err}", flush=True)
-        return jsonify({"error": f"Internal server error: {str(crash_err)}"}), 500
+# GDPR Endpoint: Right to be forgotten
+@app.route("/delete-user-data", methods=["DELETE"])
+def delete_user_data():
+    user_id, _ = get_current_user_context()
+    if user_id == "00000000-0000-0000-0000-000000000000":
+        return jsonify({"error": "Obehörig förfrågan"}), 401
+
+    try:
+        if supabase_client:
+            supabase_client.table("user_memories").delete().eq("user_id", user_id).execute()
+            supabase_client.table("journal_entries").delete().eq("user_id", user_id).execute()
+            supabase_client.table("profiles").update({"tier": "FREE"}).eq("id", user_id).execute()
+        return jsonify({"status": "success", "message": "Alla sparade minnen och sökdata har raderats."}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/chat", methods=["POST"])
 @limiter.limit(get_rate_limit_val, key_func=get_rate_limit_key)
