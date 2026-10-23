@@ -904,21 +904,37 @@
             const container = document.createElement('div');
             if (type === 'user') {
                 container.className = "flex justify-end";
-                container.innerHTML = `<div class="bg-bubble-user text-amber-50 px-4 py-3 rounded-2xl max-w-[85%] text-xs shadow-sm">${text}</div>`;
+                container.innerHTML = `<div class="bg-bubble-user text-amber-50 px-4 py-3 rounded-2xl max-w-[85%] text-xs shadow-sm leading-relaxed whitespace-pre-wrap">${text}</div>`;
             } else {
-                container.className = "flex flex-col items-start space-y-1.5";
+                container.className = "flex flex-col items-start space-y-1 my-1";
                 const msgId = 'msg-' + Math.random().toString(36).substr(2, 9);
+                
+                // Säkra textformatering och säkerställ ikonradens synlighet
+                const formattedText = text.replace(/
+/g, '<br>');
+
                 container.innerHTML = `
-                    <div class="bg-white/90 border border-stone-200/80 text-stone-800 px-4 py-3 rounded-2xl max-w-[90%] text-xs shadow-sm leading-relaxed" id="${msgId}">${text}</div>
-                    <div class="flex items-center space-x-2 px-1 py-1 text-stone-400 text-xs">
-                        <button onclick="speakText('${msgId}')" class="p-1.5 hover:text-stone-800 hover:bg-stone-200/60 rounded-lg transition" title="Höguppläsning"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg></button>
-                        <button onclick="openReminderModal('${msgId}')" class="p-1.5 hover:text-stone-800 hover:bg-stone-200/60 rounded-lg transition ml-1 text-deep-olive" title="Skapa påminnelse"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+                    <div class="bg-white/90 border border-stone-200/80 text-stone-800 px-4 py-3 rounded-2xl max-w-[90%] text-xs shadow-sm leading-relaxed font-normal whitespace-pre-wrap break-words" id="${msgId}">${formattedText}</div>
+                    
+                    <!-- IKONRAD MED EXPLICITA KNAPPAR OCH TOOLTIPS -->
+                    <div class="flex items-center space-x-2 px-1 py-0.5 text-stone-500 text-xs">
+                        <button onclick="speakText('${msgId}')" class="flex items-center space-x-1 p-1.5 hover:text-deep-olive hover:bg-stone-200/60 rounded-lg transition" title="Läs upp meddelande">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+                            <span class="text-[10px] font-semibold">Läs upp</span>
+                        </button>
+                        <span class="text-stone-300">•</span>
+                        <button onclick="openReminderModal('${msgId}')" class="flex items-center space-x-1 p-1.5 hover:text-deep-olive hover:bg-stone-200/60 rounded-lg transition text-deep-olive" title="Skapa påminnelse">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span class="text-[10px] font-semibold">Sätt påminnelse</span>
+                        </button>
                     </div>`;
             }
             list.appendChild(container);
             const containerBox = document.getElementById('chat-container');
             if (containerBox) containerBox.scrollTop = containerBox.scrollHeight;
         }
+
+        function _disabled_old_append(
 
         function speakText(id) {
             const el = document.getElementById(id);
