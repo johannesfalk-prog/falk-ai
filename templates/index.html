@@ -412,15 +412,42 @@
     </div>
 
     <div id="privacy-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
-        <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-lg w-full space-y-4 max-h-[80vh] flex flex-col shadow-2xl">
-            <div class="text-center pb-2 border-b border-stone-100"><h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2><p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p></div>
-            <div class="flex-1 overflow-y-auto text-xs text-stone-600 space-y-3 pr-2 leading-relaxed">
-                <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 font-medium">MEDICINSK FRISKRIVNING: FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling. FALK tillhandahåller inte medicinsk diagnostik, psykoterapi eller hälso- och sjukvård.</div>
+        <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-lg w-full space-y-4 max-h-[85vh] flex flex-col shadow-2xl">
+            <div class="text-center pb-2 border-b border-stone-100">
+                <h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2>
+                <p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p>
+            </div>
+            
+            <!-- FLIKAR FÖR JURIDIK -->
+            <div class="flex border-b border-stone-200 pb-2">
+                <button id="legal-tab-privacy" onclick="setLegalTab('privacy')" class="flex-1 text-center font-bold text-xs text-deep-olive border-b-2 border-deep-olive pb-1">
+                    Integritetspolicy (GDPR)
+                </button>
+                <button id="legal-tab-terms" onclick="setLegalTab('terms')" class="flex-1 text-center font-bold text-xs text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600">
+                    Användarvillkor (ToS)
+                </button>
+            </div>
+
+            <!-- INNEHÅLL INTEGRITETSPOLICY -->
+            <div id="legal-content-privacy" class="flex-1 overflow-y-auto text-xs text-stone-600 space-y-3 pr-2 leading-relaxed">
+                <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 font-medium">
+                    MEDICINSK FRISKRIVNING: FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling. FALK tillhandahåller inte medicinsk diagnostik, psykoterapi eller hälso- och sjukvård.
+                </div>
                 <p><strong>Personuppgiftsansvarig:</strong> FALK AI Services.</p>
                 <p><strong>Vilka data behandlas?</strong> E-postadress, användarnamn, samtalsloggar, krypterade minnesvektorer samt stämningsskattningar (hälsodata enligt Art. 9 GDPR).</p>
+                <p><strong>PII-Anonymisering:</strong> Dina samtal tvättas automatiskt på servernivå från e-postadresser, telefonnummer och personnummer innan de behandlas av AI-motorn.</p>
                 <p>Dina rättigheter att begära radering och dataportabilitet finns under Inställningar.</p>
             </div>
-            <button onclick="closePrivacyPolicyModal()" class="w-full bg-deep-olive text-amber-50 font-semibold py-2 rounded-xl text-xs transition">Jag förstår</button>
+
+            <!-- INNEHÅLL ANVÄNDARVILLKOR -->
+            <div id="legal-content-terms" class="hidden flex-1 overflow-y-auto text-xs text-stone-600 space-y-3 pr-2 leading-relaxed">
+                <p><strong>1. Tjänstens natur:</strong> FALK är en AI-driven samtalskompass för personlig reflektion. Svaren genereras av algoritmer och ska inte betraktas som juridisk, finansiell eller medicinsk rådgivning.</p>
+                <p><strong>2. Användaransvar:</strong> Du ansvarar själv för de beslut du fattar baserat på dina samtal med FALK. Det är förbjudet att använda tjänsten för olagliga ändamål eller att försöka manipulera systemets säkerhetsspärrar.</p>
+                <p><strong>3. Ansvarsbegränsning:</strong> FALK AI Services friskriver sig från allt ansvar för direkt eller indirekt skada som kan uppstå till följd av användning av tjänsten eller tillfälliga avbrott i tillgängligheten.</p>
+                <p><strong>4. Immateriella rättigheter:</strong> All källkod, design och varumärket FALK tillhör FALK AI Services.</p>
+            </div>
+
+            <button onclick="closePrivacyPolicyModal()" class="w-full bg-deep-olive text-amber-50 font-semibold py-2.5 rounded-xl text-xs transition shadow">Jag har tagit del av informationen</button>
         </div>
     </div>
 
@@ -1003,6 +1030,30 @@
 
         function openAuthModal() { document.getElementById('auth-modal').classList.remove('hidden'); }
         function closeAuthModal() { document.getElementById('auth-modal').classList.add('hidden'); }
+        
+        function setLegalTab(tab) {
+            const btnPrivacy = document.getElementById('legal-tab-privacy');
+            const btnTerms = document.getElementById('legal-tab-terms');
+            const contentPrivacy = document.getElementById('legal-content-privacy');
+            const contentTerms = document.getElementById('legal-content-terms');
+
+            if (tab === 'privacy') {
+                btnPrivacy.className = "flex-1 text-center font-bold text-xs text-deep-olive border-b-2 border-deep-olive pb-1";
+                btnTerms.className = "flex-1 text-center font-bold text-xs text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600";
+                contentPrivacy.classList.remove('hidden');
+                contentTerms.classList.add('hidden');
+            } else {
+                btnTerms.className = "flex-1 text-center font-bold text-xs text-deep-olive border-b-2 border-deep-olive pb-1";
+                btnPrivacy.className = "flex-1 text-center font-bold text-xs text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600";
+                contentTerms.classList.remove('hidden');
+                contentPrivacy.classList.add('hidden');
+            }
+        }
+        function openTermsModal() {
+            openPrivacyPolicyModal();
+            setLegalTab('terms');
+        }
+
         function openPrivacyPolicyModal() { document.getElementById('privacy-modal').classList.remove('hidden'); }
         function closePrivacyPolicyModal() { document.getElementById('privacy-modal').classList.add('hidden'); }
 
