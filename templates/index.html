@@ -7,80 +7,126 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 h-screen max-h-screen flex flex-col font-sans overflow-hidden">
+<body class="bg-slate-900 text-slate-100 h-screen max-h-screen flex font-sans overflow-hidden">
 
-    <!-- Header -->
-    <header class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950 flex-shrink-0">
-        <div class="flex items-center space-x-3">
-            <h1 class="text-2xl font-bold tracking-wider text-amber-500">FALK</h1>
-            <span id="tier-badge" class="text-xs font-semibold px-2.5 py-0.5 rounded bg-slate-800 text-slate-400">FREE</span>
+    <!-- Sidomeny (Sidebar) -->
+    <aside id="sidebar" class="w-64 bg-slate-950 border-r border-slate-800 flex flex-col justify-between flex-shrink-0 transition-all duration-300">
+        <div class="p-4 flex flex-col h-full min-h-0">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-xl font-bold tracking-wider text-amber-500">FALK</h1>
+                <span id="tier-badge" class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-400">FREE</span>
+            </div>
+
+            <!-- Navigering Flikar -->
+            <nav class="space-y-1 mb-6">
+                <button onclick="switchTab('chat')" id="nav-chat" class="w-full text-left px-3 py-2 rounded-xl text-sm font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center space-x-2">
+                    <span>💬</span> <span>Sokratisk Chatt</span>
+                </button>
+                <button onclick="switchTab('journal')" id="nav-journal" class="w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition flex items-center space-x-2">
+                    <span>📓</span> <span>Journal & Mående</span>
+                </button>
+                <button onclick="switchTab('settings')" id="nav-settings" class="w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition flex items-center space-x-2">
+                    <span>⚙️</span> <span>Inställningar & GDPR</span>
+                </button>
+            </nav>
+
+            <!-- Samtalshistorik -->
+            <div class="flex-1 flex flex-col min-h-0">
+                <div class="flex justify-between items-center mb-2 px-1">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Samtal</span>
+                    <button onclick="createNewSession()" class="text-xs text-amber-500 hover:text-amber-400 font-bold">+ Nytt</button>
+                </div>
+                <div id="session-list" class="flex-1 overflow-y-auto space-y-1 pr-1 text-xs text-slate-400">
+                    <p class="p-2 text-slate-600 italic">Logga in för historik</p>
+                </div>
+            </div>
+
+            <!-- Användarprofil i botten -->
+            <div id="auth-section" class="pt-4 border-t border-slate-800">
+                <button id="login-btn" onclick="openAuthModal()" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-medium py-2 rounded-xl text-xs transition">
+                    Logga in / Skapa konto
+                </button>
+                <div id="user-info" class="hidden flex justify-between items-center">
+                    <span id="user-email" class="text-xs text-slate-400 truncate max-w-[120px]"></span>
+                    <button onclick="logout()" class="text-xs text-rose-400 hover:text-rose-300">Logga ut</button>
+                </div>
+            </div>
         </div>
-        <div id="auth-section">
-            <button id="login-btn" onclick="openAuthModal()" class="bg-amber-600 hover:bg-amber-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
-                Logga in / Skapa konto
-            </button>
-            <div id="user-info" class="hidden flex items-center space-x-3">
-                <span id="user-email" class="text-sm text-slate-400"></span>
-                <button onclick="logout()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm px-3 py-1.5 rounded-lg border border-slate-700 transition">
-                    Logga ut
+    </aside>
+
+    <!-- Huvudområde (Main Content View) -->
+    <main class="flex-1 flex flex-col h-full min-w-0 bg-slate-900">
+        
+        <!-- VY 1: Sokratisk Chatt -->
+        <section id="view-chat" class="flex-1 flex flex-col h-full min-h-0 p-4 max-w-3xl w-full mx-auto">
+            <div id="chat-box" class="flex-1 overflow-y-auto space-y-4 pr-2 mb-4 min-h-0">
+                <div class="bg-slate-800/60 border border-slate-700/50 p-4 rounded-xl text-slate-300 text-sm">
+                    <p class="font-semibold text-amber-400 mb-1">FALK READY</p>
+                    <p>Välkommen. Beskriv vad du bär på just nu.</p>
+                </div>
+            </div>
+
+            <form id="chat-form" onsubmit="sendMessage(event)" class="flex space-x-2 flex-shrink-0">
+                <input type="text" id="message-input" placeholder="Beskriv din tanke..." 
+                       class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-amber-500 text-sm transition">
+                <button type="submit" id="send-btn" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold px-6 py-3 rounded-xl text-sm transition disabled:opacity-50">
+                    Skicka
+                </button>
+            </form>
+        </section>
+
+        <!-- VY 2: Journal & Mående Tracker -->
+        <section id="view-journal" class="hidden flex-1 flex flex-col h-full min-h-0 p-6 max-w-2xl w-full mx-auto overflow-y-auto">
+            <h2 class="text-xl font-bold text-white mb-4">CBT Journal & Måendetracker</h2>
+            
+            <form onsubmit="saveJournalEntry(event)" class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-4 mb-6">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-2">Hur mår du just nu? (1-5)</label>
+                    <div class="flex space-x-3">
+                        <button type="button" onclick="setMood(1)" class="mood-btn flex-1 py-2 bg-slate-800 hover:bg-rose-900/50 border border-slate-700 rounded-xl text-lg" data-score="1">😞 1</button>
+                        <button type="button" onclick="setMood(2)" class="mood-btn flex-1 py-2 bg-slate-800 hover:bg-amber-900/50 border border-slate-700 rounded-xl text-lg" data-score="2">😐 2</button>
+                        <button type="button" onclick="setMood(3)" class="mood-btn flex-1 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-lg" data-score="3">🙂 3</button>
+                        <button type="button" onclick="setMood(4)" class="mood-btn flex-1 py-2 bg-slate-800 hover:bg-emerald-900/50 border border-slate-700 rounded-xl text-lg" data-score="4">😊 4</button>
+                        <button type="button" onclick="setMood(5)" class="mood-btn flex-1 py-2 bg-slate-800 hover:bg-emerald-600/50 border border-slate-700 rounded-xl text-lg" data-score="5">🤩 5</button>
+                    </div>
+                </div>
+                <div>
+                    <textarea id="journal-text" rows="3" placeholder="Skriv en kort reflektion om vad som påverkar ditt mående idag..." 
+                              class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-sm text-slate-100 focus:outline-none focus:border-amber-500"></textarea>
+                </div>
+                <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold py-2.5 rounded-xl text-sm transition">Spara Journalinlägg</button>
+            </form>
+
+            <h3 class="text-sm font-semibold text-slate-400 mb-3 uppercase tracking-wider">Tidigare inlägg</h3>
+            <div id="journal-list" class="space-y-3">
+                <p class="text-slate-500 text-xs italic">Inga inlägg sparade ännu.</p>
+            </div>
+        </section>
+
+        <!-- VY 3: Inställningar & GDPR -->
+        <section id="view-settings" class="hidden flex-1 flex flex-col h-full min-h-0 p-6 max-w-xl w-full mx-auto overflow-y-auto">
+            <h2 class="text-xl font-bold text-white mb-6">Inställningar & Dataskydd</h2>
+            
+            <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-4 mb-6">
+                <h3 class="text-sm font-semibold text-amber-400 uppercase tracking-wider">Kontostatus</h3>
+                <div class="text-sm text-slate-300 space-y-1">
+                    <p>Status: <span id="settings-tier" class="font-bold text-slate-100">FREE</span></p>
+                    <p class="text-xs text-slate-500">PRO ger obegränsade samtalsstunder och personligt minne.</p>
+                </div>
+            </div>
+
+            <div class="bg-rose-950/20 p-5 rounded-2xl border border-rose-900/30 space-y-4">
+                <h3 class="text-sm font-semibold text-rose-400 uppercase tracking-wider">GDPR & Integritet</h3>
+                <p class="text-xs text-slate-400 leading-relaxed">Du har rätt att när som helst radera all personaliserad data, samtalshistorik och journalinlägg som sparats om dig.</p>
+                <button onclick="deleteMyData()" class="bg-rose-800 hover:bg-rose-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition">
+                    Radera all min data permanent
                 </button>
             </div>
-        </div>
-    </header>
+        </section>
 
-    <!-- Payment Success Banner -->
-    <div id="success-banner" class="hidden bg-emerald-900/80 border-b border-emerald-500/50 p-3 text-center text-emerald-200 text-sm font-semibold flex justify-between items-center px-6">
-        <span>🎉 Välkommen till FALK PRO! Ditt konto är nu uppgraderat med obegränsat minne och utökade samtal.</span>
-        <button onclick="document.getElementById('success-banner').classList.add('hidden')" class="text-emerald-400 hover:text-white ml-4">✕</button>
-    </div>
-
-    <!-- Main Chat Container -->
-    <main class="flex-1 max-w-3xl w-full mx-auto p-4 flex flex-col min-h-0 overflow-hidden">
-        <div id="chat-box" class="flex-1 overflow-y-auto space-y-4 pr-2 mb-4 min-h-0">
-            <div class="bg-slate-800/60 border border-slate-700/50 p-4 rounded-xl text-slate-300 text-sm">
-                <p class="font-semibold text-amber-400 mb-1">FALK READY</p>
-                <p>Välkommen. Beskriv vad du bär på just nu.</p>
-            </div>
-        </div>
-
-        <form id="chat-form" onsubmit="sendMessage(event)" class="flex space-x-2 flex-shrink-0">
-            <input type="text" id="message-input" placeholder="Beskriv din tanke..." 
-                   class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-amber-500 text-sm transition">
-            <button type="submit" id="send-btn" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold px-6 py-3 rounded-xl text-sm transition disabled:opacity-50">
-                Skicka
-            </button>
-        </form>
     </main>
 
-    <!-- Paywall Modal -->
-    <div id="paywall-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
-        <div class="bg-slate-900 border border-amber-500/30 p-6 rounded-2xl max-w-md w-full shadow-2xl text-center space-y-4">
-            <div class="w-12 h-12 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
-                🔒
-            </div>
-            <h2 class="text-xl font-bold text-white">Daglig gräns nådd</h2>
-            <p id="paywall-message" class="text-slate-300 text-sm">
-                Du har nått din dagliga gräns på 5 meddelanden. Uppgradera till PRO för obegränsade samtalsstunder och personligt minne.
-            </p>
-            
-            <div id="modal-auth-form" class="hidden space-y-3 text-left">
-                <p class="text-xs text-amber-400 font-semibold text-center">Ange e-post för att skapa konto/logga in och fortsätta:</p>
-                <input type="email" id="modal-email" placeholder="Din e-postadress" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
-                <input type="password" id="modal-password" placeholder="Välj ett lösenord (minst 6 tecken)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
-            </div>
-
-            <div class="pt-2 flex flex-col space-y-2">
-                <button onclick="upgradeToPro()" id="upgrade-btn" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-xl transition text-sm">
-                    Uppgradera till PRO (199 SEK/mån)
-                </button>
-                <button onclick="closePaywall()" class="text-slate-400 hover:text-slate-200 text-xs py-2 transition">
-                    Jag väntar till imorgon
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Auth Modal -->
+    <!-- Modaler (Auth & Paywall) -->
     <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl max-w-sm w-full space-y-4">
             <h2 class="text-lg font-bold text-white text-center">Logga in / Skapa konto</h2>
@@ -106,15 +152,11 @@
         }
 
         let userToken = null;
+        let activeSessionId = null;
+        let selectedMood = 3;
 
         async function initAuth() {
             if (!supabaseClient) return;
-
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('payment') === 'success') {
-                document.getElementById('success-banner').classList.remove('hidden');
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
 
             const { data: { session } } = await supabaseClient.auth.getSession();
             updateAuthUI(session);
@@ -129,7 +171,7 @@
             const userInfo = document.getElementById('user-info');
             const userEmail = document.getElementById('user-email');
             const tierBadge = document.getElementById('tier-badge');
-            const modalAuthForm = document.getElementById('modal-auth-form');
+            const settingsTier = document.getElementById('settings-tier');
 
             if (session) {
                 userToken = session.access_token;
@@ -137,56 +179,134 @@
                 userInfo.classList.remove('hidden');
                 userEmail.textContent = session.user.email;
                 tierBadge.textContent = "INLOGGAD";
-                tierBadge.className = "text-xs font-semibold px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30";
-                if (modalAuthForm) modalAuthForm.classList.add('hidden');
+                tierBadge.className = "text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30";
+                settingsTier.textContent = "PRO / INLOGGAD";
+                loadSessions();
+                loadJournal();
             } else {
                 userToken = null;
                 loginBtn.classList.remove('hidden');
                 userInfo.classList.add('hidden');
                 tierBadge.textContent = "FREE";
-                tierBadge.className = "text-xs font-semibold px-2.5 py-0.5 rounded bg-slate-800 text-slate-400";
+                tierBadge.className = "text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-400";
+                settingsTier.textContent = "FREE";
+                document.getElementById('session-list').innerHTML = `<p class="p-2 text-slate-600 italic">Logga in för historik</p>`;
             }
         }
 
-        function openAuthModal() {
-            document.getElementById('auth-modal').classList.remove('hidden');
-        }
+        function switchTab(tab) {
+            document.getElementById('view-chat').classList.add('hidden');
+            document.getElementById('view-journal').classList.add('hidden');
+            document.getElementById('view-settings').classList.add('hidden');
 
-        function closeAuthModal() {
-            document.getElementById('auth-modal').classList.add('hidden');
-        }
+            document.getElementById('nav-chat').className = "w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800 transition flex items-center space-x-2";
+            document.getElementById('nav-journal').className = "w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800 transition flex items-center space-x-2";
+            document.getElementById('nav-settings').className = "w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800 transition flex items-center space-x-2";
 
-        async function handleAuth(type) {
-            const email = document.getElementById('auth-email').value.trim();
-            const password = document.getElementById('auth-password').value.trim();
-
-            if (!email || !password) {
-                alert("Fyll i både e-post och lösenord.");
-                return;
-            }
-
-            let res;
-            if (type === 'signup') {
-                res = await supabaseClient.auth.signUp({ email, password });
-            } else {
-                res = await supabaseClient.auth.signInWithPassword({ email, password });
-            }
-
-            if (res.error) {
-                alert("Fel: " + res.error.message);
-            } else {
-                closeAuthModal();
+            if (tab === 'chat') {
+                document.getElementById('view-chat').classList.remove('hidden');
+                document.getElementById('nav-chat').className = "w-full text-left px-3 py-2 rounded-xl text-sm font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center space-x-2";
+            } else if (tab === 'journal') {
+                document.getElementById('view-journal').classList.remove('hidden');
+                document.getElementById('nav-journal').className = "w-full text-left px-3 py-2 rounded-xl text-sm font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center space-x-2";
+            } else if (tab === 'settings') {
+                document.getElementById('view-settings').classList.remove('hidden');
+                document.getElementById('nav-settings').className = "w-full text-left px-3 py-2 rounded-xl text-sm font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center space-x-2";
             }
         }
 
-        async function logout() {
-            if (supabaseClient) {
-                await supabaseClient.auth.signOut();
+        async function loadSessions() {
+            if (!userToken) return;
+            const res = await fetch('/api/sessions', { headers: { 'Authorization': `Bearer ${userToken}` } });
+            const sessions = await res.json();
+            const list = document.getElementById('session-list');
+            list.innerHTML = '';
+
+            sessions.forEach(s => {
+                const btn = document.createElement('button');
+                btn.className = `w-full text-left p-2 rounded-lg truncate transition ${activeSessionId === s.id ? 'bg-slate-800 text-amber-400' : 'hover:bg-slate-800/50'}`;
+                btn.textContent = s.title;
+                btn.onclick = () => selectSession(s.id);
+                list.appendChild(btn);
+            });
+        }
+
+        async function createNewSession() {
+            if (!userToken) return openAuthModal();
+            const res = await fetch('/api/sessions', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: `Samtal ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` })
+            });
+            const s = await res.json();
+            if (s.id) {
+                activeSessionId = s.id;
+                document.getElementById('chat-box').innerHTML = '';
+                loadSessions();
             }
-            userToken = null;
-            localStorage.clear();
-            sessionStorage.clear();
-            window.location.reload();
+        }
+
+        async function selectSession(id) {
+            activeSessionId = id;
+            loadSessions();
+            const res = await fetch(`/api/sessions/${id}/messages`, { headers: { 'Authorization': `Bearer ${userToken}` } });
+            const messages = await res.json();
+            const box = document.getElementById('chat-box');
+            box.innerHTML = '';
+            messages.forEach(m => appendMessage(m.sender === 'user' ? 'Du' : 'FALK', m.content, m.sender));
+        }
+
+        function setMood(score) {
+            selectedMood = score;
+            document.querySelectorAll('.mood-btn').forEach(btn => {
+                btn.classList.remove('border-amber-500', 'bg-slate-700');
+            });
+            event.currentTarget.classList.add('border-amber-500', 'bg-slate-700');
+        }
+
+        async function saveJournalEntry(e) {
+            e.preventDefault();
+            if (!userToken) return openAuthModal();
+            const text = document.getElementById('journal-text').value.trim();
+            if (!text) return;
+
+            await fetch('/api/journal', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mood_score: selectedMood, entry_text: text })
+            });
+
+            document.getElementById('journal-text').value = '';
+            loadJournal();
+        }
+
+        async function loadJournal() {
+            if (!userToken) return;
+            const res = await fetch('/api/journal', { headers: { 'Authorization': `Bearer ${userToken}` } });
+            const entries = await res.json();
+            const list = document.getElementById('journal-list');
+            list.innerHTML = '';
+
+            const moodEmojis = ['', '😞', '😐', '🙂', '😊', '🤩'];
+            entries.forEach(e => {
+                const div = document.createElement('div');
+                div.className = "bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs space-y-1";
+                div.innerHTML = `
+                    <div class="flex justify-between items-center font-semibold text-slate-400">
+                        <span>Skattning: ${moodEmojis[e.mood_score]} (${e.mood_score}/5)</span>
+                        <span>${new Date(e.created_at).toLocaleDateString('sv-SE')}</span>
+                    </div>
+                    <p class="text-slate-200 text-sm">${e.entry_text}</p>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        async function deleteMyData() {
+            if (!confirm("Är du helt säker? Detta kommer permanent radera all din samtalshistorik och dina journalinlägg.")) return;
+            await fetch('/delete-user-data', { method: 'DELETE', headers: { 'Authorization': `Bearer ${userToken}` } });
+            alert("All din data har raderats.");
+            location.reload();
         }
 
         async function sendMessage(e) {
@@ -196,6 +316,10 @@
             const message = input.value.trim();
 
             if (!message) return;
+
+            if (!activeSessionId && userToken) {
+                await createNewSession();
+            }
 
             appendMessage('Du', message, 'user');
             input.value = '';
@@ -208,21 +332,14 @@
                 const res = await fetch('/chat', {
                     method: 'POST',
                     headers: headers,
-                    body: JSON.stringify({ message: message })
+                    body: JSON.stringify({ message: message, session_id: activeSessionId })
                 });
 
                 const data = await res.json();
-
-                if (res.status === 429) {
-                    showPaywall(data.error);
-                    btn.disabled = false;
-                    return;
-                }
-
-                if (!res.ok) {
-                    appendMessage('FALK', data.error || 'Ett fel uppstod.', 'error');
-                } else {
+                if (res.ok) {
                     appendMessage('FALK', data.response, 'bot');
+                } else {
+                    appendMessage('FALK', data.error || 'Fel uppstod.', 'error');
                 }
             } catch (err) {
                 appendMessage('FALK', 'Kunde inte ansluta till servern.', 'error');
@@ -234,94 +351,30 @@
         function appendMessage(sender, text, type) {
             const box = document.getElementById('chat-box');
             const div = document.createElement('div');
-            
-            if (type === 'user') {
-                div.className = "bg-amber-950/40 border border-amber-800/40 p-4 rounded-xl text-amber-100 text-sm ml-8";
-            } else if (type === 'bot') {
-                div.className = "bg-slate-800/80 border border-slate-700/80 p-4 rounded-xl text-slate-200 text-sm mr-8";
-            } else {
-                div.className = "bg-rose-950/40 border border-rose-800/40 p-4 rounded-xl text-rose-200 text-sm";
-            }
-
+            div.className = type === 'user' ? "bg-amber-950/40 border border-amber-800/40 p-4 rounded-xl text-amber-100 text-sm ml-8" : "bg-slate-800/80 border border-slate-700/80 p-4 rounded-xl text-slate-200 text-sm mr-8";
             div.innerHTML = `<p class="font-semibold text-xs mb-1 opacity-70">${sender}</p><p>${text}</p>`;
             box.appendChild(div);
             box.scrollTop = box.scrollHeight;
         }
 
-        function showPaywall(msg) {
-            if (msg) document.getElementById('paywall-message').textContent = msg;
-            const modalAuthForm = document.getElementById('modal-auth-form');
-            if (!userToken) {
-                modalAuthForm.classList.remove('hidden');
-            } else {
-                modalAuthForm.classList.add('hidden');
-            }
-            document.getElementById('paywall-modal').classList.remove('hidden');
+        function openAuthModal() { document.getElementById('auth-modal').classList.remove('hidden'); }
+        function closeAuthModal() { document.getElementById('auth-modal').classList.add('hidden'); }
+
+        async function handleAuth(type) {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value.trim();
+            if (!email || !password) return alert("Fyll i både e-post och lösenord.");
+
+            let res = type === 'signup' ? await supabaseClient.auth.signUp({ email, password }) : await supabaseClient.auth.signInWithPassword({ email, password });
+            if (res.error) alert("Fel: " + res.error.message);
+            else closeAuthModal();
         }
 
-        function closePaywall() {
-            document.getElementById('paywall-modal').classList.add('hidden');
-        }
-
-        async function upgradeToPro() {
-            const upgradeBtn = document.getElementById('upgrade-btn');
-
-            if (!userToken) {
-                const email = document.getElementById('modal-email').value.trim();
-                const password = document.getElementById('modal-password').value.trim();
-
-                if (!email || !password) {
-                    alert("Fyll i e-post och lösenord för att skapa ditt konto och fortsätta till betalning.");
-                    return;
-                }
-
-                upgradeBtn.disabled = true;
-                upgradeBtn.textContent = "Skapar konto...";
-
-                let authRes = await supabaseClient.auth.signInWithPassword({ email, password });
-                if (authRes.error) {
-                    authRes = await supabaseClient.auth.signUp({ email, password });
-                }
-
-                if (authRes.error) {
-                    alert("Kunde inte autentisera: " + authRes.error.message);
-                    upgradeBtn.disabled = false;
-                    upgradeBtn.textContent = "Uppgradera till PRO (199 SEK/mån)";
-                    return;
-                }
-
-                const { data: { session } } = await supabaseClient.auth.getSession();
-                if (session) {
-                    userToken = session.access_token;
-                }
-            }
-
-            upgradeBtn.disabled = true;
-            upgradeBtn.textContent = "Förbereder betalning...";
-
-            try {
-                const res = await fetch('/create-checkout-session', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${userToken}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                const data = await res.json();
-
-                if (data.url) {
-                    window.location.href = data.url;
-                } else {
-                    alert("Kunde inte starta betalningen: " + (data.error || "Okänt fel"));
-                    upgradeBtn.disabled = false;
-                    upgradeBtn.textContent = "Uppgradera till PRO (199 SEK/mån)";
-                }
-            } catch (e) {
-                alert("Nätverksfel vid kontakt med betaltjänsten.");
-                upgradeBtn.disabled = false;
-                upgradeBtn.textContent = "Uppgradera till PRO (199 SEK/mån)";
-            }
+        async function logout() {
+            if (supabaseClient) await supabaseClient.auth.signOut();
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.reload();
         }
 
         initAuth();
