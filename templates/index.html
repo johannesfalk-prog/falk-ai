@@ -182,13 +182,7 @@
     <!-- MAIN VIEWS CONTAINER -->
     <main class="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
 
-        <!-- PULL TO REFRESH INDIKATOR (MOBIL) -->
-        <div id="ptr-indicator" class="w-full flex justify-center items-center py-2 -mt-10 transition-all duration-200 opacity-0 pointer-events-none z-20">
-            <div class="bg-white/90 border border-stone-300 px-3 py-1.5 rounded-full shadow-md flex items-center space-x-2 text-stone-600 text-xs font-semibold">
-                <svg id="ptr-icon" class="w-4 h-4 text-deep-olive transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
-                <span id="ptr-text">Dra för att uppdatera</span>
-            </div>
-        </div>
+        
 
         
         <!-- VY 1: CHATT -->
@@ -1131,86 +1125,7 @@
 
         initAuth();
 
-        // PULL-TO-REFRESH FÖR MOBIL
-        let touchStartY = 0;
-        let touchMoveY = 0;
-        let isPulling = false;
-
-        function initPullToRefresh() {
-            const mainContainer = document.querySelector('main');
-            const ptrIndicator = document.getElementById('ptr-indicator');
-            const ptrIcon = document.getElementById('ptr-icon');
-            const ptrText = document.getElementById('ptr-text');
-
-            if (!mainContainer || !ptrIndicator) return;
-
-            window.addEventListener('touchstart', (e) => {
-                const activeScrollable = document.querySelector('section:not(.hidden) .overflow-y-auto');
-                const scrollTop = activeScrollable ? activeScrollable.scrollTop : 0;
-                
-                if (scrollTop <= 0) {
-                    touchStartY = e.touches[0].clientY;
-                    isPulling = true;
-                } else {
-                    isPulling = false;
-                }
-            }, { passive: true });
-
-            window.addEventListener('touchmove', (e) => {
-                if (!isPulling) return;
-                touchMoveY = e.touches[0].clientY;
-                const distance = touchMoveY - touchStartY;
-
-                if (distance > 30 && distance < 150) {
-                    ptrIndicator.style.marginTop = `${Math.min(distance - 40, 20)}px`;
-                    ptrIndicator.style.opacity = '1';
-                    if (distance > 90) {
-                        ptrText.textContent = "Släpp för att uppdatera";
-                        ptrIcon.style.transform = "rotate(180deg)";
-                    } else {
-                        ptrText.textContent = "Dra för att uppdatera";
-                        ptrIcon.style.transform = "rotate(0deg)";
-                    }
-                }
-            }, { passive: true });
-
-            window.addEventListener('touchend', async () => {
-                if (!isPulling) return;
-                const distance = touchMoveY - touchStartY;
-                
-                if (distance > 90) {
-                    ptrText.textContent = "Uppdaterar...";
-                    ptrIcon.classList.add("animate-spin");
-                    
-                    // Tyst datasynk från Supabase
-                    try {
-                        if (typeof loadSessions === 'function') await loadSessions();
-                        if (typeof loadJournal === 'function') await loadJournal();
-                        if (activeSessionId && typeof selectSession === 'function') await selectSession(activeSessionId);
-                    } catch (err) {
-                        console.error("PTR Sync failed", err);
-                    }
-
-                    setTimeout(() => {
-                        ptrIndicator.style.marginTop = '-2.5rem';
-                        ptrIndicator.style.opacity = '0';
-                        ptrIcon.classList.remove("animate-spin");
-                        ptrIcon.style.transform = "rotate(0deg)";
-                    }, 500);
-                } else {
-                    ptrIndicator.style.marginTop = '-2.5rem';
-                    ptrIndicator.style.opacity = '0';
-                }
-                isPulling = false;
-                touchStartY = 0;
-                touchMoveY = 0;
-            });
-        }
-
-        // Kör vid uppstart
-        document.addEventListener('DOMContentLoaded', initPullToRefresh);
-        if (document.readyState === 'complete' || document.readyState === 'interactive') {
-            initPullToRefresh();
+        
         }
 
     </script>
