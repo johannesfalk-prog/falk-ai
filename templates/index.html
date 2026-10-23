@@ -54,7 +54,7 @@
         </div>
     </aside>
 
-    <!-- Huvudområde (Main Content View) -->
+    <!-- Huvudområde -->
     <main class="flex-1 flex flex-col h-full min-w-0 bg-slate-900">
         
         <!-- VY 1: Sokratisk Chatt -->
@@ -66,13 +66,18 @@
                 </div>
             </div>
 
-            <form id="chat-form" onsubmit="sendMessage(event)" class="flex space-x-2 flex-shrink-0">
-                <input type="text" id="message-input" placeholder="Beskriv din tanke..." 
-                       class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-amber-500 text-sm transition">
-                <button type="submit" id="send-btn" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold px-6 py-3 rounded-xl text-sm transition disabled:opacity-50">
-                    Skicka
-                </button>
-            </form>
+            <div class="flex-shrink-0 space-y-2">
+                <form id="chat-form" onsubmit="sendMessage(event)" class="flex space-x-2">
+                    <input type="text" id="message-input" placeholder="Beskriv din tanke..." 
+                           class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-amber-500 text-sm transition">
+                    <button type="submit" id="send-btn" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold px-6 py-3 rounded-xl text-sm transition disabled:opacity-50">
+                        Skicka
+                    </button>
+                </form>
+                <p class="text-[10px] text-slate-500 text-center">
+                    FALK är ett AI-verktyg för självreflektion, inte sjukvård. Vid akuta kriser eller suicidtankar, ring 112 eller 90101 (MIND).
+                </p>
+            </div>
         </section>
 
         <!-- VY 2: Journal & Mående Tracker -->
@@ -116,23 +121,32 @@
             </div>
 
             <div class="bg-rose-950/20 p-5 rounded-2xl border border-rose-900/30 space-y-4">
-                <h3 class="text-sm font-semibold text-rose-400 uppercase tracking-wider">GDPR & Integritet</h3>
-                <p class="text-xs text-slate-400 leading-relaxed">Du har rätt att när som helst radera all personaliserad data, samtalshistorik och journalinlägg som sparats om dig.</p>
-                <button onclick="deleteMyData()" class="bg-rose-800 hover:bg-rose-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition">
-                    Radera all min data permanent
-                </button>
+                <h3 class="text-sm font-semibold text-rose-400 uppercase tracking-wider">GDPR & Integritet (Artikel 17 & 20)</h3>
+                <p class="text-xs text-slate-400 leading-relaxed">Du har rätt att när som helst radera all personaliserad data, samtalsminnen och journalinlägg permanent.</p>
+                <div class="flex space-x-3 pt-2">
+                    <button onclick="deleteMyData()" class="bg-rose-800 hover:bg-rose-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition">
+                        Radera all min data permanent
+                    </button>
+                </div>
             </div>
         </section>
 
     </main>
 
-    <!-- Modaler (Auth & Paywall) -->
+    <!-- Auth Modal med GDPR Samtycke -->
     <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl max-w-sm w-full space-y-4">
             <h2 class="text-lg font-bold text-white text-center">Logga in / Skapa konto</h2>
             <div class="space-y-3">
                 <input type="email" id="auth-email" placeholder="E-post" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
                 <input type="password" id="auth-password" placeholder="Lösenord" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500">
+                
+                <div id="gdpr-consent-box" class="pt-2">
+                    <label class="flex items-start space-x-2 text-xs text-slate-400 cursor-pointer">
+                        <input type="checkbox" id="auth-gdpr-check" class="mt-0.5 rounded border-slate-800 bg-slate-950 text-amber-500 focus:ring-amber-500">
+                        <span>Jag samtycker till att FALK behandlar mina uppgifter om mentalt mående i enlighet med GDPR för Sokratisk guidning.</span>
+                    </label>
+                </div>
             </div>
             <div class="flex space-x-2 pt-2">
                 <button onclick="handleAuth('login')" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-semibold py-2 rounded-xl text-sm transition">Logga in</button>
@@ -303,7 +317,7 @@
         }
 
         async function deleteMyData() {
-            if (!confirm("Är du helt säker? Detta kommer permanent radera all din samtalshistorik och dina journalinlägg.")) return;
+            if (!confirm("Är du helt säker? Detta kommer permanent radera all din samtalshistorik, minnen och journalinlägg.")) return;
             await fetch('/delete-user-data', { method: 'DELETE', headers: { 'Authorization': `Bearer ${userToken}` } });
             alert("All din data har raderats.");
             location.reload();
@@ -363,7 +377,13 @@
         async function handleAuth(type) {
             const email = document.getElementById('auth-email').value.trim();
             const password = document.getElementById('auth-password').value.trim();
+            const gdprCheck = document.getElementById('auth-gdpr-check').checked;
+
             if (!email || !password) return alert("Fyll i både e-post och lösenord.");
+
+            if (type === 'signup' && !gdprCheck) {
+                return alert("Du måste samtycka till behandlingen av hälsodata för att kunna skapa ett konto på FALK.");
+            }
 
             let res = type === 'signup' ? await supabaseClient.auth.signUp({ email, password }) : await supabaseClient.auth.signInWithPassword({ email, password });
             if (res.error) alert("Fel: " + res.error.message);
