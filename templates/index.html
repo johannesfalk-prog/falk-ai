@@ -9,7 +9,7 @@
 </head>
 <body class="bg-slate-900 text-slate-100 h-screen max-h-screen flex flex-col font-sans overflow-hidden">
 
-    <!-- Header (Låst i toppen) -->
+    <!-- Header -->
     <header class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950 flex-shrink-0">
         <div class="flex items-center space-x-3">
             <h1 class="text-2xl font-bold tracking-wider text-amber-500">FALK</h1>
@@ -28,9 +28,14 @@
         </div>
     </header>
 
-    <!-- Main Chat Container (Låst höjd, isolerad chatt-scroll) -->
+    <!-- Payment Success Banner -->
+    <div id="success-banner" class="hidden bg-emerald-900/80 border-b border-emerald-500/50 p-3 text-center text-emerald-200 text-sm font-semibold flex justify-between items-center px-6">
+        <span>🎉 Välkommen till FALK PRO! Ditt konto är nu uppgraderat med obegränsat minne och utökade samtal.</span>
+        <button onclick="document.getElementById('success-banner').classList.add('hidden')" class="text-emerald-400 hover:text-white ml-4">✕</button>
+    </div>
+
+    <!-- Main Chat Container -->
     <main class="flex-1 max-w-3xl w-full mx-auto p-4 flex flex-col min-h-0 overflow-hidden">
-        <!-- Chat Box (Enda elementet som får scrolla) -->
         <div id="chat-box" class="flex-1 overflow-y-auto space-y-4 pr-2 mb-4 min-h-0">
             <div class="bg-slate-800/60 border border-slate-700/50 p-4 rounded-xl text-slate-300 text-sm">
                 <p class="font-semibold text-amber-400 mb-1">FALK READY</p>
@@ -38,7 +43,6 @@
             </div>
         </div>
 
-        <!-- Input Form (Låst i botten) -->
         <form id="chat-form" onsubmit="sendMessage(event)" class="flex space-x-2 flex-shrink-0">
             <input type="text" id="message-input" placeholder="Beskriv din tanke..." 
                    class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-amber-500 text-sm transition">
@@ -76,7 +80,7 @@
         </div>
     </div>
 
-    <!-- Auth Modal (standalone) -->
+    <!-- Auth Modal -->
     <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl max-w-sm w-full space-y-4">
             <h2 class="text-lg font-bold text-white text-center">Logga in / Skapa konto</h2>
@@ -105,6 +109,12 @@
 
         async function initAuth() {
             if (!supabaseClient) return;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('payment') === 'success') {
+                document.getElementById('success-banner').classList.remove('hidden');
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
 
             const { data: { session } } = await supabaseClient.auth.getSession();
             updateAuthUI(session);
