@@ -71,8 +71,8 @@
                         Skicka
                     </button>
                 </form>
-                <p class="text-[10px] text-slate-500 text-center">
-                    FALK är ett AI-verktyg för självreflektion, inte sjukvård. Vid akuta kriser eller suicidtankar, ring 112 eller 90101 (MIND).
+                <p class="text-[10px] text-slate-500 text-center leading-tight">
+                    FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling. FALK tillhandahåller inte medicinsk diagnostik, psykoterapi eller hälso- och sjukvård. Vid akuta kriser, ring 112 eller 90101 (MIND).
                 </p>
             </div>
         </section>
@@ -150,7 +150,7 @@
                 <div id="gdpr-consent-box" class="pt-2">
                     <label class="flex items-start space-x-2 text-xs text-slate-400 cursor-pointer">
                         <input type="checkbox" id="auth-gdpr-check" class="mt-0.5 rounded border-slate-800 bg-slate-950 text-amber-500 focus:ring-amber-500">
-                        <span>Jag samtycker till behandling av mina uppgifter om mentalt mående enligt <button type="button" onclick="openPrivacyPolicyModal()" class="text-amber-400 underline">Integritetspolicyn</button>.</span>
+                        <span>Jag samtycker till behandling av mina uppgifter och bekräftar att FALK är ett verktyg för självhjälp/personlig utveckling (ej sjukvård/psykoterapi) enligt <button type="button" onclick="openPrivacyPolicyModal()" class="text-amber-400 underline">Integritetspolicyn</button>.</span>
                     </label>
                 </div>
             </div>
@@ -165,8 +165,11 @@
     <!-- GDPR Privacy Policy Modal -->
     <div id="privacy-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl max-w-xl w-full space-y-4 max-h-[80vh] flex flex-col">
-            <h2 class="text-lg font-bold text-white">Integritetspolicy & GDPR-information (Art. 13/14)</h2>
+            <h2 class="text-lg font-bold text-white">Integritetspolicy & Viktig Friskrivning</h2>
             <div class="flex-1 overflow-y-auto text-xs text-slate-300 space-y-3 pr-2 leading-relaxed">
+                <div class="p-3 bg-amber-950/40 border border-amber-800/50 rounded-xl text-amber-200 font-medium">
+                    MEDICINSK FRISKRIVNING: FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling. FALK tillhandahåller inte medicinsk diagnostik, psykoterapi eller hälso- och sjukvård.
+                </div>
                 <p><strong>Personuppgiftsansvarig:</strong> FALK AI Services.</p>
                 <p><strong>Vilka data behandlas?</strong> E-postadress, samtalsloggar, krypterade minnesvektorer samt stämningsskattningar (hälsodata enligt Art. 9 GDPR).</p>
                 <p><strong>Ändamål:</strong> Att tillhandahålla Sokratisk CBT-guidning och personanpassat minne över tid.</p>
@@ -446,7 +449,7 @@
             if (!email || !password) return alert("Fyll i både e-post och lösenord.");
 
             if (type === 'signup' && !gdprCheck) {
-                return alert("Du måste samtycka till Integritetspolicyn för att kunna skapa ett konto på FALK.");
+                return alert("Du måste bocka i samtyckesrutan och godkänna Integritetspolicyn för att skapa ett konto.");
             }
 
             let res = type === 'signup' ? await supabaseClient.auth.signUp({ email, password }) : await supabaseClient.auth.signInWithPassword({ email, password });
