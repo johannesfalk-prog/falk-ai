@@ -1027,7 +1027,7 @@
             entries.forEach(e => {
                 const div = document.createElement('div');
                 div.className = "bg-white p-3.5 rounded-xl border border-stone-200 text-xs space-y-1 shadow-sm flex justify-between items-start";
-                const safeText = e.entry_text.replace(/'/g, "\\'");
+                const safeText = (e.entry_text || '').replaceAll("'", "\\'");
                 div.innerHTML = `
                     <div class="space-y-1 flex-1 pr-2">
                         <div class="flex justify-between items-center font-bold text-stone-500"><span>Status: ${moodEmojis[e.mood_score] || '🙂'} (${e.mood_score}/5)</span><span>${new Date(e.created_at).toLocaleDateString('sv-SE')}</span></div>
