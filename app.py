@@ -74,7 +74,7 @@ def build_system_prompt(focus_data=None):
 
 def generate_session_title(user_message):
     if not groq_client:
-        return user_message[:25] + "..."
+        return user_message[:25]
     try:
         res = groq_client.chat.completions.create(
             model="llama-3.1-8b-instant",
@@ -188,7 +188,7 @@ def resolve_username():
         except Exception as e:
             print(f"[USERNAME RESOLVE FAIL]: {e}", flush=True)
             
-    return jsonify({"error": "Användarnamnet kunde inte hittas."}), 444
+    return jsonify({"error": "Användarnamnet kunde inte hittas."}), 404
 
 @app.route("/api/profile", methods=["GET", "POST"])
 def handle_profile():
@@ -385,20 +385,23 @@ def chat():
         if ai_response:
             if session_id and user_id != "00000000-0000-0000-0000-000000000000":
                 try:
-                    # Spara meddelanden
                     supabase_client.table("chat_messages").insert([
                         {"session_id": session_id, "sender": "user", "content": user_message},
                         {"session_id": session_id, "sender": "bot", "content": ai_response}
                     ]).execute()
 
-                    # Auto-döp om samtalet om det fortfarande heter standardnamn
-                    sess_check = supabase_client.table("chat_sessions").select("title").eq("id", session_id).single().execute()
-                    if sess_check.data and (sess_check.data.get("title", "").startswith("Samtal") or sess_check.data.get("title") == "Nytt samtalsrum"):
-                        new_title = generate_session_title(user_message)
-                        supabase_client.table("chat_sessions").update({"title": new_title}).eq("id", session_id).execute()
+                    try:
+                        sess_check = supabase_client.table("chat_sessions").select("title").eq("id", session_id).execute()
+                        if sess_check.data and len(sess_check.data) > 0:
+                            current_title = sess_check.data[0].get("title", "")
+                            if current_title.startswith("Samtal") or current_title == "Nytt samtalsrum":
+                                new_title = generate_session_title(user_message)
+                                supabase_client.table("chat_sessions").update({"title": new_title}).eq("id", session_id).execute()
+                    except Exception as title_err:
+                        print(f"[AUTO-TITLE FAIL]: {title_err}", flush=True)
 
                 except Exception as db_err:
-                    print(f"[CHAT MSG/TITLE SAVE FAIL]: {db_err}", flush=True)
+                    print(f"[CHAT MSG DB SAVE FAIL]: {db_err}", flush=True)
 
             return jsonify({
                 "response": ai_response,
