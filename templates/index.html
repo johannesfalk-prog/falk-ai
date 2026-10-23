@@ -757,8 +757,8 @@
                         ${text}
                     </div>
                     
-                    <!-- IKONRAD MED SVG OCH LÄTTA MOBIL-TOUCHZONER -->
-                    <div class="flex items-center space-x-2.5 px-1 py-1 text-stone-400 text-xs">
+                    <!-- IKONRAD MED SVG OCH - / + TANGENTER MED STOR TOUCHZON -->
+                    <div class="flex items-center space-x-2 px-1 py-1 text-stone-400 text-xs">
                         
                         <!-- Röst -->
                         <button onclick="speakText('${msgId}')" class="p-1.5 hover:text-stone-800 hover:bg-stone-200/60 rounded-lg transition" title="Höguppläsning">
@@ -780,14 +780,14 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"/></svg>
                         </button>
 
-                        <!-- Kortare -->
-                        <button onclick="requestShorter()" class="px-2 py-1 bg-stone-200/50 hover:bg-stone-300/60 text-[10px] font-semibold text-stone-700 rounded-md transition" title="Kortare svar">
-                            Kortare
+                        <!-- Kortare (-) SVG -->
+                        <button onclick="requestShorter()" class="p-1.5 hover:text-stone-800 hover:bg-stone-200/60 rounded-lg transition font-bold" title="Kortare svar">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
                         </button>
 
-                        <!-- Längre -->
-                        <button onclick="requestLonger()" class="px-2 py-1 bg-stone-200/50 hover:bg-stone-300/60 text-[10px] font-semibold text-stone-700 rounded-md transition" title="Längre svar">
-                            Längre
+                        <!-- Längre (+) SVG -->
+                        <button onclick="requestLonger()" class="p-1.5 hover:text-stone-800 hover:bg-stone-200/60 rounded-lg transition font-bold" title="Längre svar">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                         </button>
 
                         <!-- Påminnelse / Spara -->

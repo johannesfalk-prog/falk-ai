@@ -149,7 +149,7 @@ def get_rate_limit_val():
     _, tier = get_current_user_context()
     if tier == "PRO":
         return "60 per day"
-    return "5 per day"
+    return "6 per day"
 
 limiter = Limiter(
     get_rate_limit_key,
