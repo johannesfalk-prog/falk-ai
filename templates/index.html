@@ -120,11 +120,11 @@
                 </div>
             </div>
 
-            <!-- CHATTBOX -->
-            <div id="chat-box" class="flex-1 overflow-y-auto space-y-4 pr-1 mb-2 min-h-0">
+            <!-- CHATTCONTAINER -->
+            <div id="chat-container" class="flex-1 overflow-y-auto pr-1 mb-2 min-h-0 flex flex-col">
                 
-                <!-- ONBOARDING CARDS (9 KORT) -->
-                <div id="onboarding-cards" class="space-y-2.5 py-2">
+                <!-- ONBOARDING CARDS -->
+                <div id="onboarding-cards" class="space-y-2.5 py-2 mb-4">
                     <div onclick="selectOnboarding('Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
                         <p class="text-xs font-bold text-stone-800">✨ Mening & livsriktning</p>
                         <p class="text-xs text-stone-600 italic">"Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det."</p>
@@ -170,6 +170,9 @@
                         <p class="text-xs text-stone-600 italic">"Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet."</p>
                     </div>
                 </div>
+
+                <!-- SEPARAT ELEMENT FÖR SJÄLVA CHATTMEDDELANDENA -->
+                <div id="chat-messages-list" class="space-y-4"></div>
 
             </div>
 
@@ -338,11 +341,10 @@
         </div>
     </div>
 
-    <!-- AUTH MODAL MED TYDLIGA FLIKAR -->
+    <!-- AUTH MODAL -->
     <div id="auth-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl">
             
-            <!-- FLIKVÄXLARE -->
             <div class="flex border-b border-stone-200 pb-2">
                 <button id="tab-btn-login" onclick="setAuthTab('login')" class="flex-1 text-center font-bold text-sm text-deep-olive border-b-2 border-deep-olive pb-1">
                     Logga in
@@ -352,15 +354,11 @@
                 </button>
             </div>
 
-            <!-- FORMULÄRFÄLT -->
             <div class="space-y-3">
-                
-                <!-- BARA VID SKAPA KONTO -->
                 <div id="wrap-username" class="hidden">
                     <input type="text" id="auth-username" placeholder="Välj Användarnamn" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive">
                 </div>
 
-                <!-- BÅDE LOGGA IN OCH SKAPA KONTO -->
                 <div id="wrap-identifier">
                     <input type="text" id="auth-identifier" placeholder="E-post eller Användarnamn" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive">
                 </div>
@@ -369,7 +367,6 @@
                     <input type="password" id="auth-password" placeholder="Lösenord" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive">
                 </div>
                 
-                <!-- BARA VID SKAPA KONTO -->
                 <div id="wrap-gdpr" class="hidden pt-1">
                     <label class="flex items-start space-x-2 text-[11px] text-stone-600 cursor-pointer">
                         <input type="checkbox" id="auth-gdpr-check" class="mt-0.5 rounded border-stone-300 text-deep-olive focus:ring-deep-olive">
@@ -378,7 +375,6 @@
                 </div>
             </div>
 
-            <!-- KNAPPAR -->
             <div class="pt-2">
                 <button id="auth-submit-btn" onclick="submitAuth()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">
                     Logga in
@@ -418,7 +414,7 @@
         let activeSessionId = null;
         let selectedMood = 3;
         let userProfile = null;
-        let currentAuthMode = 'login'; // 'login' eller 'signup'
+        let currentAuthMode = 'login';
 
         let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motivation: 50 };
 
@@ -557,8 +553,10 @@
         }
 
         function selectOnboarding(text) {
-            document.getElementById('onboarding-cards').classList.add('hidden');
-            document.getElementById('message-input').value = text;
+            const cards = document.getElementById('onboarding-cards');
+            if (cards) cards.classList.add('hidden');
+            const input = document.getElementById('message-input');
+            if (input) input.value = text;
             sendMessage(new Event('submit'));
         }
 
@@ -588,8 +586,9 @@
             const s = await res.json();
             if (s.id) {
                 activeSessionId = s.id;
-                document.getElementById('chat-box').innerHTML = '';
-                document.getElementById('onboarding-cards').classList.remove('hidden');
+                document.getElementById('chat-messages-list').innerHTML = '';
+                const cards = document.getElementById('onboarding-cards');
+                if (cards) cards.classList.remove('hidden');
                 loadSessions();
             }
         }
@@ -598,11 +597,14 @@
             activeSessionId = id;
             loadSessions();
             toggleSidebar();
-            document.getElementById('onboarding-cards').classList.add('hidden');
+            
+            const cards = document.getElementById('onboarding-cards');
+            if (cards) cards.classList.add('hidden');
+
             const res = await fetch(`/api/sessions/${id}/messages`, { headers: { 'Authorization': `Bearer ${userToken}` } });
             const messages = await res.json();
-            const box = document.getElementById('chat-box');
-            box.innerHTML = '';
+            const list = document.getElementById('chat-messages-list');
+            list.innerHTML = '';
             messages.forEach(m => appendMessage(m.sender === 'user' ? 'Du' : 'FALK', m.content, m.sender));
         }
 
@@ -671,22 +673,24 @@
         function closeFocusModal() { document.getElementById('focus-modal').classList.add('hidden'); }
 
         async function sendMessage(e) {
-            e.preventDefault();
+            if (e && e.preventDefault) e.preventDefault();
+
             const input = document.getElementById('message-input');
             const btn = document.getElementById('send-btn');
-            const message = input.value.trim();
+            const message = input ? input.value.trim() : '';
 
             if (!message) return;
 
-            document.getElementById('onboarding-cards').classList.add('hidden');
+            const cards = document.getElementById('onboarding-cards');
+            if (cards) cards.classList.add('hidden');
 
             if (!activeSessionId && userToken) {
                 await createNewSession();
             }
 
             appendMessage('Du', message, 'user');
-            input.value = '';
-            btn.disabled = true;
+            if (input) input.value = '';
+            if (btn) btn.disabled = true;
 
             document.getElementById('thinking-indicator').classList.remove('hidden');
 
@@ -715,12 +719,14 @@
                 appendMessage('FALK', 'Kunde inte ansluta till servern.', 'error');
             } finally {
                 document.getElementById('thinking-indicator').classList.add('hidden');
-                btn.disabled = false;
+                if (btn) btn.disabled = false;
             }
         }
 
         function appendMessage(sender, text, type) {
-            const box = document.getElementById('chat-box');
+            const list = document.getElementById('chat-messages-list');
+            if (!list) return;
+
             const container = document.createElement('div');
             
             if (type === 'user') {
@@ -749,12 +755,16 @@
                     </div>
                 `;
             }
-            box.appendChild(container);
-            box.scrollTop = box.scrollHeight;
+            list.appendChild(container);
+
+            const containerBox = document.getElementById('chat-container');
+            if (containerBox) containerBox.scrollTop = containerBox.scrollHeight;
         }
 
         function speakText(id) {
-            const text = document.getElementById(id).textContent;
+            const el = document.getElementById(id);
+            if (!el) return;
+            const text = el.textContent;
             if ('speechSynthesis' in window) {
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'sv-SE';
@@ -765,22 +775,27 @@
         }
 
         function regenerateLast() {
-            document.getElementById('message-input').value = "Kan du fördjupa detta svar med ett nytt Sokratiskt perspektiv?";
+            const input = document.getElementById('message-input');
+            if (input) input.value = "Kan du fördjupa detta svar med ett nytt Sokratiskt perspektiv?";
             sendMessage(new Event('submit'));
         }
 
         function requestShorter() {
-            document.getElementById('message-input').value = "Gör ditt förra svar ännu kortare och mer koncis.";
+            const input = document.getElementById('message-input');
+            if (input) input.value = "Gör ditt förra svar ännu kortare och mer koncis.";
             sendMessage(new Event('submit'));
         }
 
         function requestLonger() {
-            document.getElementById('message-input').value = "Utveckla ditt förra svar lite mer ingående.";
+            const input = document.getElementById('message-input');
+            if (input) input.value = "Utveckla ditt förra svar lite mer ingående.";
             sendMessage(new Event('submit'));
         }
 
         async function saveAsReminder(id) {
-            const text = document.getElementById(id).textContent;
+            const el = document.getElementById(id);
+            if (!el) return;
+            const text = el.textContent;
             if (!userToken) return openAuthModal();
             await fetch('/api/journal', {
                 method: 'POST',
@@ -799,9 +814,10 @@
         }
 
         async function saveJournalEntry(e) {
-            e.preventDefault();
+            if (e && e.preventDefault) e.preventDefault();
             if (!userToken) return openAuthModal();
-            const text = document.getElementById('journal-text').value.trim();
+            const input = document.getElementById('journal-text');
+            const text = input ? input.value.trim() : '';
             if (!text) return;
 
             await fetch('/api/journal', {
@@ -810,7 +826,7 @@
                 body: JSON.stringify({ mood_score: selectedMood, entry_text: text })
             });
 
-            document.getElementById('journal-text').value = '';
+            if (input) input.value = '';
             loadJournal();
         }
 
@@ -819,6 +835,7 @@
             const res = await fetch('/api/journal', { headers: { 'Authorization': `Bearer ${userToken}` } });
             const entries = await res.json();
             const list = document.getElementById('journal-list');
+            if (!list) return;
             list.innerHTML = '';
 
             const moodEmojis = ['', '😞', '😐', '🙂', '😊', '🤩'];
@@ -839,8 +856,10 @@
         async function exportMyData() {
             if (!userToken) return openAuthModal();
             const btn = document.getElementById('export-btn');
-            btn.disabled = true;
-            btn.textContent = "Genererar fil...";
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = "Genererar fil...";
+            }
 
             try {
                 const res = await fetch('/api/export-user-data', {
@@ -865,8 +884,10 @@
             } catch (err) {
                 alert("Nätverksfel vid export: " + err.message);
             } finally {
-                btn.disabled = false;
-                btn.textContent = "📥 Exportera min data (JSON)";
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = "📥 Exportera min data (JSON)";
+                }
             }
         }
 
