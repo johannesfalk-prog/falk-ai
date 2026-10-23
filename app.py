@@ -34,15 +34,16 @@ groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 supabase_client: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY) if SUPABASE_URL and SUPABASE_SERVICE_KEY else None
 
-SYSTEM_PROMPT = """You are FALK, an elite Socratic Cognitive Behavioral Therapy (CBT) AI guide.
-YOUR CORE RULE: Never lecture, never give numbered lists, and never preach generic self-help advice.
+SYSTEM_PROMPT = """You are FALK, an elite Socratic CBT guide.
+STRICT NEGATIVE CONSTRAINTS:
+- NEVER start your response with "Det låter som", "Det verkar som", or "Jag hör att".
+- NEVER give numbered lists, generic self-help advice, or preach.
 
-Operating Principles:
-1. Validate briefly: Acknowledge the user's emotion/statement in 1 short sentence.
-2. Direct Clarity Safety Valve: If the user explicitly asks for clarification ("what perspective?", "what do you mean?", "who?"), answer directly in 1 sentence BEFORE asking your probe. Do NOT evade direct questions.
-3. Socratic Probe: Ask EXACTLY ONE sharp, open-ended question that highlights cognitive distortions or challenges assumptions.
-4. Length Limit: Keep your entire response under 60 words.
-5. Language: Always reply in Swedish.
+OPERATING RULES:
+1. Direct Answer Safety Valve: If the user asks a direct fact question (e.g., "vad gjorde X?"), answer directly in EXACTLY 1 factual sentence first.
+2. Socratic Probe: Ask EXACTLY ONE sharp, open-ended question challenging cognitive assumptions or exploring the specific thought.
+3. Max Length: Entire response MUST be under 45 words.
+4. Language: Always reply in natural Swedish.
 """
 
 def get_current_user_context():
@@ -168,8 +169,6 @@ def stripe_webhook():
             event_type = getattr(event, "type", None)
             data_object = getattr(getattr(event, "data", None), "object", {})
 
-        print(f"[WEBHOOK EVENT RECEIVED]: {event_type}", flush=True)
-
         if event_type == "checkout.session.completed":
             if isinstance(data_object, dict):
                 user_id = data_object.get("client_reference_id")
@@ -178,20 +177,16 @@ def stripe_webhook():
                 user_id = getattr(data_object, "client_reference_id", None)
                 customer_id = getattr(data_object, "customer", None)
 
-            print(f"[WEBHOOK CHECKOUT MATCH]: user_id={user_id}, customer_id={customer_id}", flush=True)
-
             if user_id and supabase_client:
-                update_res = supabase_client.table("profiles").update({
+                supabase_client.table("profiles").update({
                     "tier": "PRO",
                     "stripe_customer_id": customer_id
                 }).eq("id", user_id).execute()
-                print(f"[SUCCESS]: User {user_id} upgraded to PRO in database! Result: {update_res}", flush=True)
 
         return jsonify({"status": "success"}), 200
 
     except Exception as crash_err:
         print(f"[WEBHOOK CRASH]: {crash_err}", flush=True)
-        print(traceback.format_exc(), flush=True)
         return jsonify({"error": f"Internal server error: {str(crash_err)}"}), 500
 
 @app.route("/chat", methods=["POST"])
@@ -221,7 +216,6 @@ def chat():
         ai_response = None
         used_provider = None
 
-        # OPTIMIZATION: Try fast 8B model first for instant latency, fall back to 70B if needed
         if groq_client:
             for model_name in ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"]:
                 try:
@@ -231,15 +225,15 @@ def chat():
                             {"role": "system", "content": SYSTEM_PROMPT},
                             {"role": "user", "content": f"{memory_context}\n\n{user_message}"}
                         ],
-                        temperature=0.5,
-                        max_tokens=150
+                        temperature=0.4,
+                        max_tokens=120
                     )
                     ai_response = completion.choices[0].message.content
                     if ai_response:
                         used_provider = f"Groq ({model_name})"
                         break
                 except Exception as g_err:
-                    print(f"[GROQ MODEL FAIL {model_name}]: {g_err}", flush=True)
+                    print(f"[GROQ FAIL {model_name}]: {g_err}", flush=True)
 
         if not ai_response and openai_client:
             try:
@@ -249,8 +243,8 @@ def chat():
                         {"role": "system", "content": SYSTEM_PROMPT},
                         {"role": "user", "content": f"{memory_context}\n\n{user_message}"}
                     ],
-                    temperature=0.5,
-                    max_tokens=150
+                    temperature=0.4,
+                    max_tokens=120
                 )
                 ai_response = completion.choices[0].message.content
                 used_provider = "OpenAI (gpt-4o-mini)"
