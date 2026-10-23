@@ -1,6 +1,7 @@
 import os
 import traceback
 import stripe
+from datetime import datetime, timezone
 from flask import Flask, request, jsonify, render_template, g
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -65,10 +66,20 @@ def get_current_user_context():
         if user_response and user_response.user:
             user_id = user_response.user.id
             try:
-                prof = supabase_client.table("profiles").select("tier").eq("id", user_id).single().execute()
-                if prof.data and prof.data.get("tier") == "PRO":
-                    g.user_context = (user_id, "PRO")
-                    return g.user_context
+                prof = supabase_client.table("profiles").select("tier, trial_ends_at").eq("id", user_id).single().execute()
+                if prof.data:
+                    tier = prof.data.get("tier")
+                    trial_ends = prof.data.get("trial_ends_at")
+                    
+                    is_trial_active = False
+                    if trial_ends:
+                        trial_date = datetime.fromisoformat(trial_ends.replace('Z', '+00:00'))
+                        if trial_date > datetime.now(timezone.utc):
+                            is_trial_active = True
+
+                    if tier == "PRO" or is_trial_active:
+                        g.user_context = (user_id, "PRO")
+                        return g.user_context
             except Exception as e:
                 print(f"[PROFILE LOOKUP FAIL]: {e}", flush=True)
 
@@ -117,6 +128,71 @@ def ratelimit_handler(e):
 def index():
     return render_template("index.html", supabase_url=SUPABASE_URL, supabase_anon_key=SUPABASE_ANON_KEY)
 
+# --- CHAT SESSIONS & HISTORY ENDPOINTS ---
+@app.route("/api/sessions", methods=["GET", "POST"])
+def handle_sessions():
+    user_id, _ = get_current_user_context()
+    if user_id == "00000000-0000-0000-0000-000000000000":
+        return jsonify({"error": "Obehörig"}), 401
+
+    if request.method == "POST":
+        data = request.json or {}
+        title = data.get("title", "Nytt samtalsrum")
+        res = supabase_client.table("chat_sessions").insert({"user_id": user_id, "title": title}).execute()
+        return jsonify(res.data[0] if res.data else {})
+
+    res = supabase_client.table("chat_sessions").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+    return jsonify(res.data or [])
+
+@app.route("/api/sessions/<session_id>/messages", methods=["GET"])
+def get_session_messages(session_id):
+    user_id, _ = get_current_user_context()
+    if user_id == "00000000-0000-0000-0000-000000000000":
+        return jsonify({"error": "Obehörig"}), 401
+
+    res = supabase_client.table("chat_messages").select("*").eq("session_id", session_id).order("created_at", desc=False).execute()
+    return jsonify(res.data or [])
+
+# --- JOURNAL & MOOD TRACKER ENDPOINTS ---
+@app.route("/api/journal", methods=["GET", "POST"])
+def handle_journal():
+    user_id, _ = get_current_user_context()
+    if user_id == "00000000-0000-0000-0000-000000000000":
+        return jsonify({"error": "Obehörig"}), 401
+
+    if request.method == "POST":
+        data = request.json or {}
+        mood_score = data.get("mood_score")
+        entry_text = data.get("entry_text", "").strip()
+
+        if not mood_score or not entry_text:
+            return jsonify({"error": "Både skattning och text krävs."}), 400
+
+        res = supabase_client.table("journal_entries").insert({
+            "user_id": user_id,
+            "mood_score": mood_score,
+            "entry_text": entry_text
+        }).execute()
+        return jsonify(res.data[0] if res.data else {})
+
+    res = supabase_client.table("journal_entries").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+    return jsonify(res.data or [])
+
+# --- GDPR DATA DELETION ---
+@app.route("/delete-user-data", methods=["DELETE"])
+def delete_user_data():
+    user_id, _ = get_current_user_context()
+    if user_id == "00000000-0000-0000-0000-000000000000":
+        return jsonify({"error": "Obehörig"}), 401
+
+    try:
+        supabase_client.table("user_memories").delete().eq("user_id", user_id).execute()
+        supabase_client.table("journal_entries").delete().eq("user_id", user_id).execute()
+        supabase_client.table("chat_sessions").delete().eq("user_id", user_id).execute()
+        return jsonify({"status": "success", "message": "All din sparade data har raderats helt."}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/create-checkout-session", methods=["POST"])
 def create_checkout_session():
     try:
@@ -124,14 +200,8 @@ def create_checkout_session():
         if user_id == "00000000-0000-0000-0000-000000000000":
             return jsonify({"error": "Du måste vara inloggad för att uppgradera till PRO."}), 401
 
-        if not STRIPE_SECRET_KEY or not STRIPE_PRICE_ID:
-            return jsonify({"error": "Stripe-konfiguration saknas på servern."}), 500
-
         checkout_session = stripe.checkout.Session.create(
-            line_items=[{
-                'price': STRIPE_PRICE_ID,
-                'quantity': 1,
-            }],
+            line_items=[{'price': STRIPE_PRICE_ID, 'quantity': 1}],
             mode='subscription',
             client_reference_id=user_id,
             success_url=request.host_url + '?payment=success',
@@ -139,7 +209,6 @@ def create_checkout_session():
         )
         return jsonify({"url": checkout_session.url})
     except Exception as e:
-        print(f"[STRIPE ERROR]: {e}", flush=True)
         return jsonify({"error": str(e)}), 500
 
 @app.route("/stripe-webhook", methods=["POST"])
@@ -148,19 +217,12 @@ def stripe_webhook():
     sig_header = request.headers.get("Stripe-Signature")
 
     if not STRIPE_WEBHOOK_SECRET or not sig_header:
-        print("[SECURITY ALERT]: Missing webhook secret or signature header", flush=True)
         return jsonify({"error": "Unauthorized"}), 401
 
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, STRIPE_WEBHOOK_SECRET
-        )
-    except stripe.error.SignatureVerificationError as sig_err:
-        print(f"[WEBHOOK SIG FAIL]: Invalid signature - {sig_err}", flush=True)
-        return jsonify({"error": "Invalid signature"}), 400
+        event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
     except Exception as e:
-        print(f"[WEBHOOK PAYLOAD FAIL]: {e}", flush=True)
-        return jsonify({"error": "Invalid payload"}), 400
+        return jsonify({"error": "Invalid signature"}), 400
 
     event_type = getattr(event, "type", None) or event.get("type")
     data_object = getattr(getattr(event, "data", None), "object", {}) or event.get("data", {}).get("object", {})
@@ -170,33 +232,9 @@ def stripe_webhook():
         customer_id = getattr(data_object, "customer", None) or data_object.get("customer")
 
         if user_id and supabase_client:
-            try:
-                supabase_client.table("profiles").update({
-                    "tier": "PRO",
-                    "stripe_customer_id": customer_id
-                }).eq("id", user_id).execute()
-                print(f"[SUCCESS]: User {user_id} upgraded to PRO via verified webhook", flush=True)
-            except Exception as db_err:
-                print(f"[DB PROVISION ERROR]: {db_err}", flush=True)
-                return jsonify({"error": "Database update failed"}), 500
+            supabase_client.table("profiles").update({"tier": "PRO", "stripe_customer_id": customer_id}).eq("id", user_id).execute()
 
     return jsonify({"status": "success"}), 200
-
-# GDPR Endpoint: Right to be forgotten
-@app.route("/delete-user-data", methods=["DELETE"])
-def delete_user_data():
-    user_id, _ = get_current_user_context()
-    if user_id == "00000000-0000-0000-0000-000000000000":
-        return jsonify({"error": "Obehörig förfrågan"}), 401
-
-    try:
-        if supabase_client:
-            supabase_client.table("user_memories").delete().eq("user_id", user_id).execute()
-            supabase_client.table("journal_entries").delete().eq("user_id", user_id).execute()
-            supabase_client.table("profiles").update({"tier": "FREE"}).eq("id", user_id).execute()
-        return jsonify({"status": "success", "message": "Alla sparade minnen och sökdata har raderats."}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 @app.route("/chat", methods=["POST"])
 @limiter.limit(get_rate_limit_val, key_func=get_rate_limit_key)
@@ -204,6 +242,8 @@ def chat():
     try:
         data = request.json or {}
         user_message = data.get("message", "").strip()
+        session_id = data.get("session_id")
+
         if not user_message:
             return jsonify({"error": "Meddelandet kan inte vara tomt"}), 400
 
@@ -241,8 +281,8 @@ def chat():
                     if ai_response:
                         used_provider = f"Groq ({model_name})"
                         break
-                except Exception as g_err:
-                    print(f"[GROQ FAIL {model_name}]: {g_err}", flush=True)
+                except Exception:
+                    pass
 
         if not ai_response and openai_client:
             try:
@@ -257,10 +297,19 @@ def chat():
                 )
                 ai_response = completion.choices[0].message.content
                 used_provider = "OpenAI (gpt-4o-mini)"
-            except Exception as o_err:
-                print(f"[OPENAI FAIL]: {o_err}", flush=True)
+            except Exception:
+                pass
 
         if ai_response:
+            if session_id and user_id != "00000000-0000-0000-0000-000000000000":
+                try:
+                    supabase_client.table("chat_messages").insert([
+                        {"session_id": session_id, "sender": "user", "content": user_message},
+                        {"session_id": session_id, "sender": "bot", "content": ai_response}
+                    ]).execute()
+                except Exception as db_err:
+                    print(f"[CHAT MSG DB SAVE FAIL]: {db_err}", flush=True)
+
             return jsonify({
                 "response": ai_response,
                 "tier": tier,
