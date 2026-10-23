@@ -1,7 +1,6 @@
 import os
 import traceback
 import stripe
-from datetime import datetime, timezone
 from flask import Flask, request, jsonify, render_template, g
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -36,6 +35,11 @@ openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 supabase_client: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY) if SUPABASE_URL and SUPABASE_SERVICE_KEY else None
 
 SYSTEM_PROMPT = """You are FALK, an elite Socratic CBT guide.
+
+CRITICAL CRISIS OVERRIDE:
+If the user expresses explicit intent of suicide, severe self-harm, or immediate physical danger, IMMEDIATELY break character and reply ONLY with:
+"Jag hör att du har det väldigt tufft just nu. FALK är en AI och kan inte ge akuthjälp. Ring 112 för akuta situationer eller kontakta Självmordslinjen på 90101 (mind.se) för stöd dygnet runt."
+
 STRICT NEGATIVE CONSTRAINTS:
 - NEVER start your response with "Det låter som", "Det verkar som", or "Jag hör att".
 - NEVER give numbered lists, generic self-help advice, or preach.
@@ -66,20 +70,10 @@ def get_current_user_context():
         if user_response and user_response.user:
             user_id = user_response.user.id
             try:
-                prof = supabase_client.table("profiles").select("tier, trial_ends_at").eq("id", user_id).single().execute()
-                if prof.data:
-                    tier = prof.data.get("tier")
-                    trial_ends = prof.data.get("trial_ends_at")
-                    
-                    is_trial_active = False
-                    if trial_ends:
-                        trial_date = datetime.fromisoformat(trial_ends.replace('Z', '+00:00'))
-                        if trial_date > datetime.now(timezone.utc):
-                            is_trial_active = True
-
-                    if tier == "PRO" or is_trial_active:
-                        g.user_context = (user_id, "PRO")
-                        return g.user_context
+                prof = supabase_client.table("profiles").select("tier").eq("id", user_id).single().execute()
+                if prof.data and prof.data.get("tier") == "PRO":
+                    g.user_context = (user_id, "PRO")
+                    return g.user_context
             except Exception as e:
                 print(f"[PROFILE LOOKUP FAIL]: {e}", flush=True)
 
@@ -176,7 +170,6 @@ def handle_journal():
     res = supabase_client.table("journal_entries").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
     return jsonify(res.data or [])
 
-# GDPR FULL ACCOUNT & DATA DELETION
 @app.route("/delete-user-data", methods=["DELETE"])
 def delete_user_data():
     user_id, _ = get_current_user_context()
@@ -185,13 +178,11 @@ def delete_user_data():
 
     try:
         if supabase_client:
-            # 1. Radera applikationsdata
             supabase_client.table("user_memories").delete().eq("user_id", user_id).execute()
             supabase_client.table("journal_entries").delete().eq("user_id", user_id).execute()
             supabase_client.table("chat_sessions").delete().eq("user_id", user_id).execute()
             supabase_client.table("profiles").delete().eq("id", user_id).execute()
             
-            # 2. Radera auth-konto via Admin API (Artikel 17)
             try:
                 supabase_client.auth.admin.delete_user(user_id)
             except Exception as admin_err:
