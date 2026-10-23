@@ -72,6 +72,24 @@ def build_system_prompt(focus_data=None):
             prompt += "\nCURRENT USER FOCUS PRIORITIES:\n- " + "\n- ".join(focus_instructions) + "\n"
     return prompt
 
+def generate_session_title(user_message):
+    if not groq_client:
+        return user_message[:25] + "..."
+    try:
+        res = groq_client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": "Skapa en ultrakort sammanfattande rubrik (2-4 ord på svenska) för ett samtal som börjar med användarens meddelande. Svara enbart med rubriken utan citationstecken."},
+                {"role": "user", "content": user_message}
+            ],
+            max_tokens=15,
+            temperature=0.3
+        )
+        title = res.choices[0].message.content.strip().replace('"', '')
+        return title if title else user_message[:25]
+    except Exception:
+        return user_message[:25]
+
 def get_current_user_context():
     if 'user_context' in g:
         return g.user_context
@@ -153,6 +171,49 @@ def ratelimit_handler(e):
 @app.route("/")
 def index():
     return render_template("index.html", supabase_url=SUPABASE_URL, supabase_anon_key=SUPABASE_ANON_KEY)
+
+@app.route("/api/resolve-username", methods=["POST"])
+def resolve_username():
+    data = request.json or {}
+    identifier = data.get("identifier", "").strip()
+    
+    if "@" in identifier:
+        return jsonify({"email": identifier})
+    
+    if supabase_client:
+        try:
+            res = supabase_client.table("profiles").select("email").eq("username", identifier).execute()
+            if res.data and len(res.data) > 0:
+                return jsonify({"email": res.data[0]["email"]})
+        except Exception as e:
+            print(f"[USERNAME RESOLVE FAIL]: {e}", flush=True)
+            
+    return jsonify({"error": "Användarnamnet kunde inte hittas."}), 444
+
+@app.route("/api/profile", methods=["GET", "POST"])
+def handle_profile():
+    user_id, _ = get_current_user_context()
+    if user_id == "00000000-0000-0000-0000-000000000000":
+        return jsonify({"error": "Obehörig"}), 401
+
+    if request.method == "POST":
+        data = request.json or {}
+        username = data.get("username", "").strip()
+        email = data.get("email", "").strip()
+        
+        update_data = {}
+        if username: update_data["username"] = username
+        if email: update_data["email"] = email
+
+        if supabase_client and update_data:
+            supabase_client.table("profiles").upsert({"id": user_id, **update_data}).execute()
+        return jsonify({"status": "success"})
+
+    if supabase_client:
+        res = supabase_client.table("profiles").select("*").eq("id", user_id).execute()
+        if res.data:
+            return jsonify(res.data[0])
+    return jsonify({})
 
 @app.route("/api/sessions", methods=["GET", "POST"])
 def handle_sessions():
@@ -324,12 +385,20 @@ def chat():
         if ai_response:
             if session_id and user_id != "00000000-0000-0000-0000-000000000000":
                 try:
+                    # Spara meddelanden
                     supabase_client.table("chat_messages").insert([
                         {"session_id": session_id, "sender": "user", "content": user_message},
                         {"session_id": session_id, "sender": "bot", "content": ai_response}
                     ]).execute()
+
+                    # Auto-döp om samtalet om det fortfarande heter standardnamn
+                    sess_check = supabase_client.table("chat_sessions").select("title").eq("id", session_id).single().execute()
+                    if sess_check.data and (sess_check.data.get("title", "").startswith("Samtal") or sess_check.data.get("title") == "Nytt samtalsrum"):
+                        new_title = generate_session_title(user_message)
+                        supabase_client.table("chat_sessions").update({"title": new_title}).eq("id", session_id).execute()
+
                 except Exception as db_err:
-                    print(f"[CHAT MSG DB SAVE FAIL]: {db_err}", flush=True)
+                    print(f"[CHAT MSG/TITLE SAVE FAIL]: {db_err}", flush=True)
 
             return jsonify({
                 "response": ai_response,
