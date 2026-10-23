@@ -1,7 +1,9 @@
 import os
 import traceback
 import stripe
-from flask import Flask, request, jsonify, render_template, g
+from datetime import datetime, timezone
+from flask import Flask, request, jsonify, render_template, g, Response
+import json
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -70,10 +72,20 @@ def get_current_user_context():
         if user_response and user_response.user:
             user_id = user_response.user.id
             try:
-                prof = supabase_client.table("profiles").select("tier").eq("id", user_id).single().execute()
-                if prof.data and prof.data.get("tier") == "PRO":
-                    g.user_context = (user_id, "PRO")
-                    return g.user_context
+                prof = supabase_client.table("profiles").select("tier, trial_ends_at").eq("id", user_id).single().execute()
+                if prof.data:
+                    tier = prof.data.get("tier")
+                    trial_ends = prof.data.get("trial_ends_at")
+                    
+                    is_trial_active = False
+                    if trial_ends:
+                        trial_date = datetime.fromisoformat(trial_ends.replace('Z', '+00:00'))
+                        if trial_date > datetime.now(timezone.utc):
+                            is_trial_active = True
+
+                    if tier == "PRO" or is_trial_active:
+                        g.user_context = (user_id, "PRO")
+                        return g.user_context
             except Exception as e:
                 print(f"[PROFILE LOOKUP FAIL]: {e}", flush=True)
 
@@ -170,6 +182,38 @@ def handle_journal():
     res = supabase_client.table("journal_entries").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
     return jsonify(res.data or [])
 
+# GDPR ARTIKEL 20: Dataportabilitet (Export av all användardata)
+@app.route("/api/export-user-data", methods=["GET"])
+def export_user_data():
+    user_id, _ = get_current_user_context()
+    if user_id == "00000000-0000-0000-0000-000000000000":
+        return jsonify({"error": "Obehörig"}), 401
+
+    try:
+        profile = supabase_client.table("profiles").select("*").eq("id", user_id).execute().data
+        memories = supabase_client.table("user_memories").select("*").eq("user_id", user_id).execute().data
+        sessions = supabase_client.table("chat_sessions").select("*").eq("user_id", user_id).execute().data
+        journals = supabase_client.table("journal_entries").select("*").eq("user_id", user_id).execute().data
+
+        all_data = {
+            "export_date": datetime.now(timezone.utc).isoformat(),
+            "user_id": user_id,
+            "profile": profile,
+            "user_memories": memories,
+            "chat_sessions": sessions,
+            "journal_entries": journals
+        }
+
+        json_output = json.dumps(all_data, indent=2, ensure_ascii=False)
+        return Response(
+            json_output,
+            mimetype="application/json",
+            headers={"Content-Disposition": f"attachment;filename=falk_userdata_{user_id[:8]}.json"}
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# GDPR ARTIKEL 17: Fullständig Kontoradering
 @app.route("/delete-user-data", methods=["DELETE"])
 def delete_user_data():
     user_id, _ = get_current_user_context()
