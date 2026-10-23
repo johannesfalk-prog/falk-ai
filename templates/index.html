@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FALK</title>
-    <!-- Favicon / App Icon set to FALK title -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22 font-weight=%22bold%22 fill=%22%234E5C4B%22>F</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -17,9 +16,7 @@
                         'deep-olive': '#4E5C4B',
                         'terracotta': '#C57B57',
                         'soft-sage': '#A8BFA1',
-                        'app-bg': '#E8DCC4',
-                        'bubble-user': '#4E5C4B',
-                        'card-bg': '#FFFFFF'
+                        'bubble-user': '#4E5C4B'
                     }
                 }
             }
@@ -27,10 +24,6 @@
     </script>
     <style>
         body { background-color: #E8DCC4; color: #2C352B; }
-        .bg-beige { background-color: #E8DCC4; }
-        .bg-olive { background-color: #4E5C4B; }
-        .text-olive { color: #4E5C4B; }
-        .border-olive { border-color: #4E5C4B; }
         .focus-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
@@ -58,8 +51,8 @@
                 Logga in
             </button>
             <div id="user-info-top" class="hidden flex items-center space-x-2">
-                <span id="user-email-top" class="text-xs text-deep-olive truncate max-w-[100px] font-medium"></span>
-                <button onclick="logout()" class="text-xs text-terracotta hover:underline">Logga ut</button>
+                <span id="user-display-top" class="text-xs text-deep-olive truncate font-semibold"></span>
+                <button onclick="logout()" class="text-xs text-terracotta hover:underline font-medium">Logga ut</button>
             </div>
         </div>
     </header>
@@ -71,7 +64,7 @@
             <div class="flex justify-between items-center mb-6 border-b border-stone-200 pb-4">
                 <div>
                     <h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2>
-                    <p class="text-[10px] text-stone-500">Sokratisk CBT Guide</p>
+                    <p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv</p>
                 </div>
                 <button onclick="toggleSidebar()" class="text-stone-400 hover:text-stone-700 p-1">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -92,7 +85,7 @@
 
             <div class="flex-1 flex flex-col min-h-0">
                 <div class="flex justify-between items-center mb-2 px-1">
-                    <span class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">Samtal</span>
+                    <span class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">SAMTAL</span>
                     <button onclick="createNewSession()" class="text-xs text-deep-olive hover:underline font-bold">+ Nytt</button>
                 </div>
                 <div id="session-list" class="flex-1 overflow-y-auto space-y-1 pr-1 text-xs text-stone-600">
@@ -112,10 +105,25 @@
         <!-- VY 1: CHATT -->
         <section id="view-chat" class="flex-1 flex flex-col h-full min-h-0 max-w-2xl w-full mx-auto px-4 pt-4 pb-2">
             
+            <!-- DAGLIG MÅENDE-PROMPT BANNER -->
+            <div id="daily-checkin-card" class="hidden mb-3 bg-white/90 border border-stone-300 p-3.5 rounded-2xl shadow-sm flex justify-between items-center">
+                <div>
+                    <p class="text-xs font-bold text-deep-olive" id="daily-checkin-title">Morgonavstämning</p>
+                    <p class="text-[11px] text-stone-500">Hur startar du din dag på skalan 1–5?</p>
+                </div>
+                <div class="flex space-x-1">
+                    <button onclick="quickMood(1)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">😞 1</button>
+                    <button onclick="quickMood(2)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">😐 2</button>
+                    <button onclick="quickMood(3)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">🙂 3</button>
+                    <button onclick="quickMood(4)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">😊 4</button>
+                    <button onclick="quickMood(5)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">🤩 5</button>
+                </div>
+            </div>
+
             <!-- CHATTBOX -->
             <div id="chat-box" class="flex-1 overflow-y-auto space-y-4 pr-1 mb-2 min-h-0">
                 
-                <!-- ONBOARDING CARDS (9 KORT ENLIGT BILD) -->
+                <!-- ONBOARDING CARDS (9 KORT) -->
                 <div id="onboarding-cards" class="space-y-2.5 py-2">
                     <div onclick="selectOnboarding('Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
                         <p class="text-xs font-bold text-stone-800">✨ Mening & livsriktning</p>
@@ -165,40 +173,48 @@
 
             </div>
 
-            <!-- BOT TÄNKER INDIKATOR (ENLIGT BILD 1) -->
+            <!-- BOT TÄNKER INDIKATOR -->
             <div id="thinking-indicator" class="hidden mb-3">
                 <div class="inline-block border border-dashed border-stone-400 bg-white/40 px-4 py-2 rounded-2xl text-xs text-stone-600 italic animate-pulse">
                     FALK tänker...
                 </div>
             </div>
 
-            <!-- INPUT BAR (ENLIGT BILD 1 & 3) -->
-            <div class="flex-shrink-0 space-y-2 pb-2">
+            <!-- INPUT BAR -->
+            <div class="flex-shrink-0 space-y-1.5 pb-2">
                 <form id="chat-form" onsubmit="sendMessage(event)" class="flex items-center space-x-2">
+                    
                     <div class="flex-1 relative flex items-center">
                         <input type="text" id="message-input" placeholder="Skriv till mig eller välj ett alternativ..." 
-                               class="w-full bg-white border border-stone-300 rounded-full pl-5 pr-12 py-3 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:border-deep-olive shadow-sm">
+                               class="w-full bg-white border border-stone-300 rounded-full pl-5 pr-11 py-3 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:border-deep-olive shadow-sm">
+                        
+                        <button type="button" onclick="toggleSpeechRecognition()" id="mic-btn" class="absolute right-3 text-stone-400 hover:text-deep-olive transition p-1" title="Tala in meddelande">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/>
+                            </svg>
+                        </button>
                     </div>
-                    
-                    <!-- Röstmikrofon (Framtida tal-gränssnitt) -->
-                    <button type="button" onclick="alert('Tal-till-text aktiveras i nästa beta-release.')" class="p-2.5 rounded-full bg-white border border-stone-300 text-stone-600 hover:bg-stone-100 transition">
-                        🎤
+
+                    <button type="button" onclick="openFocusModal()" class="p-2.5 rounded-full bg-white border border-stone-300 text-stone-700 hover:bg-stone-100 transition shadow-sm flex items-center justify-center flex-shrink-0" title="Justera Fokus">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+                        </svg>
                     </button>
 
-                    <!-- Focus Reglage / Inställnings-ikon (BILD 2) -->
-                    <button type="button" onclick="openFocusModal()" class="p-2.5 rounded-full bg-white border border-stone-300 text-stone-600 hover:bg-stone-100 transition" title="Justera Fokus">
-                        🎛️
-                    </button>
-
-                    <!-- Skicka-knapp -->
-                    <button type="submit" id="send-btn" class="bg-deep-olive hover:opacity-90 text-amber-50 font-semibold px-5 py-3 rounded-full text-xs transition disabled:opacity-50 shadow-sm">
+                    <button type="submit" id="send-btn" class="bg-deep-olive hover:opacity-90 text-amber-50 font-semibold px-5 py-3 rounded-full text-xs transition disabled:opacity-50 shadow-sm flex-shrink-0">
                         Skicka
                     </button>
                 </form>
 
-                <p class="text-[9px] text-stone-500 text-center leading-tight">
-                    FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling. Ej sjukvård. Vid akuta kriser, ring 112 eller 90101 (MIND).
-                </p>
+                <div class="text-center space-y-0.5">
+                    <p class="text-[9.5px] text-stone-500 leading-tight">
+                        FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling. Ej sjukvård. Vid akuta kriser, ring 112 eller 90101 (MIND).
+                    </p>
+                    <p class="text-[10px] font-bold text-stone-400 tracking-wider uppercase">
+                        Powered by WAYJS
+                    </p>
+                </div>
             </div>
         </section>
 
@@ -261,7 +277,7 @@
 
     </main>
 
-    <!-- FOKUS MODAL (ENLIGT BILD 2) -->
+    <!-- FOKUS MODAL -->
     <div id="focus-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-5 shadow-2xl">
             <div class="flex justify-between items-center border-b border-stone-100 pb-3">
@@ -322,25 +338,53 @@
         </div>
     </div>
 
-    <!-- AUTH MODAL -->
+    <!-- AUTH MODAL MED TYDLIGA FLIKAR -->
     <div id="auth-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl">
-            <h2 class="text-lg font-bold text-stone-900 text-center">Logga in / Skapa konto</h2>
+            
+            <!-- FLIKVÄXLARE -->
+            <div class="flex border-b border-stone-200 pb-2">
+                <button id="tab-btn-login" onclick="setAuthTab('login')" class="flex-1 text-center font-bold text-sm text-deep-olive border-b-2 border-deep-olive pb-1">
+                    Logga in
+                </button>
+                <button id="tab-btn-signup" onclick="setAuthTab('signup')" class="flex-1 text-center font-bold text-sm text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600">
+                    Skapa konto
+                </button>
+            </div>
+
+            <!-- FORMULÄRFÄLT -->
             <div class="space-y-3">
-                <input type="email" id="auth-email" placeholder="E-post" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive">
-                <input type="password" id="auth-password" placeholder="Lösenord" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive">
                 
-                <div id="gdpr-consent-box" class="pt-1">
+                <!-- BARA VID SKAPA KONTO -->
+                <div id="wrap-username" class="hidden">
+                    <input type="text" id="auth-username" placeholder="Välj Användarnamn" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive">
+                </div>
+
+                <!-- BÅDE LOGGA IN OCH SKAPA KONTO -->
+                <div id="wrap-identifier">
+                    <input type="text" id="auth-identifier" placeholder="E-post eller Användarnamn" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive">
+                </div>
+
+                <div>
+                    <input type="password" id="auth-password" placeholder="Lösenord" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive">
+                </div>
+                
+                <!-- BARA VID SKAPA KONTO -->
+                <div id="wrap-gdpr" class="hidden pt-1">
                     <label class="flex items-start space-x-2 text-[11px] text-stone-600 cursor-pointer">
                         <input type="checkbox" id="auth-gdpr-check" class="mt-0.5 rounded border-stone-300 text-deep-olive focus:ring-deep-olive">
                         <span>Jag samtycker till behandling av mina uppgifter och bekräftar att FALK är ett verktyg för självhjälp/personlig utveckling (ej sjukvård) enligt <button type="button" onclick="openPrivacyPolicyModal()" class="text-deep-olive underline">Integritetspolicyn</button>.</span>
                     </label>
                 </div>
             </div>
-            <div class="flex space-x-2 pt-2">
-                <button onclick="handleAuth('login')" class="flex-1 bg-deep-olive text-amber-50 font-semibold py-2 rounded-xl text-xs transition">Logga in</button>
-                <button onclick="handleAuth('signup')" class="flex-1 bg-stone-100 text-stone-800 font-semibold py-2 rounded-xl text-xs border border-stone-300 transition">Skapa konto</button>
+
+            <!-- KNAPPAR -->
+            <div class="pt-2">
+                <button id="auth-submit-btn" onclick="submitAuth()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">
+                    Logga in
+                </button>
             </div>
+            
             <button onclick="closeAuthModal()" class="w-full text-center text-stone-400 text-xs mt-1 hover:text-stone-600">Avbryt</button>
         </div>
     </div>
@@ -354,8 +398,7 @@
                     MEDICINSK FRISKRIVNING: FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling. FALK tillhandahåller inte medicinsk diagnostik, psykoterapi eller hälso- och sjukvård.
                 </div>
                 <p><strong>Personuppgiftsansvarig:</strong> FALK AI Services.</p>
-                <p><strong>Vilka data behandlas?</strong> E-postadress, samtalsloggar, krypterade minnesvektorer samt stämningsskattningar (hälsodata enligt Art. 9 GDPR).</p>
-                <p><strong>Underbiträden:</strong> Supabase (USA), Render (USA), Groq (USA), OpenAI (USA), Stripe (EU/USA).</p>
+                <p><strong>Vilka data behandlas?</strong> E-postadress, användarnamn, samtalsloggar, krypterade minnesvektorer samt stämningsskattningar (hälsodata enligt Art. 9 GDPR).</p>
                 <p>Dina rättigheter att begära radering (Art. 17) och dataportabilitet (Art. 20) finns under Inställningar.</p>
             </div>
             <button onclick="closePrivacyPolicyModal()" class="w-full bg-deep-olive text-amber-50 font-semibold py-2 rounded-xl text-xs transition">Jag förstår</button>
@@ -374,31 +417,28 @@
         let userToken = null;
         let activeSessionId = null;
         let selectedMood = 3;
+        let userProfile = null;
+        let currentAuthMode = 'login'; // 'login' eller 'signup'
 
-        // Focus values
-        let focusState = {
-            confidence: 50,
-            stress: 50,
-            action: 50,
-            boundaries: 50,
-            motivation: 50
-        };
+        let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motivation: 50 };
 
         async function initAuth() {
             if (!supabaseClient) return;
 
             const { data: { session } } = await supabaseClient.auth.getSession();
-            updateAuthUI(session);
+            await updateAuthUI(session);
 
-            supabaseClient.auth.onAuthStateChange((_event, session) => {
-                updateAuthUI(session);
+            supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+                await updateAuthUI(session);
             });
+
+            checkDailyMoodPrompt();
         }
 
-        function updateAuthUI(session) {
+        async function updateAuthUI(session) {
             const loginBtnTop = document.getElementById('login-btn-top');
             const userInfoTop = document.getElementById('user-info-top');
-            const userEmailTop = document.getElementById('user-email-top');
+            const userDisplayTop = document.getElementById('user-display-top');
             const tierBadge = document.getElementById('tier-badge');
             const settingsTier = document.getElementById('settings-tier');
 
@@ -406,18 +446,86 @@
                 userToken = session.access_token;
                 loginBtnTop.classList.add('hidden');
                 userInfoTop.classList.remove('hidden');
-                userEmailTop.textContent = session.user.email;
+                
+                await fetchProfile();
+                const displayName = (userProfile && userProfile.username) ? userProfile.username : session.user.email;
+                userDisplayTop.textContent = displayName;
+
                 tierBadge.textContent = "INLOGGAD (PRO)";
                 settingsTier.textContent = "PRO / INLOGGAD";
                 loadSessions();
                 loadJournal();
             } else {
                 userToken = null;
+                userProfile = null;
                 loginBtnTop.classList.remove('hidden');
                 userInfoTop.classList.add('hidden');
                 tierBadge.textContent = "FREE TIER";
                 settingsTier.textContent = "FREE";
                 document.getElementById('session-list').innerHTML = `<p class="p-2 text-stone-400 italic">Logga in för samtalshistorik</p>`;
+            }
+        }
+
+        async function fetchProfile() {
+            if (!userToken) return;
+            try {
+                const res = await fetch('/api/profile', { headers: { 'Authorization': `Bearer ${userToken}` } });
+                userProfile = await res.json();
+            } catch (err) {
+                console.error("Profile fetch fail", err);
+            }
+        }
+
+        function setAuthTab(mode) {
+            currentAuthMode = mode;
+            const btnLogin = document.getElementById('tab-btn-login');
+            const btnSignup = document.getElementById('tab-btn-signup');
+            const wrapUsername = document.getElementById('wrap-username');
+            const wrapGdpr = document.getElementById('wrap-gdpr');
+            const submitBtn = document.getElementById('auth-submit-btn');
+            const identifierInput = document.getElementById('auth-identifier');
+
+            if (mode === 'login') {
+                btnLogin.className = "flex-1 text-center font-bold text-sm text-deep-olive border-b-2 border-deep-olive pb-1";
+                btnSignup.className = "flex-1 text-center font-bold text-sm text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600";
+                wrapUsername.classList.add('hidden');
+                wrapGdpr.classList.add('hidden');
+                submitBtn.textContent = "Logga in";
+                identifierInput.placeholder = "E-post eller Användarnamn";
+            } else {
+                btnSignup.className = "flex-1 text-center font-bold text-sm text-deep-olive border-b-2 border-deep-olive pb-1";
+                btnLogin.className = "flex-1 text-center font-bold text-sm text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600";
+                wrapUsername.classList.remove('hidden');
+                wrapGdpr.classList.remove('hidden');
+                submitBtn.textContent = "Skapa konto";
+                identifierInput.placeholder = "E-postadress";
+            }
+        }
+
+        function checkDailyMoodPrompt() {
+            const today = new Date().toISOString().slice(0, 10);
+            const lastCheck = localStorage.getItem('falk_last_mood_check');
+            const card = document.getElementById('daily-checkin-card');
+            
+            if (lastCheck !== today) {
+                const hour = new Date().getHours();
+                document.getElementById('daily-checkin-title').textContent = hour < 14 ? "Morgonavstämning" : "Kvällsavstämning";
+                card.classList.remove('hidden');
+            }
+        }
+
+        async function quickMood(score) {
+            selectedMood = score;
+            const today = new Date().toISOString().slice(0, 10);
+            localStorage.setItem('falk_last_mood_check', today);
+            document.getElementById('daily-checkin-card').classList.add('hidden');
+
+            if (userToken) {
+                await fetch('/api/journal', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mood_score: score, entry_text: "Daglig stämningsavstämning" })
+                });
             }
         }
 
@@ -475,7 +583,7 @@
             const res = await fetch('/api/sessions', {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: `Samtal ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` })
+                body: JSON.stringify({ title: "Nytt samtalsrum" })
             });
             const s = await res.json();
             if (s.id) {
@@ -496,6 +604,54 @@
             const box = document.getElementById('chat-box');
             box.innerHTML = '';
             messages.forEach(m => appendMessage(m.sender === 'user' ? 'Du' : 'FALK', m.content, m.sender));
+        }
+
+        let isRecording = false;
+        let recognition = null;
+
+        function toggleSpeechRecognition() {
+            const micBtn = document.getElementById('mic-btn');
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                return alert("Tal-till-text stöds inte i din webbläsare.");
+            }
+
+            if (isRecording) {
+                if (recognition) recognition.stop();
+                isRecording = false;
+                micBtn.classList.remove('text-rose-600', 'animate-pulse');
+                micBtn.classList.add('text-stone-400');
+            } else {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.lang = 'sv-SE';
+                recognition.continuous = false;
+                recognition.interimResults = false;
+
+                recognition.onstart = function() {
+                    isRecording = true;
+                    micBtn.classList.remove('text-stone-400');
+                    micBtn.classList.add('text-rose-600', 'animate-pulse');
+                };
+
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    document.getElementById('message-input').value += transcript;
+                };
+
+                recognition.onerror = function() {
+                    isRecording = false;
+                    micBtn.classList.remove('text-rose-600', 'animate-pulse');
+                    micBtn.classList.add('text-stone-400');
+                };
+
+                recognition.onend = function() {
+                    isRecording = false;
+                    micBtn.classList.remove('text-rose-600', 'animate-pulse');
+                    micBtn.classList.add('text-stone-400');
+                };
+
+                recognition.start();
+            }
         }
 
         function updateFocusVal(key) {
@@ -532,7 +688,6 @@
             input.value = '';
             btn.disabled = true;
 
-            // Visa "FALK tänker..." (BILD 1)
             document.getElementById('thinking-indicator').classList.remove('hidden');
 
             try {
@@ -552,6 +707,7 @@
                 const data = await res.json();
                 if (res.ok) {
                     appendMessage('FALK', data.response, 'bot');
+                    loadSessions();
                 } else {
                     appendMessage('FALK', data.error || 'Fel uppstod.', 'error');
                 }
@@ -582,7 +738,6 @@
                         ${text}
                     </div>
                     
-                    <!-- IKONRAD UNDER FALK-SVAR (ChatGPT / Gemini stil) -->
                     <div class="flex items-center space-x-2 px-2 text-stone-400 text-[11px]">
                         <button onclick="speakText('${msgId}')" class="hover:text-stone-700 transition" title="Höguppläsning">🔊</button>
                         <button onclick="regenerateLast()" class="hover:text-stone-700 transition" title="Generera nytt svar">🔄</button>
@@ -722,25 +877,61 @@
             location.reload();
         }
 
-        function openAuthModal() { document.getElementById('auth-modal').classList.remove('hidden'); }
+        function openAuthModal() { 
+            setAuthTab('login');
+            document.getElementById('auth-modal').classList.remove('hidden'); 
+        }
         function closeAuthModal() { document.getElementById('auth-modal').classList.add('hidden'); }
         function openPrivacyPolicyModal() { document.getElementById('privacy-modal').classList.remove('hidden'); }
         function closePrivacyPolicyModal() { document.getElementById('privacy-modal').classList.add('hidden'); }
 
-        async function handleAuth(type) {
-            const email = document.getElementById('auth-email').value.trim();
+        async function submitAuth() {
+            const identifier = document.getElementById('auth-identifier').value.trim();
+            const username = document.getElementById('auth-username').value.trim();
             const password = document.getElementById('auth-password').value.trim();
             const gdprCheck = document.getElementById('auth-gdpr-check').checked;
 
-            if (!email || !password) return alert("Fyll i både e-post och lösenord.");
+            if (!identifier || !password) return alert("Fyll i alla fält.");
 
-            if (type === 'signup' && !gdprCheck) {
-                return alert("Du måste bocka i samtyckesrutan för att skapa ett konto.");
+            if (currentAuthMode === 'signup') {
+                if (!username) return alert("Ange ett användarnamn för kontot.");
+                if (!gdprCheck) return alert("Du måste bocka i samtyckesrutan.");
+
+                let res = await supabaseClient.auth.signUp({ email: identifier, password });
+                if (res.error) return alert("Fel: " + res.error.message);
+
+                if (res.data && res.data.user) {
+                    userToken = res.data.session ? res.data.session.access_token : null;
+                    if (userToken) {
+                        await fetch('/api/profile', {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ username, email: identifier })
+                        });
+                    }
+                }
+                alert("Konto skapat! Du kan nu logga in.");
+                setAuthTab('login');
+            } else {
+                let loginEmail = identifier;
+                if (!identifier.includes('@')) {
+                    const resolveRes = await fetch('/api/resolve-username', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ identifier })
+                    });
+                    const resolveData = await resolveRes.json();
+                    if (resolveData.email) {
+                        loginEmail = resolveData.email;
+                    } else {
+                        return alert("Hittade inget konto med det användarnamnet.");
+                    }
+                }
+
+                let res = await supabaseClient.auth.signInWithPassword({ email: loginEmail, password });
+                if (res.error) alert("Fel: " + res.error.message);
+                else closeAuthModal();
             }
-
-            let res = type === 'signup' ? await supabaseClient.auth.signUp({ email, password }) : await supabaseClient.auth.signInWithPassword({ email, password });
-            if (res.error) alert("Fel: " + res.error.message);
-            else closeAuthModal();
         }
 
         async function logout() {
