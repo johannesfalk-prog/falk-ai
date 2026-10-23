@@ -43,7 +43,7 @@ If the user expresses explicit intent of suicide, severe self-harm, or immediate
 "Jag hör att du har det väldigt tufft just nu. FALK är en AI och kan inte ge akuthjälp. Ring 112 för akuta situationer eller kontakta Självmordslinjen på 90101 (mind.se) för stöd dygnet runt."
 
 STRICT NEGATIVE CONSTRAINTS:
-- NEVER start your response with "Det låter som", "Det verkar som", or "Jag hör att".
+- NEVER start your response with "Det låter som", "Det verkar som", or "Jag hör että".
 - NEVER give numbered lists, generic self-help advice, or preach.
 
 OPERATING RULES:
@@ -57,13 +57,14 @@ def get_current_user_context():
     if 'user_context' in g:
         return g.user_context
 
+    token = None
     auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        g.user_context = ("00000000-0000-0000-0000-000000000000", "FREE")
-        return g.user_context
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+    elif request.args.get("token"):
+        token = request.args.get("token")
 
-    token = auth_header.split(" ")[1]
-    if not supabase_client:
+    if not token or not supabase_client:
         g.user_context = ("00000000-0000-0000-0000-000000000000", "FREE")
         return g.user_context
 
@@ -182,7 +183,6 @@ def handle_journal():
     res = supabase_client.table("journal_entries").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
     return jsonify(res.data or [])
 
-# GDPR ARTIKEL 20: Dataportabilitet (Export av all användardata)
 @app.route("/api/export-user-data", methods=["GET"])
 def export_user_data():
     user_id, _ = get_current_user_context()
@@ -213,7 +213,6 @@ def export_user_data():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# GDPR ARTIKEL 17: Fullständig Kontoradering
 @app.route("/delete-user-data", methods=["DELETE"])
 def delete_user_data():
     user_id, _ = get_current_user_context()
