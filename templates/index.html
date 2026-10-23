@@ -199,7 +199,6 @@
             </div>
 
             <div id="chat-container" class="flex-1 overflow-y-auto pr-1 mb-2 min-h-0 flex flex-col">
-                <!-- ALLA 9 ONBOARDING-KORT ÅTERSTÄLLDA -->
                 <div id="onboarding-cards" class="space-y-2.5 py-2 mb-4">
                     <div onclick="selectOnboarding('Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
                         <p class="text-xs font-bold text-stone-800">✨ Mening & livsriktning</p>
@@ -264,9 +263,14 @@
                     </button>
                     <button type="submit" id="send-btn" class="bg-deep-olive hover:opacity-90 text-amber-50 font-semibold px-5 py-3 rounded-full text-xs transition disabled:opacity-50 shadow-sm flex-shrink-0">Skicka</button>
                 </form>
+                
+                <!-- STEG 2: MIKRO-UX INTEGRITETSPÅMINNELSE DIREKT I GRÄNSSNITTET -->
                 <div class="text-center space-y-0.5">
-                    <p id="disclaimer-text" class="text-[9.5px] text-stone-500 leading-tight">FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling. Ej sjukvård. Vid akuta kriser, ring 112 eller 90101 (MIND).</p>
-                    <p class="text-[10px] font-bold text-stone-400 tracking-wider uppercase">Powered by WAYJS</p>
+                    <p class="text-[9.5px] text-stone-600 font-medium">
+                        🔒 <span class="font-bold text-deep-olive">Integritetstips:</span> Undvik att skriva ut efternamn på kollegor eller känsliga personnummer i klartext.
+                    </p>
+                    <p id="disclaimer-text" class="text-[9px] text-stone-500 leading-tight">FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling (ej sjukvård). Vid akuta kriser, ring 112 eller 90101 (MIND).</p>
+                    <p class="text-[9.5px] font-bold text-stone-400 tracking-wider uppercase">Powered by WAYJS</p>
                 </div>
             </div>
         </section>
@@ -344,7 +348,7 @@
         </section>
     </main>
 
-    <!-- ALLA MODALER ÅTERSTÄLLDA (6 ST) -->
+    <!-- MODALER -->
     <div id="confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl text-center">
             <div class="text-center pb-2 border-b border-stone-100"><h3 id="confirm-title" class="text-base font-bold text-deep-olive">Bekräfta åtgärd</h3></div>
@@ -396,6 +400,7 @@
         </div>
     </div>
 
+    <!-- STEG 1: AUTH MODAL MED EXPLICIT ART. 9 SAMTYCKESTEXT -->
     <div id="auth-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl">
             <div class="text-center pb-2 border-b border-stone-100"><h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2><p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p></div>
@@ -404,13 +409,20 @@
                 <div id="wrap-username" class="hidden"><input type="text" id="auth-username" placeholder="Välj Användarnamn" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive"></div>
                 <div id="wrap-identifier"><input type="text" id="auth-identifier" placeholder="E-post eller Användarnamn" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive"></div>
                 <div><input type="password" id="auth-password" placeholder="Lösenord" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive"></div>
-                <div id="wrap-gdpr" class="hidden pt-1"><label class="flex items-start space-x-2 text-[11px] text-stone-600 cursor-pointer"><input type="checkbox" id="auth-gdpr-check" class="mt-0.5 rounded border-stone-300 text-deep-olive focus:ring-deep-olive"><span>Jag samtycker till behandling av mina uppgifter och bekräftar att FALK är ett verktyg för självhjälp/personlig utveckling (ej sjukvård) enligt <button type="button" onclick="openPrivacyPolicyModal()" class="text-deep-olive underline">Integritetspolicyn</button>.</span></label></div>
+                
+                <div id="wrap-gdpr" class="hidden pt-1">
+                    <label class="flex items-start space-x-2 text-[11px] text-stone-600 cursor-pointer">
+                        <input type="checkbox" id="auth-gdpr-check" class="mt-0.5 rounded border-stone-300 text-deep-olive focus:ring-deep-olive">
+                        <span>Jag samtycker <strong>uttryckligen</strong> till att FALK behandlar mina reflektioner och måendeskattningar (hälsodata enl. Art. 9 GDPR) samt godkänner <button type="button" onclick="openTermsModal()" class="text-deep-olive underline font-bold">Användarvillkoren</button> och <button type="button" onclick="openPrivacyPolicyModal()" class="text-deep-olive underline font-bold">Integritetspolicyn</button>.</span>
+                    </label>
+                </div>
             </div>
             <div class="pt-2"><button id="auth-submit-btn" onclick="submitAuth()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Logga in</button></div>
             <button onclick="closeAuthModal()" class="w-full text-center text-stone-400 text-xs mt-1 hover:text-stone-600">Avbryt</button>
         </div>
     </div>
 
+    <!-- DUAL-TAB LEGAL HUB -->
     <div id="privacy-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-lg w-full space-y-4 max-h-[85vh] flex flex-col shadow-2xl">
             <div class="text-center pb-2 border-b border-stone-100">
@@ -418,7 +430,6 @@
                 <p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p>
             </div>
             
-            <!-- FLIKAR FÖR JURIDIK -->
             <div class="flex border-b border-stone-200 pb-2">
                 <button id="legal-tab-privacy" onclick="setLegalTab('privacy')" class="flex-1 text-center font-bold text-xs text-deep-olive border-b-2 border-deep-olive pb-1">
                     Integritetspolicy (GDPR)
@@ -428,7 +439,6 @@
                 </button>
             </div>
 
-            <!-- INNEHÅLL INTEGRITETSPOLICY -->
             <div id="legal-content-privacy" class="flex-1 overflow-y-auto text-xs text-stone-600 space-y-3 pr-2 leading-relaxed">
                 <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 font-medium">
                     MEDICINSK FRISKRIVNING: FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling. FALK tillhandahåller inte medicinsk diagnostik, psykoterapi eller hälso- och sjukvård.
@@ -439,7 +449,6 @@
                 <p>Dina rättigheter att begära radering och dataportabilitet finns under Inställningar.</p>
             </div>
 
-            <!-- INNEHÅLL ANVÄNDARVILLKOR -->
             <div id="legal-content-terms" class="hidden flex-1 overflow-y-auto text-xs text-stone-600 space-y-3 pr-2 leading-relaxed">
                 <p><strong>1. Tjänstens natur:</strong> FALK är en AI-driven samtalskompass för personlig reflektion. Svaren genereras av algoritmer och ska inte betraktas som juridisk, finansiell eller medicinsk rådgivning.</p>
                 <p><strong>2. Användaransvar:</strong> Du ansvarar själv för de beslut du fattar baserat på dina samtal med FALK. Det är förbjudet att använda tjänsten för olagliga ändamål eller att försöka manipulera systemets säkerhetsspärrar.</p>
@@ -451,7 +460,6 @@
         </div>
     </div>
 
-    <!-- HULTSTÄNDIG JAVASCRIPT-MOTOR ÅTERSTÄLLD -->
     <script>
         const SUPABASE_URL = "{{ supabase_url }}";
         const SUPABASE_ANON_KEY = "{{ supabase_anon_key }}";
@@ -471,6 +479,29 @@
 
         let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motivation: 50 };
         let pinnedSessions = JSON.parse(localStorage.getItem('falk_pinned_sessions') || '[]');
+
+        function setLegalTab(tab) {
+            const btnPrivacy = document.getElementById('legal-tab-privacy');
+            const btnTerms = document.getElementById('legal-tab-terms');
+            const contentPrivacy = document.getElementById('legal-content-privacy');
+            const contentTerms = document.getElementById('legal-content-terms');
+
+            if (tab === 'privacy') {
+                btnPrivacy.className = "flex-1 text-center font-bold text-xs text-deep-olive border-b-2 border-deep-olive pb-1";
+                btnTerms.className = "flex-1 text-center font-bold text-xs text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600";
+                contentPrivacy.classList.remove('hidden');
+                contentTerms.classList.add('hidden');
+            } else {
+                btnTerms.className = "flex-1 text-center font-bold text-xs text-deep-olive border-b-2 border-deep-olive pb-1";
+                btnPrivacy.className = "flex-1 text-center font-bold text-xs text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600";
+                contentTerms.classList.remove('hidden');
+                contentPrivacy.classList.add('hidden');
+            }
+        }
+        function openTermsModal() {
+            openPrivacyPolicyModal();
+            setLegalTab('terms');
+        }
 
         function customConfirm(msg, title = "Bekräfta åtgärd") {
             return new Promise((resolve) => {
@@ -1030,30 +1061,6 @@
 
         function openAuthModal() { document.getElementById('auth-modal').classList.remove('hidden'); }
         function closeAuthModal() { document.getElementById('auth-modal').classList.add('hidden'); }
-        
-        function setLegalTab(tab) {
-            const btnPrivacy = document.getElementById('legal-tab-privacy');
-            const btnTerms = document.getElementById('legal-tab-terms');
-            const contentPrivacy = document.getElementById('legal-content-privacy');
-            const contentTerms = document.getElementById('legal-content-terms');
-
-            if (tab === 'privacy') {
-                btnPrivacy.className = "flex-1 text-center font-bold text-xs text-deep-olive border-b-2 border-deep-olive pb-1";
-                btnTerms.className = "flex-1 text-center font-bold text-xs text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600";
-                contentPrivacy.classList.remove('hidden');
-                contentTerms.classList.add('hidden');
-            } else {
-                btnTerms.className = "flex-1 text-center font-bold text-xs text-deep-olive border-b-2 border-deep-olive pb-1";
-                btnPrivacy.className = "flex-1 text-center font-bold text-xs text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600";
-                contentTerms.classList.remove('hidden');
-                contentPrivacy.classList.add('hidden');
-            }
-        }
-        function openTermsModal() {
-            openPrivacyPolicyModal();
-            setLegalTab('terms');
-        }
-
         function openPrivacyPolicyModal() { document.getElementById('privacy-modal').classList.remove('hidden'); }
         function closePrivacyPolicyModal() { document.getElementById('privacy-modal').classList.add('hidden'); }
 
