@@ -186,8 +186,6 @@ def stripe_webhook():
                     "stripe_customer_id": customer_id
                 }).eq("id", user_id).execute()
                 print(f"[SUCCESS]: User {user_id} upgraded to PRO in database! Result: {update_res}", flush=True)
-            else:
-                print(f"[WEBHOOK WARNING]: Missing user_id ({user_id}) or supabase_client missing", flush=True)
 
         return jsonify({"status": "success"}), 200
 
@@ -223,8 +221,9 @@ def chat():
         ai_response = None
         used_provider = None
 
+        # OPTIMIZATION: Try fast 8B model first for instant latency, fall back to 70B if needed
         if groq_client:
-            for model_name in ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]:
+            for model_name in ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"]:
                 try:
                     completion = groq_client.chat.completions.create(
                         model=model_name,
@@ -239,8 +238,8 @@ def chat():
                     if ai_response:
                         used_provider = f"Groq ({model_name})"
                         break
-                except Exception:
-                    pass
+                except Exception as g_err:
+                    print(f"[GROQ MODEL FAIL {model_name}]: {g_err}", flush=True)
 
         if not ai_response and openai_client:
             try:
