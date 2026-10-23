@@ -77,17 +77,13 @@
                 </button>
             </div>
 
-            <!-- NAVIGATION -->
+            <!-- NAVIGATION (UTVECKLINGSPROFIL BORTTAGEN HÄRIFRÅN) -->
             <nav class="space-y-1 mb-5">
                 <button onclick="switchTab('chat')" id="nav-chat" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-deep-olive text-amber-50 flex items-center space-x-2 shadow-sm">
                     <span>💬</span> <span>Chatt</span>
                 </button>
                 <button onclick="switchTab('journal')" id="nav-journal" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
                     <span>🌱</span> <span>Reflektion & Utveckling</span>
-                </button>
-                <button onclick="openProgressFromMenu()" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
-                    <svg class="w-4 h-4 text-stone-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
-                    <span>Min Utvecklingsprofil</span>
                 </button>
                 <button onclick="switchTab('settings')" id="nav-settings" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
                     <span>⚙️</span> <span>Inställningar & Dataskydd</span>
@@ -117,7 +113,7 @@
         </div>
     </aside>
 
-    <!-- VISUELL UTVECKLINGSPANEL (SLIDER IN FRÅN HÖGER) -->
+    <!-- VISUELL UTVECKLINGSPANEL -->
     <aside id="progress-drawer" class="fixed top-0 right-0 bottom-0 w-80 sm:w-96 bg-white z-50 transform translate-x-full transition-transform duration-300 flex flex-col justify-between shadow-2xl border-l border-stone-200 overflow-y-auto">
         <div class="p-6 space-y-5">
             <div class="flex justify-between items-start border-b border-stone-100 pb-3">
@@ -130,7 +126,6 @@
                 </button>
             </div>
 
-            <!-- KOGNITIV VECKOINSIKT -->
             <div class="bg-amber-50/70 border border-amber-200/80 p-3.5 rounded-2xl text-xs space-y-1">
                 <div class="flex items-center space-x-1.5 text-amber-900 font-bold">
                     <span>💡</span>
@@ -141,7 +136,6 @@
                 </p>
             </div>
 
-            <!-- MÅENDETREND (NO-WRAP BADGE) -->
             <div class="bg-stone-50 p-4 rounded-2xl border border-stone-200/80 space-y-3">
                 <div class="flex justify-between items-center">
                     <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wider">Måendetrend (Senaste 7)</h3>
@@ -180,7 +174,6 @@
                 </div>
             </div>
 
-            <!-- FOKUSPROFIL -->
             <div class="bg-stone-50 p-4 rounded-2xl border border-stone-200/80 space-y-3">
                 <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wider">Aktiv Fokusprofil</h3>
                 <div class="space-y-2 text-xs">
@@ -223,7 +216,6 @@
                 </div>
             </div>
 
-            <!-- STATISTIK -->
             <div class="grid grid-cols-2 gap-3">
                 <div class="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 text-center">
                     <p class="text-[10px] font-bold text-stone-400 uppercase">Reflektioner</p>
@@ -344,14 +336,13 @@
             </div>
         </section>
 
-        <!-- VY 2: REFLEKTION & AVANCERAD UTVECKLINGSHUB -->
+        <!-- VY 2: REFLEKTION & UTVECKLINGSHUB -->
         <section id="view-journal" class="hidden flex-1 flex flex-col h-full min-h-0 p-4 sm:p-6 max-w-2xl w-full mx-auto overflow-y-auto space-y-6">
             <div>
                 <h2 class="text-xl font-bold text-deep-olive">Reflektionsdagbok & Utvecklingsanalys</h2>
                 <p class="text-xs text-stone-500 font-medium">En kompass med perspektiv.</p>
             </div>
 
-            <!-- INTEGRERADE UTVECKLINGSKORT DIREKT I HUVUDVYN -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div class="bg-white p-3.5 rounded-2xl border border-stone-200 shadow-sm flex flex-col justify-between">
                     <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Klarhets-Streak</span>
@@ -370,7 +361,6 @@
                 </div>
             </div>
 
-            <!-- NY REFLEKTION FORMULÄR -->
             <form onsubmit="saveJournalEntry(event)" class="bg-white p-5 rounded-2xl border border-stone-200 space-y-4 shadow-sm">
                 <div>
                     <label class="block text-xs font-semibold text-stone-600 mb-2">Hur upplever du din energi & bana just nu? (1-5)</label>
@@ -389,7 +379,6 @@
                 <button type="submit" class="w-full bg-deep-olive text-amber-50 font-semibold py-2.5 rounded-xl text-xs transition">Spara Reflektion</button>
             </form>
 
-            <!-- HISTORISKA REFLEKTIONER MED RADERINGSKNAPP (X) -->
             <div>
                 <h3 class="text-xs font-bold text-stone-500 uppercase tracking-wider mb-3">Tidigare Reflektioner</h3>
                 <div id="journal-list" class="space-y-3">
@@ -430,6 +419,20 @@
         </section>
 
     </main>
+
+    <!-- ANPASSAD FALK CONFIRM-MODAL (ERSÄTTER BROWSER NATIVE CONFIRM) -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl text-center">
+            <div class="text-center pb-2 border-b border-stone-100">
+                <h3 id="confirm-title" class="text-base font-bold text-deep-olive">Bekräfta åtgärd</h3>
+            </div>
+            <p id="confirm-msg" class="text-xs text-stone-700 leading-relaxed py-1"></p>
+            <div class="flex space-x-2 pt-2">
+                <button id="confirm-cancel-btn" onclick="closeConfirmModal(false)" class="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold py-2.5 rounded-xl text-xs transition">Avbryt</button>
+                <button id="confirm-ok-btn" onclick="closeConfirmModal(true)" class="flex-1 bg-rose-700 hover:bg-rose-800 text-white font-bold py-2.5 rounded-xl text-xs transition shadow">Radera</button>
+            </div>
+        </div>
+    </div>
 
     <!-- PÅMINNELSESMODAL -->
     <div id="reminder-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
@@ -475,7 +478,7 @@
         </div>
     </div>
 
-    <!-- UNIFIERAD CUSTOM POPUP MODAL -->
+    <!-- CUSTOM POPUP MODAL -->
     <div id="custom-alert-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl text-center">
             <div class="text-center pb-2 border-b border-stone-100">
@@ -636,8 +639,27 @@
         let userProfile = null;
         let currentAuthMode = 'login';
         let pendingReminderText = '';
+        let confirmResolver = null;
 
         let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motivation: 50 };
+
+        /* CUSTOM FALK CONFIRM MODAL ENGINE */
+        function customConfirm(msg, title = "Bekräfta åtgärd") {
+            return new Promise((resolve) => {
+                document.getElementById('confirm-title').textContent = title;
+                document.getElementById('confirm-msg').textContent = msg;
+                document.getElementById('confirm-modal').classList.remove('hidden');
+                confirmResolver = resolve;
+            });
+        }
+
+        function closeConfirmModal(result) {
+            document.getElementById('confirm-modal').classList.add('hidden');
+            if (confirmResolver) {
+                confirmResolver(result);
+                confirmResolver = null;
+            }
+        }
 
         function initDisclaimer() {
             const lang = (navigator.language || 'sv').toLowerCase();
@@ -824,11 +846,6 @@
             }
         }
 
-        function openProgressFromMenu() {
-            toggleSidebar();
-            setTimeout(() => toggleProgressDrawer(), 150);
-        }
-
         function switchTab(tab) {
             closeAllDrawers();
 
@@ -860,41 +877,82 @@
             sendMessage(new Event('submit'));
         }
 
-        /* INKLUDERAR DIREKT RADERING AV SAMTAL MED CROSS-IKON */
+        /* SAMTALSHANTERING MED NÅLNING OCH SVG PAPPERSKORG */
+        let pinnedSessions = JSON.parse(localStorage.getItem('falk_pinned_sessions') || '[]');
+
         async function loadSessions() {
             if (!userToken) return;
             const res = await fetch('/api/sessions', { headers: { 'Authorization': `Bearer ${userToken}` } });
-            const sessions = await res.json();
+            let sessions = await res.json();
             const list = document.getElementById('session-list');
             if (!list) return;
             list.innerHTML = '';
 
+            // Sortera nålade samtal överst
+            sessions.sort((a, b) => {
+                const isAPinned = pinnedSessions.includes(a.id);
+                const isBPinned = pinnedSessions.includes(b.id);
+                if (isAPinned && !isBPinned) return -1;
+                if (!isAPinned && isBPinned) return 1;
+                return 0;
+            });
+
             sessions.forEach(s => {
+                const isPinned = pinnedSessions.includes(s.id);
                 const item = document.createElement('div');
                 item.className = `group flex items-center justify-between p-2 rounded-lg text-xs transition ${activeSessionId === s.id ? 'bg-stone-200 text-deep-olive font-bold' : 'hover:bg-stone-200/50 text-stone-700'}`;
                 
                 const titleBtn = document.createElement('button');
-                titleBtn.className = "truncate flex-1 text-left";
-                titleBtn.textContent = s.title;
+                titleBtn.className = "truncate flex-1 text-left flex items-center space-x-1.5";
+                titleBtn.innerHTML = `${isPinned ? '<span class="text-terracotta">📌</span>' : ''}<span class="truncate">${s.title}</span>`;
                 titleBtn.onclick = () => selectSession(s.id);
 
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = "flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition";
+
+                // Nåla knapp
+                const pinBtn = document.createElement('button');
+                pinBtn.className = "p-1 hover:text-terracotta text-stone-400 transition";
+                pinBtn.title = isPinned ? "Lossa samtal" : "Nåla samtal";
+                pinBtn.innerHTML = `<svg class="w-3.5 h-3.5" fill="${isPinned ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 5h14l-4 4v6l2 2v1H7v-1l2-2V9L5 5z"/></svg>`;
+                pinBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    togglePinSession(s.id);
+                };
+
+                // Papperskorg knapp (SVG)
                 const delBtn = document.createElement('button');
-                delBtn.className = "text-stone-400 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition px-1 font-bold";
-                delBtn.textContent = "✕";
+                delBtn.className = "p-1 hover:text-rose-600 text-stone-400 transition";
                 delBtn.title = "Radera samtal";
+                delBtn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`;
                 delBtn.onclick = (e) => {
                     e.stopPropagation();
                     deleteSession(s.id);
                 };
 
+                actionsDiv.appendChild(pinBtn);
+                actionsDiv.appendChild(delBtn);
+
                 item.appendChild(titleBtn);
-                item.appendChild(delBtn);
+                item.appendChild(actionsDiv);
                 list.appendChild(item);
             });
         }
 
+        function togglePinSession(id) {
+            if (pinnedSessions.includes(id)) {
+                pinnedSessions = pinnedSessions.filter(item => item !== id);
+            } else {
+                pinnedSessions.push(id);
+            }
+            localStorage.setItem('falk_pinned_sessions', JSON.stringify(pinnedSessions));
+            loadSessions();
+        }
+
         async function deleteSession(id) {
-            if (!confirm("Vill du radera detta samtal permanent?")) return;
+            const confirmed = await customConfirm("Vill du radera detta samtal permanent?", "Radera samtal");
+            if (!confirmed) return;
+
             if (userToken) {
                 await fetch(`/api/sessions/${id}`, {
                     method: 'DELETE',
@@ -1184,10 +1242,9 @@
             sendMessage(new Event('submit'));
         }
 
-        function openReminderModal(msgId) {
-            const el = document.getElementById(msgId);
-            if (!el) return;
-            pendingReminderText = el.textContent.trim();
+        function openReminderModal(textOrId) {
+            const el = document.getElementById(textOrId);
+            pendingReminderText = el ? el.textContent.trim() : textOrId;
             const input = document.getElementById('reminder-quote-input');
             if (input) input.value = pendingReminderText;
             document.getElementById('reminder-modal').classList.remove('hidden');
@@ -1283,7 +1340,7 @@
             renderJournalList(entries);
         }
 
-        /* INKLUDERAR ENKLA RADERINGSKNAPPAR (X) PÅ VARJE REFLEKTIONSKORT */
+        /* REFLEKTIONER MED SVG-PAPPERSKORG OCH PÅMINNELSEKLOCKA */
         function renderJournalList(entries) {
             const list = document.getElementById('journal-list');
             if (!list) return;
@@ -1301,6 +1358,9 @@
             entries.forEach(e => {
                 const div = document.createElement('div');
                 div.className = "bg-white p-3.5 rounded-xl border border-stone-200 text-xs space-y-1 shadow-sm flex justify-between items-start";
+                
+                const safeText = e.entry_text.replace(/'/g, "\\'");
+
                 div.innerHTML = `
                     <div class="space-y-1 flex-1 pr-2">
                         <div class="flex justify-between items-center font-bold text-stone-500">
@@ -1309,16 +1369,25 @@
                         </div>
                         <p class="text-stone-800 leading-relaxed">${e.entry_text}</p>
                     </div>
-                    <button onclick="deleteJournalEntry('${e.id}')" class="text-stone-300 hover:text-rose-600 font-bold p-1 transition" title="Radera reflektion">
-                        ✕
-                    </button>
+                    <div class="flex items-center space-x-1">
+                        <!-- PÅMINNELSE-KNAPP FÖR REFLEKTION -->
+                        <button onclick="openReminderModal('${safeText}')" class="p-1 hover:text-deep-olive text-stone-400 transition" title="Sätt påminnelse från reflektion">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </button>
+
+                        <!-- PAPPERSKORG (SVG) FÖR RADERING -->
+                        <button onclick="deleteJournalEntry('${e.id}')" class="p-1 hover:text-rose-600 text-stone-400 transition" title="Radera reflektion">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                    </div>
                 `;
                 list.appendChild(div);
             });
         }
 
         async function deleteJournalEntry(id) {
-            if (!confirm("Vill du radera denna reflektion?")) return;
+            const confirmed = await customConfirm("Vill du radera denna reflektion permanent?", "Radera reflektion");
+            if (!confirmed) return;
             
             if (userToken && !id.startsWith('local-')) {
                 await fetch(`/api/journal/${id}`, {
@@ -1373,7 +1442,9 @@
         }
 
         async function deleteMyData() {
-            if (!confirm("Är du helt säker? Detta raderar permanent ditt konto och all din samtalshistorik.")) return;
+            const confirmed = await customConfirm("Är du helt säker? Detta raderar permanent ditt konto och all din samtalshistorik.", "Radera konto");
+            if (!confirmed) return;
+
             if (userToken) {
                 await fetch('/delete-user-data', { method: 'DELETE', headers: { 'Authorization': `Bearer ${userToken}` } });
             }
