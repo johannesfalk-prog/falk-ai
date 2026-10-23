@@ -37,38 +37,35 @@
 </head>
 <body class="bg-warm-beige text-slate-800 h-screen max-h-screen flex flex-col font-sans overflow-hidden">
 
-    <!-- TOP HEADER MED ETT DIREKT + FÖR NYTT SAMTAL -->
+    <!-- TOP HEADER -->
     <header class="h-14 border-b border-stone-300/60 flex items-center justify-between px-4 bg-warm-beige/90 backdrop-blur-sm z-30 flex-shrink-0">
-        <div class="flex items-center space-x-3">
-            <button onclick="toggleSidebar()" class="flex items-center space-x-1.5 text-deep-olive font-semibold text-sm hover:opacity-80 transition">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-                <span>Meny</span>
-            </button>
-            
-            <!-- + KNAPP I HEADER -->
-            <button onclick="createNewSession()" class="text-deep-olive hover:opacity-80 font-bold text-xl px-1.5 transition leading-none" title="Nytt samtal">
+        <!-- VÄNSTER SIDA: + KNAPP OCH MENY -->
+        <div class="flex items-center space-x-2">
+            <button onclick="createNewSession()" class="text-deep-olive hover:opacity-80 font-bold text-2xl leading-none px-1 py-0.5 transition" title="Nytt samtal">
                 +
             </button>
-        </div>
-
-        <h1 class="text-xl font-bold tracking-widest text-deep-olive absolute left-1/2 -translate-x-1/2">FALK</h1>
-
-        <div id="auth-header-right">
-            <button id="login-btn-top" onclick="openAuthModal()" class="text-xs bg-deep-olive text-amber-50 px-3 py-1.5 rounded-full font-medium hover:bg-stone-700 transition">
-                Logga in
+            <button onclick="toggleSidebar()" class="flex items-center space-x-1 text-deep-olive font-semibold text-xs hover:opacity-80 transition pl-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                <span>Meny</span>
             </button>
-            <div id="user-info-top" class="hidden flex items-center space-x-2">
-                <span id="user-display-top" class="text-xs text-deep-olive truncate font-semibold"></span>
-                <button onclick="logout()" class="text-xs text-terracotta hover:underline font-medium">Logga ut</button>
-            </div>
         </div>
+
+        <!-- MITTEN: BRANDING -->
+        <h1 class="text-lg font-bold tracking-widest text-deep-olive absolute left-1/2 -translate-x-1/2">FALK</h1>
+
+        <!-- HÖGER SIDA: UTVECKLINGSKNAPP -->
+        <button onclick="toggleProgressDrawer()" class="flex items-center space-x-1 text-xs font-bold text-deep-olive bg-stone-200/60 hover:bg-stone-300/60 px-2.5 py-1.5 rounded-full transition shadow-sm">
+            <span>📈</span>
+            <span>Utveckling</span>
+        </button>
     </header>
 
-    <!-- SLIDE-IN SIDEBAR DRAWER -->
-    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/40 z-40 hidden transition-opacity"></div>
+    <!-- SLIDE-IN SIDEBAR DRAWER (FRÅN VÄNSTER) -->
+    <div id="sidebar-overlay" onclick="closeAllDrawers()" class="fixed inset-0 bg-black/40 z-40 hidden transition-opacity"></div>
+    
     <aside id="sidebar-drawer" class="fixed top-0 left-0 bottom-0 w-72 bg-stone-100 z-50 transform -translate-x-full transition-transform duration-300 flex flex-col justify-between shadow-2xl border-r border-stone-300">
         <div class="p-5 flex flex-col h-full">
-            <div class="flex justify-between items-start mb-6 border-b border-stone-200 pb-4">
+            <div class="flex justify-between items-start mb-5 border-b border-stone-200 pb-3">
                 <div>
                     <h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2>
                     <p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p>
@@ -78,12 +75,16 @@
                 </button>
             </div>
 
-            <nav class="space-y-1 mb-6">
+            <!-- NAVIGATION (ANPASSADE COACHING-TITLAR) -->
+            <nav class="space-y-1 mb-5">
                 <button onclick="switchTab('chat')" id="nav-chat" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-deep-olive text-amber-50 flex items-center space-x-2 shadow-sm">
-                    <span>💬</span> <span>Sokratisk Chatt</span>
+                    <span>💬</span> <span>Chatt</span>
                 </button>
                 <button onclick="switchTab('journal')" id="nav-journal" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
-                    <span>📓</span> <span>Journal & Mående</span>
+                    <span>🌱</span> <span>Reflektion & Utveckling</span>
+                </button>
+                <button onclick="openProgressFromMenu()" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
+                    <span>📈</span> <span>Min Utvecklingsprofil</span>
                 </button>
                 <button onclick="switchTab('settings')" id="nav-settings" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
                     <span>⚙️</span> <span>Inställningar & Dataskydd</span>
@@ -93,7 +94,6 @@
             <div class="flex-1 flex flex-col min-h-0">
                 <div class="flex justify-between items-center mb-2 px-1">
                     <span class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">SAMTAL</span>
-                    <!-- RENODLAD + KNAPP I MENYN -->
                     <button onclick="createNewSession()" class="text-base text-deep-olive hover:opacity-80 font-bold px-1" title="Nytt samtal">+</button>
                 </div>
                 <div id="session-list" class="flex-1 overflow-y-auto space-y-1 pr-1 text-xs text-stone-600">
@@ -101,8 +101,124 @@
                 </div>
             </div>
 
-            <div class="pt-4 border-t border-stone-200 text-center">
-                <span id="tier-badge" class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-stone-200 text-stone-600">GÄST</span>
+            <!-- ANVÄNDARPROFIL OCH LOGGA UT I BOTTEN AV MENYN -->
+            <div class="pt-4 border-t border-stone-200 flex flex-col space-y-2">
+                <div id="sidebar-user-block" class="flex justify-between items-center text-xs">
+                    <span id="user-display-bottom" class="font-bold text-deep-olive truncate">Gäst</span>
+                    <button id="logout-btn-bottom" onclick="logout()" class="hidden text-terracotta hover:underline font-semibold">Logga ut</button>
+                    <button id="login-btn-bottom" onclick="openAuthModal()" class="text-deep-olive font-bold hover:underline">Logga in</button>
+                </div>
+                <div class="text-center">
+                    <span id="tier-badge" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-stone-200 text-stone-600">INLOGGAD</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- VISUELL UTVECKLINGSPANEL (SLIDER IN FRÅN VÄNSTER) -->
+    <aside id="progress-drawer" class="fixed top-0 left-0 bottom-0 w-80 sm:w-96 bg-white z-50 transform -translate-x-full transition-transform duration-300 flex flex-col justify-between shadow-2xl border-r border-stone-200 overflow-y-auto">
+        <div class="p-6 space-y-6">
+            <div class="flex justify-between items-start border-b border-stone-100 pb-3">
+                <div>
+                    <h2 class="text-lg font-bold text-deep-olive tracking-wider">Min Utveckling</h2>
+                    <p class="text-[11px] text-stone-500">Visuell analys & kognitiva framsteg</p>
+                </div>
+                <button onclick="toggleProgressDrawer()" class="text-stone-400 hover:text-stone-700 p-1">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <!-- GRAF 1: STÄMNINGS- & MÅENDETREND (SVG) -->
+            <div class="bg-stone-50 p-4 rounded-2xl border border-stone-200/80 space-y-3">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wider">Måendetrend (Senaste 7 Inlägg)</h3>
+                    <span class="text-[10px] font-bold text-deep-olive bg-stone-200/80 px-2 py-0.5 rounded-full">Snitt: 3.8 / 5</span>
+                </div>
+                <div class="h-28 w-full flex items-end justify-between pt-4 px-2 space-x-2 border-b border-stone-200">
+                    <div class="flex flex-col items-center flex-1 space-y-1">
+                        <div class="w-full bg-soft-sage/40 rounded-t-md hover:bg-deep-olive transition" style="height: 40%;"></div>
+                        <span class="text-[9px] text-stone-400">Må</span>
+                    </div>
+                    <div class="flex flex-col items-center flex-1 space-y-1">
+                        <div class="w-full bg-soft-sage/60 rounded-t-md hover:bg-deep-olive transition" style="height: 60%;"></div>
+                        <span class="text-[9px] text-stone-400">Ti</span>
+                    </div>
+                    <div class="flex flex-col items-center flex-1 space-y-1">
+                        <div class="w-full bg-soft-sage/50 rounded-t-md hover:bg-deep-olive transition" style="height: 50%;"></div>
+                        <span class="text-[9px] text-stone-400">On</span>
+                    </div>
+                    <div class="flex flex-col items-center flex-1 space-y-1">
+                        <div class="w-full bg-deep-olive rounded-t-md" style="height: 80%;"></div>
+                        <span class="text-[9px] text-deep-olive font-bold">To</span>
+                    </div>
+                    <div class="flex flex-col items-center flex-1 space-y-1">
+                        <div class="w-full bg-soft-sage/70 rounded-t-md hover:bg-deep-olive transition" style="height: 70%;"></div>
+                        <span class="text-[9px] text-stone-400">Fr</span>
+                    </div>
+                    <div class="flex flex-col items-center flex-1 space-y-1">
+                        <div class="w-full bg-soft-sage/90 rounded-t-md hover:bg-deep-olive transition" style="height: 90%;"></div>
+                        <span class="text-[9px] text-stone-400">Lö</span>
+                    </div>
+                    <div class="flex flex-col items-center flex-1 space-y-1">
+                        <div class="w-full bg-deep-olive rounded-t-md" style="height: 100%;"></div>
+                        <span class="text-[9px] text-deep-olive font-bold">Sö</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRAF 2: FOKUSPROFIL & KOGNITIV BALANS -->
+            <div class="bg-stone-50 p-4 rounded-2xl border border-stone-200/80 space-y-3">
+                <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wider">Aktiv Fokusprofil</h3>
+                <div class="space-y-2 text-xs">
+                    <div>
+                        <div class="flex justify-between text-[11px] font-semibold text-stone-700 mb-1">
+                            <span>Självförtroende</span>
+                            <span id="prog-confidence">50%</span>
+                        </div>
+                        <div class="w-full bg-stone-200 h-2 rounded-full overflow-hidden">
+                            <div id="bar-confidence" class="bg-deep-olive h-full transition-all duration-500" style="width: 50%;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[11px] font-semibold text-stone-700 mb-1">
+                            <span>Stresshantering</span>
+                            <span id="prog-stress">50%</span>
+                        </div>
+                        <div class="w-full bg-stone-200 h-2 rounded-full overflow-hidden">
+                            <div id="bar-stress" class="bg-terracotta h-full transition-all duration-500" style="width: 50%;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[11px] font-semibold text-stone-700 mb-1">
+                            <span>Handlingskraft</span>
+                            <span id="prog-action">50%</span>
+                        </div>
+                        <div class="w-full bg-stone-200 h-2 rounded-full overflow-hidden">
+                            <div id="bar-action" class="bg-deep-olive h-full transition-all duration-500" style="width: 50%;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[11px] font-semibold text-stone-700 mb-1">
+                            <span>Gränssättning</span>
+                            <span id="prog-boundaries">50%</span>
+                        </div>
+                        <div class="w-full bg-stone-200 h-2 rounded-full overflow-hidden">
+                            <div id="bar-boundaries" class="bg-soft-sage h-full transition-all duration-500" style="width: 50%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AKTIVITETSSTATISTIK -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 text-center">
+                    <p class="text-[10px] font-bold text-stone-400 uppercase">Reflektioner</p>
+                    <p id="stat-entries-count" class="text-xl font-bold text-deep-olive mt-1">12</p>
+                </div>
+                <div class="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 text-center">
+                    <p class="text-[10px] font-bold text-stone-400 uppercase">Aktiva Påminnelser</p>
+                    <p id="stat-reminders-count" class="text-xl font-bold text-terracotta mt-1">3</p>
+                </div>
             </div>
         </div>
     </aside>
@@ -157,29 +273,9 @@
                         <p class="text-xs font-bold text-stone-800">🎯 Från mål till handling</p>
                         <p class="text-xs text-stone-600 italic">"Hjälp mig komma vidare och få saker att hända."</p>
                     </div>
-
-                    <div onclick="selectOnboarding('Hjälp mig förstå en situation och kommunicera bättre.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
-                        <p class="text-xs font-bold text-stone-800">💬 Relationer & svåra samtal</p>
-                        <p class="text-xs text-stone-600 italic">"Hjälp mig förstå en situation och kommunicera bättre."</p>
-                    </div>
-
-                    <div onclick="selectOnboarding('Hjälp mig hitta hållbara vanor för sömn, energi och fokus.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
-                        <p class="text-xs font-bold text-stone-800">⚡ Mer energi & balans</p>
-                        <p class="text-xs text-stone-600 italic">"Hjälp mig hitta hållbara vanor för sömn, energi och fokus."</p>
-                    </div>
-
-                    <div onclick="selectOnboarding('Hjälp mig upptäcka mina behov, drivkrafter och mönster.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
-                        <p class="text-xs font-bold text-stone-800">🔍 Förstå mig själv bättre</p>
-                        <p class="text-xs text-stone-600 italic">"Hjälp mig upptäcka mina behov, drivkrafter och mönster."</p>
-                    </div>
-
-                    <div onclick="selectOnboarding('Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
-                        <p class="text-xs font-bold text-stone-800">🧩 Utmana mina tankar</p>
-                        <p class="text-xs text-stone-600 italic">"Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet."</p>
-                    </div>
                 </div>
 
-                <!-- SEPARAT ELEMENT FÖR SJÄLVA CHATTMEDDELANDENA -->
+                <!-- CHATTMEDDELANDEN -->
                 <div id="chat-messages-list" class="space-y-4"></div>
 
             </div>
@@ -211,7 +307,7 @@
                     </button>
                 </form>
 
-                <!-- INTERNATIONELLT ANPASSAD DISCLAIMER -->
+                <!-- DISCLAIMER -->
                 <div class="text-center space-y-0.5">
                     <p id="disclaimer-text" class="text-[9.5px] text-stone-500 leading-tight">
                         FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling. Ej sjukvård. Vid akuta kriser, ring 112 eller 90101 (MIND).
@@ -223,14 +319,14 @@
             </div>
         </section>
 
-        <!-- VY 2: JOURNAL -->
+        <!-- VY 2: REFLEKTION & UTVECKLING (COACHING-ANPASSAD) -->
         <section id="view-journal" class="hidden flex-1 flex flex-col h-full min-h-0 p-6 max-w-xl w-full mx-auto overflow-y-auto">
-            <h2 class="text-xl font-bold text-deep-olive">CBT Journal & Måendetracker</h2>
+            <h2 class="text-xl font-bold text-deep-olive">Reflektionsdagbok & Framsteg</h2>
             <p class="text-xs text-stone-500 mb-4 font-medium">En kompass med perspektiv.</p>
             
             <form onsubmit="saveJournalEntry(event)" class="bg-white p-5 rounded-2xl border border-stone-200 space-y-4 mb-6 shadow-sm">
                 <div>
-                    <label class="block text-xs font-semibold text-stone-600 mb-2">Hur mår du just nu? (1-5)</label>
+                    <label class="block text-xs font-semibold text-stone-600 mb-2">Hur upplever du din energi & bana just nu? (1-5)</label>
                     <div class="flex space-x-2">
                         <button type="button" onclick="setMood(1)" class="mood-btn flex-1 py-2 bg-stone-100 border border-stone-300 rounded-xl text-sm" data-score="1">😞 1</button>
                         <button type="button" onclick="setMood(2)" class="mood-btn flex-1 py-2 bg-stone-100 border border-stone-300 rounded-xl text-sm" data-score="2">😐 2</button>
@@ -240,29 +336,28 @@
                     </div>
                 </div>
                 <div>
-                    <textarea id="journal-text" rows="3" placeholder="Skriv en kort reflektion om vad som påverkar ditt mående idag..." 
+                    <textarea id="journal-text" rows="3" placeholder="Skriv en kort reflektion om vad som påverkar din riktning idag..." 
                               class="w-full bg-stone-50 border border-stone-300 rounded-xl p-3 text-xs text-stone-800 focus:outline-none focus:border-deep-olive"></textarea>
                 </div>
-                <button type="submit" class="w-full bg-deep-olive text-amber-50 font-semibold py-2.5 rounded-xl text-xs transition">Spara Journalinlägg</button>
+                <button type="submit" class="w-full bg-deep-olive text-amber-50 font-semibold py-2.5 rounded-xl text-xs transition">Spara Reflektion</button>
             </form>
 
-            <h3 class="text-xs font-bold text-stone-500 uppercase tracking-wider mb-3">Tidigare inlägg</h3>
+            <h3 class="text-xs font-bold text-stone-500 uppercase tracking-wider mb-3">Tidigare Reflektioner</h3>
             <div id="journal-list" class="space-y-3">
-                <p class="text-stone-400 text-xs italic">Inga inlägg sparade ännu.</p>
+                <p class="text-stone-400 text-xs italic">Inga reflektioner sparade ännu.</p>
             </div>
         </section>
 
-        <!-- VY 3: INSTÄLLNINGAR (RENSADE HÄNVISNINGAR OCH RENA STRIPPADE TITLAR) -->
+        <!-- VY 3: INSTÄLLNINGAR -->
         <section id="view-settings" class="hidden flex-1 flex flex-col h-full min-h-0 p-6 max-w-xl w-full mx-auto overflow-y-auto">
             <h2 class="text-xl font-bold text-deep-olive">Inställningar & Dataskydd</h2>
             <p class="text-xs text-stone-500 mb-6 font-medium">En kompass med perspektiv.</p>
             
             <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-3 mb-6 shadow-sm">
                 <h3 class="text-xs font-bold text-deep-olive uppercase tracking-wider">Kontostatus</h3>
-                <p class="text-xs text-stone-700">Status: <span id="settings-tier" class="font-bold text-stone-900">GÄST</span></p>
+                <p class="text-xs text-stone-700">Status: <span id="settings-tier" class="font-bold text-stone-900">INLOGGAD</span></p>
             </div>
 
-            <!-- RENODLAD DATAPORTABILITET UTAN PARENTESER -->
             <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-3 mb-6 shadow-sm">
                 <h3 class="text-xs font-bold text-deep-olive uppercase tracking-wider">Dataportabilitet</h3>
                 <p class="text-xs text-stone-600 leading-relaxed">Ladda ned en komplett maskinläsbar JSON-fil med all din data.</p>
@@ -271,7 +366,6 @@
                 </button>
             </div>
 
-            <!-- RENODLAD RÄTTEN ATT BLI GLÖMD UTAN PARENTESER -->
             <div class="bg-rose-50 p-5 rounded-2xl border border-rose-200 space-y-3 mb-6">
                 <h3 class="text-xs font-bold text-rose-800 uppercase tracking-wider">Rätten att bli glömd</h3>
                 <p class="text-xs text-stone-600 leading-relaxed">Radera ditt konto och all tillhörande data permanent.</p>
@@ -286,6 +380,51 @@
         </section>
 
     </main>
+
+    <!-- PÅMINNELSESMODAL MED KLOCKA, FREKVENS OCH DAGBOKSSYNK -->
+    <div id="reminder-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl">
+            <div class="text-center pb-2 border-b border-stone-100">
+                <div class="text-2xl mb-1">⏰</div>
+                <h3 class="text-base font-bold text-deep-olive">Skapa Påminnelse</h3>
+                <p class="text-[11px] text-stone-500">Sätt en återkommande impulspåminnelse för ditt fokus</p>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-bold text-stone-700 mb-1">Citat / Text att bli påmind om:</label>
+                    <div id="reminder-quote-preview" class="p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-stone-700 italic"></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-bold text-stone-700 mb-1">Tidpunkt:</label>
+                        <input type="time" id="reminder-time" value="08:00" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-2.5 py-2 font-semibold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-stone-700 mb-1">Frekvens:</label>
+                        <select id="reminder-freq" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-2 py-2 font-semibold text-stone-800">
+                            <option value="daily">Varje dag</option>
+                            <option value="weekly">Varje vecka</option>
+                            <option value="indefinite">Tillsvidare (Löpande)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="pt-1">
+                    <label class="flex items-center space-x-2 text-[11px] text-stone-700 cursor-pointer">
+                        <input type="checkbox" id="reminder-save-journal" checked class="rounded border-stone-300 text-deep-olive focus:ring-deep-olive">
+                        <span>Spara även som ett inlägg i Reflektionsdagboken</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex space-x-2 pt-2">
+                <button onclick="closeReminderModal()" class="flex-1 bg-stone-100 text-stone-600 font-bold py-2.5 rounded-xl transition">Avbryt</button>
+                <button onclick="saveReminderModalSubmit()" class="flex-1 bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl transition shadow">Spara Påminnelse</button>
+            </div>
+        </div>
+    </div>
 
     <!-- UNIFIERAD CUSTOM POPUP MODAL -->
     <div id="custom-alert-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
@@ -447,6 +586,7 @@
         let selectedMood = 3;
         let userProfile = null;
         let currentAuthMode = 'login';
+        let pendingReminderText = '';
 
         let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motivation: 50 };
 
@@ -509,34 +649,35 @@
             checkDailyMoodPrompt();
         }
 
-        /* UPPDRAG: TA BORT (PRO) FRÅN INLOGGAD MÄRKNING */
         async function updateAuthUI(session) {
-            const loginBtnTop = document.getElementById('login-btn-top');
-            const userInfoTop = document.getElementById('user-info-top');
-            const userDisplayTop = document.getElementById('user-display-top');
+            const userDisplayBottom = document.getElementById('user-display-bottom');
+            const logoutBtnBottom = document.getElementById('logout-btn-bottom');
+            const loginBtnBottom = document.getElementById('login-btn-bottom');
             const tierBadge = document.getElementById('tier-badge');
             const settingsTier = document.getElementById('settings-tier');
 
             if (session) {
                 userToken = session.access_token;
-                loginBtnTop.classList.add('hidden');
-                userInfoTop.classList.remove('hidden');
-                
                 await fetchProfile();
                 const displayName = (userProfile && userProfile.username) ? userProfile.username : session.user.email;
-                userDisplayTop.textContent = displayName;
+                
+                if (userDisplayBottom) userDisplayBottom.textContent = displayName;
+                if (logoutBtnBottom) logoutBtnBottom.classList.remove('hidden');
+                if (loginBtnBottom) loginBtnBottom.classList.add('hidden');
 
-                tierBadge.textContent = "INLOGGAD";
-                settingsTier.textContent = "INLOGGAD";
+                if (tierBadge) tierBadge.textContent = "INLOGGAD";
+                if (settingsTier) settingsTier.textContent = "INLOGGAD";
                 loadSessions();
                 loadJournal();
             } else {
                 userToken = null;
                 userProfile = null;
-                loginBtnTop.classList.remove('hidden');
-                userInfoTop.classList.add('hidden');
-                tierBadge.textContent = "GÄST";
-                settingsTier.textContent = "GÄST";
+                if (userDisplayBottom) userDisplayBottom.textContent = "Gäst";
+                if (logoutBtnBottom) logoutBtnBottom.classList.add('hidden');
+                if (loginBtnBottom) loginBtnBottom.classList.remove('hidden');
+                
+                if (tierBadge) tierBadge.textContent = "GÄST";
+                if (settingsTier) settingsTier.textContent = "GÄST";
                 document.getElementById('session-list').innerHTML = `<p class="p-2 text-stone-400 italic">Logga in för samtalshistorik</p>`;
             }
         }
@@ -608,21 +749,43 @@
             }
         }
 
+        function closeAllDrawers() {
+            document.getElementById('sidebar-drawer').classList.add('-translate-x-full');
+            document.getElementById('progress-drawer').classList.add('-translate-x-full');
+            document.getElementById('sidebar-overlay').classList.add('hidden');
+        }
+
         function toggleSidebar() {
             const drawer = document.getElementById('sidebar-drawer');
             const overlay = document.getElementById('sidebar-overlay');
             if (drawer.classList.contains('-translate-x-full')) {
+                closeAllDrawers();
                 drawer.classList.remove('-translate-x-full');
                 overlay.classList.remove('hidden');
             } else {
-                drawer.classList.add('-translate-x-full');
-                overlay.classList.add('hidden');
+                closeAllDrawers();
             }
         }
 
+        function toggleProgressDrawer() {
+            const drawer = document.getElementById('progress-drawer');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (drawer.classList.contains('-translate-x-full')) {
+                closeAllDrawers();
+                drawer.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                closeAllDrawers();
+            }
+        }
+
+        function openProgressFromMenu() {
+            toggleSidebar();
+            setTimeout(() => toggleProgressDrawer(), 150);
+        }
+
         function switchTab(tab) {
-            const drawer = document.getElementById('sidebar-drawer');
-            if (!drawer.classList.contains('-translate-x-full')) toggleSidebar();
+            closeAllDrawers();
 
             document.getElementById('view-chat').classList.add('hidden');
             document.getElementById('view-journal').classList.add('hidden');
@@ -682,14 +845,11 @@
                 const cards = document.getElementById('onboarding-cards');
                 if (cards) cards.classList.remove('hidden');
                 
-                // Se till att vi är i chatt-vyn om vi var i t.ex. inställningar
                 document.getElementById('view-chat').classList.remove('hidden');
                 document.getElementById('view-journal').classList.add('hidden');
                 document.getElementById('view-settings').classList.add('hidden');
 
-                const drawer = document.getElementById('sidebar-drawer');
-                if (!drawer.classList.contains('-translate-x-full')) toggleSidebar();
-
+                closeAllDrawers();
                 loadSessions();
             }
         }
@@ -697,7 +857,7 @@
         async function selectSession(id) {
             activeSessionId = id;
             loadSessions();
-            toggleSidebar();
+            closeAllDrawers();
             hidePrompts();
 
             const res = await fetch(`/api/sessions/${id}/messages`, { headers: { 'Authorization': `Bearer ${userToken}` } });
@@ -762,6 +922,12 @@
             const val = document.getElementById(`slider-${key}`).value;
             focusState[key] = parseInt(val);
             document.getElementById(`val-${key}`).textContent = `${val}%`;
+
+            // Synka direkt till utvecklingspanelen
+            const prog = document.getElementById(`prog-${key}`);
+            const bar = document.getElementById(`bar-${key}`);
+            if (prog) prog.textContent = `${val}%`;
+            if (bar) bar.style.width = `${val}%`;
         }
 
         function resetFocusSliders() {
@@ -898,8 +1064,10 @@
                         <button onclick="requestLonger()" class="p-1.5 hover:text-stone-800 hover:bg-stone-200/60 rounded-lg transition font-bold" title="Längre svar">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                         </button>
-                        <button onclick="saveAsReminder('${msgId}')" class="p-1.5 hover:text-stone-800 hover:bg-stone-200/60 rounded-lg transition ml-1" title="Spara som påminnelse">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+
+                        <!-- PÅMINNELSEMEDDELANDE MED KLOCKIKON SVG -->
+                        <button onclick="openReminderModal('${msgId}')" class="p-1.5 hover:text-stone-800 hover:bg-stone-200/60 rounded-lg transition ml-1 text-deep-olive" title="Skapa påminnelse med klocka">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </button>
                     </div>
                 `;
@@ -925,7 +1093,7 @@
 
         function regenerateLast() {
             const input = document.getElementById('message-input');
-            if (input) input.value = "Kan du fördjupa detta svar med ett nytt Sokratiskt perspektiv?";
+            if (input) input.value = "Kan du fördjupa detta svar med ett nytt perspektiv?";
             sendMessage(new Event('submit'));
         }
 
@@ -941,17 +1109,43 @@
             sendMessage(new Event('submit'));
         }
 
-        async function saveAsReminder(id) {
-            const el = document.getElementById(id);
+        /* PÅMINNELSEMUSIK & SCHEMALÄGGNING */
+        function openReminderModal(msgId) {
+            const el = document.getElementById(msgId);
             if (!el) return;
-            const text = el.textContent;
-            if (!userToken) return openAuthModal();
-            await fetch('/api/journal', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mood_score: 3, entry_text: "Påminnelse från FALK: " + text })
-            });
-            showAlert("Sparat i din CBT-Journal!");
+            pendingReminderText = el.textContent.trim();
+            document.getElementById('reminder-quote-preview').textContent = `"${pendingReminderText.substring(0, 90)}..."`;
+            document.getElementById('reminder-modal').classList.remove('hidden');
+        }
+
+        function closeReminderModal() {
+            document.getElementById('reminder-modal').classList.add('hidden');
+        }
+
+        async function saveReminderModalSubmit() {
+            if (!userToken) {
+                closeReminderModal();
+                return openAuthModal();
+            }
+
+            const timeVal = document.getElementById('reminder-time').value;
+            const freqVal = document.getElementById('reminder-freq').value;
+            const saveJournal = document.getElementById('reminder-save-journal').checked;
+
+            if (saveJournal) {
+                await fetch('/api/journal', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        mood_score: 4, 
+                        entry_text: `⏰ Påminnelse [${freqVal} kl ${timeVal}]: ${pendingReminderText}` 
+                    })
+                });
+                loadJournal();
+            }
+
+            closeReminderModal();
+            showAlert(`Påminnelse sparad! Du blir påmind ${freqVal === 'indefinite' ? 'tillsvidare' : freqVal} klockan ${timeVal}.`);
         }
 
         function setMood(score) {
@@ -987,13 +1181,16 @@
             if (!list) return;
             list.innerHTML = '';
 
+            const statCount = document.getElementById('stat-entries-count');
+            if (statCount) statCount.textContent = entries.length;
+
             const moodEmojis = ['', '😞', '😐', '🙂', '😊', '🤩'];
             entries.forEach(e => {
                 const div = document.createElement('div');
                 div.className = "bg-white p-3.5 rounded-xl border border-stone-200 text-xs space-y-1 shadow-sm";
                 div.innerHTML = `
                     <div class="flex justify-between items-center font-bold text-stone-500">
-                        <span>Skattning: ${moodEmojis[e.mood_score]} (${e.mood_score}/5)</span>
+                        <span>Status: ${moodEmojis[e.mood_score]} (${e.mood_score}/5)</span>
                         <span>${new Date(e.created_at).toLocaleDateString('sv-SE')}</span>
                     </div>
                     <p class="text-stone-800">${e.entry_text}</p>
