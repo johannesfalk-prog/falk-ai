@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FALK - En kompass med perspektiv</title>
+    <title>FALK - En kompass med perspektiv.</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22 font-weight=%22bold%22 fill=%22%234E5C4B%22>F</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -61,10 +61,10 @@
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/40 z-40 hidden transition-opacity"></div>
     <aside id="sidebar-drawer" class="fixed top-0 left-0 bottom-0 w-72 bg-stone-100 z-50 transform -translate-x-full transition-transform duration-300 flex flex-col justify-between shadow-2xl border-r border-stone-300">
         <div class="p-5 flex flex-col h-full">
-            <div class="flex justify-between items-center mb-6 border-b border-stone-200 pb-4">
+            <div class="flex justify-between items-start mb-6 border-b border-stone-200 pb-4">
                 <div>
                     <h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2>
-                    <p class="text-[11px] text-stone-500 font-medium">FALK - En kompass med perspektiv</p>
+                    <p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p>
                 </div>
                 <button onclick="toggleSidebar()" class="text-stone-400 hover:text-stone-700 p-1">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -203,8 +203,9 @@
                     </button>
                 </form>
 
+                <!-- INTERNATIONELLT ANPASSAD DISCLAIMER -->
                 <div class="text-center space-y-0.5">
-                    <p class="text-[9.5px] text-stone-500 leading-tight">
+                    <p id="disclaimer-text" class="text-[9.5px] text-stone-500 leading-tight">
                         FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling. Ej sjukvård. Vid akuta kriser, ring 112 eller 90101 (MIND).
                     </p>
                     <p class="text-[10px] font-bold text-stone-400 tracking-wider uppercase">
@@ -216,8 +217,8 @@
 
         <!-- VY 2: JOURNAL -->
         <section id="view-journal" class="hidden flex-1 flex flex-col h-full min-h-0 p-6 max-w-xl w-full mx-auto overflow-y-auto">
-            <h2 class="text-xl font-bold text-deep-olive mb-1">CBT Journal & Måendetracker</h2>
-            <p class="text-xs text-stone-500 mb-4 font-medium">FALK - En kompass med perspektiv</p>
+            <h2 class="text-xl font-bold text-deep-olive">CBT Journal & Måendetracker</h2>
+            <p class="text-xs text-stone-500 mb-4 font-medium">En kompass med perspektiv.</p>
             
             <form onsubmit="saveJournalEntry(event)" class="bg-white p-5 rounded-2xl border border-stone-200 space-y-4 mb-6 shadow-sm">
                 <div>
@@ -245,8 +246,8 @@
 
         <!-- VY 3: INSTÄLLNINGAR -->
         <section id="view-settings" class="hidden flex-1 flex flex-col h-full min-h-0 p-6 max-w-xl w-full mx-auto overflow-y-auto">
-            <h2 class="text-xl font-bold text-deep-olive mb-1">Inställningar & Dataskydd</h2>
-            <p class="text-xs text-stone-500 mb-6 font-medium">FALK - En kompass med perspektiv</p>
+            <h2 class="text-xl font-bold text-deep-olive">Inställningar & Dataskydd</h2>
+            <p class="text-xs text-stone-500 mb-6 font-medium">En kompass med perspektiv.</p>
             
             <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-3 mb-6 shadow-sm">
                 <h3 class="text-xs font-bold text-deep-olive uppercase tracking-wider">Kontostatus</h3>
@@ -276,12 +277,12 @@
 
     </main>
 
-    <!-- UNIFIERAD CUSTOM POPUP MODAL (ERSÄTTER BROWSER ALERTS) -->
+    <!-- UNIFIERAD CUSTOM POPUP MODAL (CENTERERAD LOGOTYP) -->
     <div id="custom-alert-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl text-center">
-            <div>
-                <h3 class="text-base font-bold text-deep-olive">FALK</h3>
-                <p class="text-[11px] text-stone-500 font-medium pt-0.5">FALK - En kompass med perspektiv</p>
+            <div class="text-center pb-2 border-b border-stone-100">
+                <h3 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h3>
+                <p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p>
             </div>
             <p id="custom-alert-msg" class="text-xs text-stone-700 leading-relaxed py-2"></p>
             <button onclick="closeCustomAlert()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">
@@ -293,15 +294,14 @@
     <!-- FOKUS MODAL -->
     <div id="focus-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-5 shadow-2xl">
-            <div class="border-b border-stone-100 pb-3">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-lg font-bold text-stone-900">Fokus</h2>
-                    <div class="flex items-center space-x-3">
-                        <button onclick="resetFocusSliders()" class="text-xs font-semibold text-deep-olive hover:underline">Återställ</button>
-                        <button onclick="closeFocusModal()" class="text-stone-400 hover:text-stone-700 text-lg font-bold">✕</button>
-                    </div>
+            <div class="text-center pb-2 border-b border-stone-100 relative">
+                <h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2>
+                <p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p>
+                
+                <div class="absolute right-0 top-0 flex items-center space-x-2">
+                    <button onclick="resetFocusSliders()" class="text-[11px] font-semibold text-deep-olive hover:underline">Återställ</button>
+                    <button onclick="closeFocusModal()" class="text-stone-400 hover:text-stone-700 text-base font-bold">✕</button>
                 </div>
-                <p class="text-[11px] text-stone-500 font-medium mt-0.5">FALK - En kompass med perspektiv</p>
             </div>
 
             <p class="text-xs font-medium text-stone-500">FALK är inställd på att höja:</p>
@@ -358,9 +358,9 @@
     <div id="auth-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl">
             
-            <div class="text-center pb-1 border-b border-stone-100">
+            <div class="text-center pb-2 border-b border-stone-100">
                 <h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2>
-                <p class="text-[11px] text-stone-500 font-medium">FALK - En kompass med perspektiv</p>
+                <p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p>
             </div>
 
             <div class="flex border-b border-stone-200 pb-2">
@@ -406,9 +406,9 @@
     <!-- PRIVACY POLICY MODAL -->
     <div id="privacy-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-lg w-full space-y-4 max-h-[80vh] flex flex-col shadow-2xl">
-            <div class="border-b border-stone-100 pb-2">
-                <h2 class="text-lg font-bold text-stone-900">Integritetspolicy & Friskrivning</h2>
-                <p class="text-[11px] text-stone-500 font-medium">FALK - En kompass med perspektiv</p>
+            <div class="text-center pb-2 border-b border-stone-100">
+                <h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2>
+                <p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p>
             </div>
             
             <div class="flex-1 overflow-y-auto text-xs text-stone-600 space-y-3 pr-2 leading-relaxed">
@@ -440,6 +440,42 @@
 
         let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motivation: 50 };
 
+        // DYNAMISK INTERNATIONELL DISCLAIMER
+        function initDisclaimer() {
+            const lang = (navigator.language || 'sv').toLowerCase();
+            const el = document.getElementById('disclaimer-text');
+            if (!el) return;
+
+            if (lang.startsWith('sv')) {
+                el.textContent = "FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling. Ej sjukvård. Vid akuta kriser, ring 112 eller 90101 (MIND).";
+            } else if (lang.startsWith('en-us')) {
+                el.textContent = "FALK is an AI self-help & personal growth tool (not medical care). In acute crisis, call/text 988 (Crisis Lifeline) or 911.";
+            } else if (lang.startsWith('en-gb')) {
+                el.textContent = "FALK is an AI self-help & personal growth tool (not medical care). In acute crisis, call 111 (NHS) / 116 123 (Samaritans) or 999.";
+            } else {
+                el.textContent = "FALK is an AI self-help & personal development tool (not medical care). In acute crisis, contact your local emergency service (112/911) or Befrienders Worldwide.";
+            }
+        }
+
+        function checkForCrisisKeywords(text) {
+            const lower = text.toLowerCase();
+            const crisisWords = ['suicid', 'ta mitt liv', 'skada mig', 'kill myself', 'end my life', 'suicide', 'self harm'];
+            
+            for (let word of crisisWords) {
+                if (lower.includes(word)) {
+                    showCrisisBanner();
+                    break;
+                }
+            }
+        }
+
+        function showCrisisBanner() {
+            const lang = (navigator.language || 'sv').toLowerCase();
+            let msg = "Om du befinner dig i kris eller har tankar på att skada dig själv, sök hjälp direkt. Du är inte ensam.\n\nSverige: Ring 112 eller 90101 (MIND Självmordslinjen).\nUSA: Call/Text 988.\nUK: Call 111 / 116 123.\nInternationellt: Kontakta din lokala akutmottagning eller www.befrienders.org.";
+            
+            showAlert(msg);
+        }
+
         function showAlert(msg) {
             const msgEl = document.getElementById('custom-alert-msg');
             if (msgEl) msgEl.textContent = msg;
@@ -453,6 +489,7 @@
         }
 
         async function initAuth() {
+            initDisclaimer();
             if (!supabaseClient) return;
 
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -727,18 +764,20 @@
 
             if (!message) return;
 
+            checkForCrisisKeywords(message);
+
             hidePrompts();
 
             if (!activeSessionId && userToken) {
                 await createNewSession();
             }
 
-            // 1. Rendera användarens meddelande
+            // Rendera användarens meddelande
             appendMessage('Du', message, 'user');
             if (input) input.value = '';
             if (btn) btn.disabled = true;
 
-            // 2. Visa DYNAMISK "FALK tänker..." bubbla på FALKs sida direkt under meddelandet
+            // Visa SLÄT OCH FAST "FALK tänker..." BUBBLA (INGA STRECKADE KANTER)
             const thinkingId = showThinkingIndicator();
 
             try {
@@ -757,7 +796,6 @@
 
                 const data = await res.json();
                 
-                // Ta bort den temporära tänker-bubblan
                 removeThinkingIndicator(thinkingId);
 
                 if (res.ok) {
@@ -783,8 +821,9 @@
             container.id = id;
             container.className = "flex flex-col items-start space-y-1.5 my-2";
             container.innerHTML = `
-                <div class="border border-dashed border-stone-400 bg-white/50 px-4 py-2.5 rounded-2xl text-xs text-stone-600 italic animate-pulse">
-                    FALK tänker...
+                <div class="bg-white/90 border border-stone-200/80 px-4 py-3 rounded-2xl text-xs text-stone-600 shadow-sm flex items-center space-x-2">
+                    <span class="w-2 h-2 bg-deep-olive rounded-full animate-pulse"></span>
+                    <span class="italic">FALK tänker...</span>
                 </div>
             `;
             list.appendChild(container);
@@ -823,7 +862,7 @@
                         ${text}
                     </div>
                     
-                    <!-- IKONRAD MED SVG OCH - / + TANGENTER MED STOR TOUCHZON -->
+                    <!-- IKONRAD MED SVG OCH - / + TANGENTER -->
                     <div class="flex items-center space-x-2 px-1 py-1 text-stone-400 text-xs">
                         
                         <!-- Röst -->
