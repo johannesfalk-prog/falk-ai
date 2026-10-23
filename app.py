@@ -36,14 +36,14 @@ groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 supabase_client: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY) if SUPABASE_URL and SUPABASE_SERVICE_KEY else None
 
-SYSTEM_PROMPT = """You are FALK, an elite Socratic CBT guide.
+BASE_SYSTEM_PROMPT = """You are FALK, an elite Socratic CBT guide.
 
 CRITICAL CRISIS OVERRIDE:
 If the user expresses explicit intent of suicide, severe self-harm, or immediate physical danger, IMMEDIATELY break character and reply ONLY with:
 "Jag hör att du har det väldigt tufft just nu. FALK är en AI och kan inte ge akuthjälp. Ring 112 för akuta situationer eller kontakta Självmordslinjen på 90101 (mind.se) för stöd dygnet runt."
 
 STRICT NEGATIVE CONSTRAINTS:
-- NEVER start your response with "Det låter som", "Det verkar som", or "Jag hör että".
+- NEVER start your response with "Det låter som", "Det verkar som", or "Jag hör att".
 - NEVER give numbered lists, generic self-help advice, or preach.
 
 OPERATING RULES:
@@ -52,6 +52,25 @@ OPERATING RULES:
 3. Max Length: Entire response MUST be under 45 words.
 4. Language: Always reply in natural Swedish.
 """
+
+def build_system_prompt(focus_data=None):
+    prompt = BASE_SYSTEM_PROMPT
+    if focus_data and isinstance(focus_data, dict):
+        focus_instructions = []
+        if focus_data.get("confidence", 50) > 60:
+            focus_instructions.append("Focus on strengthening self-confidence and self-worth.")
+        if focus_data.get("stress", 50) > 60:
+            focus_instructions.append("Focus heavily on stress reduction, grounding, and calming the mind.")
+        if focus_data.get("action", 50) > 60:
+            focus_instructions.append("Focus on agency, decisive action, and practical small steps.")
+        if focus_data.get("boundaries", 50) > 60:
+            focus_instructions.append("Focus on setting clear personal boundaries and saying no.")
+        if focus_data.get("motivation", 50) > 60:
+            focus_instructions.append("Focus on internal motivation, drive, and personal values.")
+        
+        if focus_instructions:
+            prompt += "\nCURRENT USER FOCUS PRIORITIES:\n- " + "\n- ".join(focus_instructions) + "\n"
+    return prompt
 
 def get_current_user_context():
     if 'user_context' in g:
@@ -167,11 +186,11 @@ def handle_journal():
 
     if request.method == "POST":
         data = request.json or {}
-        mood_score = data.get("mood_score")
+        mood_score = data.get("mood_score", 3)
         entry_text = data.get("entry_text", "").strip()
 
-        if not mood_score or not entry_text:
-            return jsonify({"error": "Både skattning och text krävs."}), 400
+        if not entry_text:
+            return jsonify({"error": "Text krävs för journalinlägg."}), 400
 
         res = supabase_client.table("journal_entries").insert({
             "user_id": user_id,
@@ -235,49 +254,6 @@ def delete_user_data():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/create-checkout-session", methods=["POST"])
-def create_checkout_session():
-    try:
-        user_id, _ = get_current_user_context()
-        if user_id == "00000000-0000-0000-0000-000000000000":
-            return jsonify({"error": "Du måste vara inloggad för att uppgradera till PRO."}), 401
-
-        checkout_session = stripe.checkout.Session.create(
-            line_items=[{'price': STRIPE_PRICE_ID, 'quantity': 1}],
-            mode='subscription',
-            client_reference_id=user_id,
-            success_url=request.host_url + '?payment=success',
-            cancel_url=request.host_url + '?payment=cancelled',
-        )
-        return jsonify({"url": checkout_session.url})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/stripe-webhook", methods=["POST"])
-def stripe_webhook():
-    payload = request.get_data(as_text=True)
-    sig_header = request.headers.get("Stripe-Signature")
-
-    if not STRIPE_WEBHOOK_SECRET or not sig_header:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    try:
-        event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
-    except Exception as e:
-        return jsonify({"error": "Invalid signature"}), 400
-
-    event_type = getattr(event, "type", None) or event.get("type")
-    data_object = getattr(getattr(event, "data", None), "object", {}) or event.get("data", {}).get("object", {})
-
-    if event_type == "checkout.session.completed":
-        user_id = getattr(data_object, "client_reference_id", None) or data_object.get("client_reference_id")
-        customer_id = getattr(data_object, "customer", None) or data_object.get("customer")
-
-        if user_id and supabase_client:
-            supabase_client.table("profiles").update({"tier": "PRO", "stripe_customer_id": customer_id}).eq("id", user_id).execute()
-
-    return jsonify({"status": "success"}), 200
-
 @app.route("/chat", methods=["POST"])
 @limiter.limit(get_rate_limit_val, key_func=get_rate_limit_key)
 def chat():
@@ -285,6 +261,7 @@ def chat():
         data = request.json or {}
         user_message = data.get("message", "").strip()
         session_id = data.get("session_id")
+        focus_data = data.get("focus")
 
         if not user_message:
             return jsonify({"error": "Meddelandet kan inte vara tomt"}), 400
@@ -304,6 +281,8 @@ def chat():
         if memories:
             memory_context = "\nRelevant historisk kontext om användaren:\n" + "\n".join([f"- {m}" for m in memories])
 
+        system_prompt = build_system_prompt(focus_data)
+
         ai_response = None
         used_provider = None
 
@@ -313,7 +292,7 @@ def chat():
                     completion = groq_client.chat.completions.create(
                         model=model_name,
                         messages=[
-                            {"role": "system", "content": SYSTEM_PROMPT},
+                            {"role": "system", "content": system_prompt},
                             {"role": "user", "content": f"{memory_context}\n\n{user_message}"}
                         ],
                         temperature=0.4,
@@ -331,7 +310,7 @@ def chat():
                 completion = openai_client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
-                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "system", "content": system_prompt},
                         {"role": "user", "content": f"{memory_context}\n\n{user_message}"}
                     ],
                     temperature=0.4,
