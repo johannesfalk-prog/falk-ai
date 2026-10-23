@@ -143,39 +143,58 @@ def create_checkout_session():
 
 @app.route("/stripe-webhook", methods=["POST"])
 def stripe_webhook():
-    payload = request.get_data(as_text=True)
-    sig_header = request.headers.get("Stripe-Signature")
-
     try:
-        if STRIPE_WEBHOOK_SECRET:
-            event = stripe.Webhook.construct_event(
-                payload, sig_header, STRIPE_WEBHOOK_SECRET
-            )
-        else:
-            event = request.json
-    except Exception as e:
-        print(f"[WEBHOOK VERIFY ERROR]: {e}", flush=True)
-        return jsonify({"error": "Invalid payload/signature"}), 400
+        payload = request.get_data(as_text=True)
+        sig_header = request.headers.get("Stripe-Signature")
 
-    event_type = event.get("type") if isinstance(event, dict) else event.type
-
-    if event_type == "checkout.session.completed":
-        session = event["data"]["object"] if isinstance(event, dict) else event.data.object
-        user_id = session.get("client_reference_id")
-        customer_id = session.get("customer")
-
-        if user_id and supabase_client:
+        if STRIPE_WEBHOOK_SECRET and sig_header:
             try:
-                supabase_client.table("profiles").update({
+                event = stripe.Webhook.construct_event(
+                    payload, sig_header, STRIPE_WEBHOOK_SECRET
+                )
+            except Exception as sig_err:
+                print(f"[WEBHOOK SIG FAIL]: {sig_err}", flush=True)
+                return jsonify({"error": "Invalid signature"}), 400
+        else:
+            event = request.get_json(silent=True) or {}
+
+        if not event:
+            return jsonify({"error": "Empty payload"}), 400
+
+        if isinstance(event, dict):
+            event_type = event.get("type")
+            data_object = event.get("data", {}).get("object", {})
+        else:
+            event_type = getattr(event, "type", None)
+            data_object = getattr(getattr(event, "data", None), "object", {})
+
+        print(f"[WEBHOOK EVENT RECEIVED]: {event_type}", flush=True)
+
+        if event_type == "checkout.session.completed":
+            if isinstance(data_object, dict):
+                user_id = data_object.get("client_reference_id")
+                customer_id = data_object.get("customer")
+            else:
+                user_id = getattr(data_object, "client_reference_id", None)
+                customer_id = getattr(data_object, "customer", None)
+
+            print(f"[WEBHOOK CHECKOUT MATCH]: user_id={user_id}, customer_id={customer_id}", flush=True)
+
+            if user_id and supabase_client:
+                update_res = supabase_client.table("profiles").update({
                     "tier": "PRO",
                     "stripe_customer_id": customer_id
                 }).eq("id", user_id).execute()
-                print(f"[SUCCESS]: User {user_id} upgraded to PRO in database!", flush=True)
-            except Exception as db_err:
-                print(f"[DB PROVISION ERROR]: {db_err}", flush=True)
-                return jsonify({"error": "Database update failed"}), 500
+                print(f"[SUCCESS]: User {user_id} upgraded to PRO in database! Result: {update_res}", flush=True)
+            else:
+                print(f"[WEBHOOK WARNING]: Missing user_id ({user_id}) or supabase_client missing", flush=True)
 
-    return jsonify({"status": "success"}), 200
+        return jsonify({"status": "success"}), 200
+
+    except Exception as crash_err:
+        print(f"[WEBHOOK CRASH]: {crash_err}", flush=True)
+        print(traceback.format_exc(), flush=True)
+        return jsonify({"error": f"Internal server error: {str(crash_err)}"}), 500
 
 @app.route("/chat", methods=["POST"])
 @limiter.limit(get_rate_limit_val, key_func=get_rate_limit_key)
