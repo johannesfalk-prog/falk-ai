@@ -1135,5 +1135,55 @@
 
         initAuth();
     </script>
+<script>
+
+let currentSpeakingBtn = null;
+
+function toggleTTS(text, btnElement) {
+    if (!('speechSynthesis' in window)) {
+        alert("Din webbläsare stöder inte text-till-tal.");
+        return;
+    }
+
+    // Om ljud spelas upp: STOPPA OMEDELBART
+    if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+        window.speechSynthesis.cancel();
+        
+        if (currentSpeakingBtn) {
+            currentSpeakingBtn.classList.remove('text-amber-600', 'animate-pulse');
+            currentSpeakingBtn.classList.add('text-stone-400');
+        }
+
+        // Om man klickar på samma knapp igen -> tystna och avbryt
+        if (currentSpeakingBtn === btnElement) {
+            currentSpeakingBtn = null;
+            return;
+        }
+    }
+
+    // Starta ny uppspelning
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'sv-SE';
+    utterance.rate = 0.95;
+
+    if (btnElement) {
+        currentSpeakingBtn = btnElement;
+        btnElement.classList.remove('text-stone-400');
+        btnElement.classList.add('text-amber-600', 'animate-pulse');
+    }
+
+    utterance.onend = utterance.onerror = function() {
+        if (btnElement) {
+            btnElement.classList.remove('text-amber-600', 'animate-pulse');
+            btnElement.classList.add('text-stone-400');
+        }
+        currentSpeakingBtn = null;
+    };
+
+    window.speechSynthesis.speak(utterance);
+}
+
+</script>
 </body>
 </html>
