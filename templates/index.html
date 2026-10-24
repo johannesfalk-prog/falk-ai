@@ -859,7 +859,8 @@
                     })
                 });
 
-                const data = await res.json();
+                if (!res.ok) { console.error('Session API Error:', res.status); return; }
+        const data = await res.json();
                 removeThinkingIndicator(thinkingId);
 
                 if (res.ok) {
@@ -1015,7 +1016,8 @@
             if (userToken) {
                 try {
                     const res = await fetch('/api/journal', { headers: { 'Authorization': `Bearer ${userToken}` } });
-                    if (res.ok) entries = await res.json();
+                    if (res.ok) if (!res.ok) { console.error('Journal API Error:', res.status); return; }
+        entries = await res.json();
                 } catch (err) { console.error("API error", err); }
             }
             if (!entries || entries.length === 0) entries = JSON.parse(localStorage.getItem('falk_guest_journal') || '[]');
