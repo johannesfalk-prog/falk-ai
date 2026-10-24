@@ -903,33 +903,56 @@
         }
 
         function appendMessage(sender, text, type) {
-            const list = document.getElementById('chat-messages-list');
+            const list = document.getElementById("chat-messages-list");
             if (!list) return;
             hidePrompts();
 
-            const container = document.createElement('div');
-            if (type === 'user') {
-                container.className = "flex justify-end";
+            const container = document.createElement("div");
+            if (type === "user") {
+                container.className = "flex justify-end my-2";
                 container.innerHTML = `<div class="bg-bubble-user text-amber-50 px-4 py-3 rounded-2xl max-w-[85%] text-xs shadow-sm leading-relaxed whitespace-pre-wrap">${escapeHtml(text)}</div>`;
             } else {
-                container.className = "flex flex-col items-start space-y-1 my-1";
-                const msgId = 'msg-' + Math.random().toString(36).substr(2, 9);
+                container.className = "flex flex-col items-start space-y-1 my-2";
+                const msgId = "msg-" + Math.random().toString(36).substr(2, 9);
                 
                 container.innerHTML = `
                     <div class="bg-white/90 border border-stone-200/80 text-stone-800 px-4 py-3 rounded-2xl max-w-[90%] text-xs shadow-sm leading-relaxed font-normal whitespace-pre-wrap break-words" id="${msgId}">${escapeHtml(text)}</div>
                     
-                    <div class="flex items-center space-x-2 px-1 py-0.5 text-stone-500 text-xs">
-                        <button onclick="speakText('${msgId}')" class="flex items-center space-x-1 p-1.5 hover:text-deep-olive hover:bg-stone-200/60 rounded-lg transition" title="Läs upp meddelande">
-                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 00-1-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
-                            <span class="text-[10px] font-semibold">Läs upp</span>
+                    <div class="icon-bar flex items-center space-x-1 mt-1.5 px-1 py-0.5 text-stone-400">
+                        <!-- 1. Högtalare -->
+                        <button onclick="speakText('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Läs upp meddelande">
+                            <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 00-1-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
                         </button>
-                        <span class="text-stone-300">•</span>
-                        <button onclick="openReminderModal('${msgId}')" class="flex items-center space-x-1 p-1.5 hover:text-deep-olive hover:bg-stone-200/60 rounded-lg transition text-deep-olive" title="Skapa påminnelse">
-                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            <span class="text-[10px] font-semibold">Sätt påminnelse</span>
+                        <!-- 2. Generera nytt -->
+                        <button onclick="regenerateLastMessage()" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Generera nytt svar">
+                            <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        </button>
+                        <!-- 3. Tumme upp -->
+                        <button onclick="rateResponse('${msgId}', 'up', this)" class="btn-thumb-up p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Bra svar">
+                            <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/></svg>
+                        </button>
+                        <!-- 4. Tumme ner -->
+                        <button onclick="rateResponse('${msgId}', 'down', this)" class="btn-thumb-down p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Mindre bra svar">
+                            <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 0117.263 21h-4.018c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714-2.11 1.412-.608-2.006L17 13V4m-7 10h2m5-9h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"/></svg>
+                        </button>
+                        <!-- 5. Minus -->
+                        <button onclick="adjustLastResponse('minus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Gör svaret mer kortfattat">
+                            <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+                        </button>
+                        <!-- 6. Plus -->
+                        <button onclick="adjustLastResponse('plus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Fördjupa svaret">
+                            <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        </button>
+                        <!-- 7. Påminnelse -->
+                        <button onclick="openReminderModal('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Skapa påminnelse">
+                            <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </button>
                     </div>`;
             }
+            list.appendChild(container);
+            const containerBox = document.getElementById("chat-container");
+            if (containerBox) containerBox.scrollTop = containerBox.scrollHeight;
+        }
             list.appendChild(container);
             const containerBox = document.getElementById('chat-container');
             if (containerBox) containerBox.scrollTop = containerBox.scrollHeight;
