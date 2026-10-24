@@ -1296,5 +1296,121 @@ window.regenerateLastMessage = function() {
 };
 </script>
 
+
+<script>
+// EXAKTA HANDLERS KOPPLADE MOT DIN HTML-STRUKTUR
+
+let currentSpeakingBtn = null;
+let currentSpeakingMsgId = null;
+
+// 1. HÖGTALARE (speakText) MED FULLSTÄNDIG TOGGLE-STOPP
+window.speakText = function(msgId) {
+    if (!('speechSynthesis' in window)) {
+        alert("Din webbläsare stöder inte text-till-tal.");
+        return;
+    }
+
+    const btnElement = (typeof event !== 'undefined' && event) ? (event.currentTarget || event.target) : null;
+
+    // Om ljud spelas upp -> STOPPA OMEDELBART
+    if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+        window.speechSynthesis.cancel();
+        
+        if (currentSpeakingBtn) {
+            currentSpeakingBtn.classList.remove('text-amber-600', 'animate-pulse');
+            currentSpeakingBtn.classList.add('text-stone-400');
+        }
+
+        if (currentSpeakingMsgId === msgId) {
+            currentSpeakingMsgId = null;
+            currentSpeakingBtn = null;
+            return;
+        }
+    }
+
+    // Extrahera text ur chattbubblan
+    let textToSpeak = "";
+    const targetMsg = document.getElementById(`msg-${msgId}`) || document.querySelector(`[data-id="${msgId}"]`);
+    if (targetMsg) {
+        textToSpeak = targetMsg.innerText || targetMsg.textContent;
+    } else {
+        // Fallback: Ta det senaste bot-meddelandet
+        const allBotMsgs = document.querySelectorAll('.bot-message, .assistant-message, [data-sender="bot"]');
+        if (allBotMsgs.length > 0) {
+            textToSpeak = allBotMsgs[allBotMsgs.length - 1].innerText;
+        }
+    }
+
+    if (!textToSpeak) {
+        console.warn("Hittade ingen text att läsa upp för msgId:", msgId);
+        return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.lang = 'sv-SE';
+    utterance.rate = 0.95;
+
+    currentSpeakingMsgId = msgId;
+    currentSpeakingBtn = btnElement;
+
+    if (btnElement) {
+        btnElement.classList.remove('text-stone-400');
+        btnElement.classList.add('text-amber-600', 'animate-pulse');
+    }
+
+    utterance.onend = utterance.onerror = function() {
+        if (btnElement) {
+            btnElement.classList.remove('text-amber-600', 'animate-pulse');
+            btnElement.classList.add('text-stone-400');
+        }
+        currentSpeakingMsgId = null;
+        currentSpeakingBtn = null;
+    };
+
+    window.speechSynthesis.speak(utterance);
+};
+
+// 2. PLUS / MINUS (adjustLastResponse) MATCHAD MOT message-input (Rad 255)
+window.adjustLastResponse = function(action) {
+    let promptText = "";
+    if (action === 'minus') {
+        promptText = "Gör ditt förra svar kortare och mer koncist.";
+    } else if (action === 'plus') {
+        promptText = "Utveckla ditt förra svar lite djupare och ge mer kontext.";
+    } else {
+        promptText = action;
+    }
+
+    // MATCHAR RAD 255 OCH RAD 264 I DIN HTML
+    const inputField = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-btn');
+
+    if (inputField && sendButton) {
+        inputField.value = promptText;
+        sendButton.click();
+    } else {
+        console.error("Kunde inte hitta message-input eller send-btn i DOM:en");
+    }
+};
+
+// 3. REGENERERA (regenerateLastMessage)
+window.regenerateLastMessage = function() {
+    window.adjustLastResponse("Formulera om ditt förra svar på ett nytt sätt.");
+};
+
+// 4. BETYG (rateResponse)
+window.rateResponse = function(msgId, direction, btnElement) {
+    if (btnElement) {
+        btnElement.classList.toggle('text-amber-600');
+    }
+    fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message_id: msgId, direction: direction })
+    }).catch(err => console.log('Feedback error:', err));
+};
+</script>
+
 </body>
 </html>
