@@ -674,7 +674,8 @@
             if (!list) return;
             list.innerHTML = '';
 
-            sessions.sort((a, b) => {
+            if (!Array.isArray(sessions)) return;
+        sessions.sort((a, b) => {
                 const isAPinned = pinnedSessions.includes(a.id);
                 const isBPinned = pinnedSessions.includes(b.id);
                 if (isAPinned && !isBPinned) return -1;
@@ -1021,7 +1022,7 @@
                 } catch (err) { console.error("API error", err); }
             }
             if (!entries || entries.length === 0) entries = JSON.parse(localStorage.getItem('falk_guest_journal') || '[]');
-            renderJournalList(entries);
+            if (Array.isArray(entries)) { renderJournalList(entries); }
         }
 
         function renderJournalList(entries) {
