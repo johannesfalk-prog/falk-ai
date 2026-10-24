@@ -421,3 +421,9 @@ def chat():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)
+
+
+@app.errorhandler(500)
+def handle_500_error(e):
+    from flask import jsonify
+    return jsonify({"error": "Internal server error", "details": str(e)}), 500
