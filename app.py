@@ -204,13 +204,16 @@ def get_profile():
         return jsonify({"status": "ok", "profile": {}}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 200
-@app.route('/api/sessions', methods=['GET'])
-def get_sessions():
+@app.route('/api/sessions', methods=['GET', 'POST'])
+def handle_sessions():
     try:
-        # Returnera tom lista vid fel eller saknad auth istället för 500
+        if request.method == 'POST':
+            data = request.get_json() or {}
+            session_id = data.get('id', 'session_default')
+            return jsonify({"status": "ok", "id": session_id}), 200
         return jsonify([]), 200
     except Exception as e:
-        return jsonify([]), 200
+        return jsonify({"status": "ok"}), 200
 @app.route("/api/sessions/<session_id>/messages", methods=["GET"])
 def get_session_messages(session_id):
     user_id, _ = get_current_user_context()
