@@ -1185,5 +1185,116 @@ function toggleTTS(text, btnElement) {
 }
 
 </script>
+
+<script>
+// SKOTTSÄKER EXPORT AV EXAKTA HTML-HANDLERS TILL WINDOW-OBJEKTET
+
+let currentSpeakingBtn = null;
+let currentSpeakingMsgId = null;
+
+// 1. HÖGTALARE (speakText) MED TOGGLE-AVBROTT
+window.speakText = function(msgId) {
+    if (!('speechSynthesis' in window)) {
+        alert("Din webbläsare stöder inte text-till-tal.");
+        return;
+    }
+
+    const btnElement = (typeof event !== 'undefined' && event) ? (event.currentTarget || event.target) : null;
+
+    // Om ljud spelas upp -> STOPPA OMEDELBART
+    if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+        window.speechSynthesis.cancel();
+        
+        if (currentSpeakingBtn) {
+            currentSpeakingBtn.classList.remove('text-amber-600', 'animate-pulse');
+            currentSpeakingBtn.classList.add('text-stone-400');
+        }
+
+        // Om man klickar på samma meddelande igen -> tystna och avbryt
+        if (currentSpeakingMsgId === msgId) {
+            currentSpeakingMsgId = null;
+            currentSpeakingBtn = null;
+            return;
+        }
+    }
+
+    // Hämta texten ur meddelandebubblan via msgId eller sista bot-meddelandet
+    let textToSpeak = "";
+    const msgElem = document.getElementById(`msg-${msgId}`) || document.querySelector(`[data-msg-id="${msgId}"]`);
+    if (msgElem) {
+        textToSpeak = msgElem.innerText || msgElem.textContent;
+    } else {
+        const botMsgs = document.querySelectorAll('.bot-message, .assistant-message, [data-sender="bot"]');
+        if (botMsgs.length > 0) {
+            textToSpeak = botMsgs[botMsgs.length - 1].innerText;
+        }
+    }
+
+    if (!textToSpeak) return;
+
+    window.speechSynthesis.cancel(); // Rensa köer
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.lang = 'sv-SE';
+    utterance.rate = 0.95;
+
+    currentSpeakingMsgId = msgId;
+    currentSpeakingBtn = btnElement;
+
+    if (btnElement) {
+        btnElement.classList.remove('text-stone-400');
+        btnElement.classList.add('text-amber-600', 'animate-pulse');
+    }
+
+    utterance.onend = utterance.onerror = function() {
+        if (btnElement) {
+            btnElement.classList.remove('text-amber-600', 'animate-pulse');
+            btnElement.classList.add('text-stone-400');
+        }
+        currentSpeakingMsgId = null;
+        currentSpeakingBtn = null;
+    };
+
+    window.speechSynthesis.speak(utterance);
+};
+
+// 2. PLUS / MINUS JUSTERING (adjustLastResponse)
+window.adjustLastResponse = function(action) {
+    let promptText = "";
+    if (action === 'minus') {
+        promptText = "Gör ditt förra svar kortare och mer koncist.";
+    } else if (action === 'plus') {
+        promptText = "Utveckla ditt förra svar lite djupare och ge mer kontext.";
+    } else {
+        promptText = action;
+    }
+
+    const input = document.getElementById('user-input') || document.querySelector('input[type="text"]') || document.querySelector('textarea');
+    if (input) {
+        input.value = promptText;
+        const sendBtn = document.getElementById('send-btn') || document.querySelector('button[type="submit"]') || document.querySelector('.bg-emerald-800');
+        if (sendBtn) {
+            sendBtn.click();
+        }
+    }
+};
+
+// 3. TUMME UPP / NED (rateResponse)
+window.rateResponse = function(msgId, direction, btnElement) {
+    if (btnElement) {
+        btnElement.classList.toggle('text-amber-600');
+    }
+    fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message_id: msgId, direction: direction })
+    }).catch(err => console.log('Feedback error:', err));
+};
+
+// 4. REGENERERA (regenerateLastMessage)
+window.regenerateLastMessage = function() {
+    window.adjustLastResponse("Formulera om ditt förra svar på ett nytt sätt.");
+};
+</script>
+
 </body>
 </html>
