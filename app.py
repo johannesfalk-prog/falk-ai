@@ -309,7 +309,7 @@ def chat():
         if memories:
             memory_context = "\nRelevant historisk kontext om användaren:\n" + "\n".join([f"- {m}" for m in memories])
 
-        system_prompt = build_system_prompt(focus_data)
+        system_prompt = get_falk_system_prompt() + "\n\n" + build_system_prompt(focus_data)
 
         ai_response = None
         used_provider = None
