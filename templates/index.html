@@ -39,36 +39,896 @@
 
     <!-- TOP HEADER -->
     <header class="h-14 border-b border-stone-300/60 flex items-center justify-between px-4 bg-warm-beige/90 backdrop-blur-sm z-30 flex-shrink-0">
-        <div class="icon-bar flex items-center space-x-1 mt-1.5 px-1 py-0.5 text-stone-400">
-                <!-- 1. Högtalare -->
-                <button onclick="speakText('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Läs upp meddelande">
-                    <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 00-1-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+        <div class="flex items-center space-x-2">
+            <button onclick="toggleSidebar()" class="flex items-center space-x-1.5 text-deep-olive font-semibold text-xs hover:opacity-80 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                <span>Meny</span>
+            </button>
+        </div>
+
+        <h1 class="text-lg font-bold tracking-widest text-deep-olive absolute left-1/2 -translate-x-1/2">FALK</h1>
+
+        <div class="flex items-center space-x-2">
+            <button onclick="createNewSession()" class="text-deep-olive hover:opacity-80 font-bold text-2xl leading-none px-2 transition" title="Nytt samtal">+</button>
+            <button onclick="toggleProgressDrawer()" class="flex items-center space-x-1 text-xs font-bold text-deep-olive bg-stone-200/60 hover:bg-stone-300/60 px-2.5 py-1.5 rounded-full transition shadow-sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                <span>Utveckling</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- SLIDE-IN SIDEBAR DRAWER -->
+    <div id="sidebar-overlay" onclick="closeAllDrawers()" class="fixed inset-0 bg-black/40 z-40 hidden transition-opacity"></div>
+    
+    <aside id="sidebar-drawer" class="fixed top-0 left-0 bottom-0 w-72 bg-stone-100 z-50 transform -translate-x-full transition-transform duration-300 flex flex-col justify-between shadow-2xl border-r border-stone-300">
+        <div class="p-5 flex flex-col h-full">
+            <div class="flex justify-between items-start mb-5 border-b border-stone-200 pb-3">
+                <div>
+                    <h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2>
+                    <p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p>
+                </div>
+                <button onclick="toggleSidebar()" class="text-stone-400 hover:text-stone-700 p-1">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
-                <!-- 2. Generera nytt -->
-                <button onclick="regenerateLastMessage()" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Generera nytt svar">
-                    <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            </div>
+
+            <nav class="space-y-1 mb-5">
+                <button onclick="switchTab('chat')" id="nav-chat" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-deep-olive text-amber-50 flex items-center space-x-2 shadow-sm">
+                    <span>💬</span> <span>Chatt</span>
                 </button>
-                <!-- 3. Tumme upp -->
-                <button onclick="rateResponse('${msgId}', 'up', this)" class="btn-thumb-up p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Bra svar">
-                    <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/></svg>
+                <button onclick="switchTab('journal')" id="nav-journal" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
+                    <span>🌱</span> <span>Reflektion & Utveckling</span>
                 </button>
-                <!-- 4. Tumme ner -->
-                <button onclick="rateResponse('${msgId}', 'down', this)" class="btn-thumb-down p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Mindre bra svar">
-                    <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 0117.263 21h-4.018c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714-2.11 1.412-.608-2.006L17 13V4m-7 10h2m5-9h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"/></svg>
+                <button onclick="switchTab('library')" id="nav-library" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
+                    <span>📚</span> <span>Kognitivt Bibliotek</span>
                 </button>
-                <!-- 5. Minus -->
-                <button onclick="adjustLastResponse('minus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Gör svaret mer kortfattat">
-                    <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+                <button onclick="switchTab('settings')" id="nav-settings" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
+                    <span>⚙️</span> <span>Inställningar & Dataskydd</span>
                 </button>
-                <!-- 6. Plus -->
-                <button onclick="adjustLastResponse('plus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Fördjupa svaret">
-                    <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            </nav>
+
+            <div class="flex-1 flex flex-col min-h-0">
+                <div class="flex justify-between items-center mb-2 px-1">
+                    <span class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">SAMTAL</span>
+                    <button onclick="createNewSession()" class="text-base text-deep-olive hover:opacity-80 font-bold px-1" title="Nytt samtal">+</button>
+                </div>
+                <div id="session-list" class="flex-1 overflow-y-auto space-y-1 pr-1 text-xs text-stone-600">
+                    <p class="p-2 text-stone-400 italic">Logga in för samtalshistorik</p>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-stone-200 flex flex-col space-y-2">
+                <div id="sidebar-user-block" class="flex justify-between items-center text-xs">
+                    <span id="user-display-bottom" class="font-bold text-deep-olive truncate">Gäst</span>
+                    <button id="logout-btn-bottom" onclick="logout()" class="hidden text-terracotta hover:underline font-semibold">Logga ut</button>
+                    <button id="login-btn-bottom" onclick="openAuthModal()" class="text-deep-olive font-bold hover:underline">Logga in</button>
+                </div>
+                <div class="text-center">
+                    <span id="tier-badge" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-stone-200 text-stone-600">INLOGGAD</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- VISUELL UTVECKLINGSPANEL -->
+    <aside id="progress-drawer" class="fixed top-0 right-0 bottom-0 w-80 sm:w-96 bg-white z-50 transform translate-x-full transition-transform duration-300 flex flex-col justify-between shadow-2xl border-l border-stone-200 overflow-y-auto">
+        <div class="p-6 space-y-5">
+            <div class="flex justify-between items-start border-b border-stone-100 pb-3">
+                <div>
+                    <h2 class="text-lg font-bold text-deep-olive tracking-wider">Min Utveckling</h2>
+                    <p class="text-[11px] text-stone-500">Visuell analys & kognitiva framsteg</p>
+                </div>
+                <button onclick="toggleProgressDrawer()" class="text-stone-400 hover:text-stone-700 p-1">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
-                <!-- 7. Påminnelse -->
-                <button onclick="openReminderModal('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Skapa påminnelse">
-                    <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+
+            <div class="bg-amber-50/70 border border-amber-200/80 p-3.5 rounded-2xl text-xs space-y-1">
+                <div class="flex items-center space-x-1.5 text-amber-900 font-bold">
+                    <span>💡</span>
+                    <span>FALKs Veckoinsikt</span>
+                </div>
+                <p id="weekly-insight-text" class="text-stone-700 leading-relaxed italic text-[11px]">
+                    "Dina reflektioner visar en positiv förskjutning i handlingskraft när du fokuserar på gränssättning."
+                </p>
+            </div>
+
+            <div class="bg-stone-50 p-4 rounded-2xl border border-stone-200/80 space-y-3">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wider">Måendetrend (Senaste 7)</h3>
+                    <span class="text-[10px] font-bold text-deep-olive bg-stone-200/80 px-2.5 py-0.5 rounded-full whitespace-nowrap">Snitt: 3.8 / 5</span>
+                </div>
+                
+                <div class="h-28 w-full flex items-end justify-between pt-4 px-2 space-x-2 border-b border-stone-200">
+                    <div class="flex flex-col items-center flex-1 space-y-1"><div class="w-full bg-soft-sage/40 rounded-t-md hover:bg-deep-olive transition" style="height: 40%;"></div><span class="text-[9px] text-stone-500 font-medium">Må</span></div>
+                    <div class="flex flex-col items-center flex-1 space-y-1"><div class="w-full bg-soft-sage/60 rounded-t-md hover:bg-deep-olive transition" style="height: 60%;"></div><span class="text-[9px] text-stone-500 font-medium">Ti</span></div>
+                    <div class="flex flex-col items-center flex-1 space-y-1"><div class="w-full bg-soft-sage/50 rounded-t-md hover:bg-deep-olive transition" style="height: 50%;"></div><span class="text-[9px] text-stone-500 font-medium">On</span></div>
+                    <div class="flex flex-col items-center flex-1 space-y-1"><div class="w-full bg-deep-olive rounded-t-md" style="height: 80%;"></div><span class="text-[9px] text-stone-500 font-medium">To</span></div>
+                    <div class="flex flex-col items-center flex-1 space-y-1"><div class="w-full bg-soft-sage/70 rounded-t-md hover:bg-deep-olive transition" style="height: 70%;"></div><span class="text-[9px] text-stone-500 font-medium">Fr</span></div>
+                    <div class="flex flex-col items-center flex-1 space-y-1"><div class="w-full bg-soft-sage/90 rounded-t-md hover:bg-deep-olive transition" style="height: 90%;"></div><span class="text-[9px] text-stone-500 font-medium">Lö</span></div>
+                    <div class="flex flex-col items-center flex-1 space-y-1"><div class="w-full bg-deep-olive rounded-t-md" style="height: 100%;"></div><span class="text-[9px] text-stone-500 font-medium">Sö</span></div>
+                </div>
+            </div>
+
+            <div class="bg-stone-50 p-4 rounded-2xl border border-stone-200/80 space-y-3">
+                <h3 class="text-xs font-bold text-stone-800 uppercase tracking-wider">Aktiv Fokusprofil</h3>
+                <div class="space-y-2 text-xs">
+                    <div>
+                        <div class="flex justify-between text-[11px] font-semibold text-stone-700 mb-1"><span>Självförtroende</span><span id="prog-confidence">50%</span></div>
+                        <div class="w-full bg-stone-200 h-2 rounded-full overflow-hidden"><div id="bar-confidence" class="bg-deep-olive h-full transition-all duration-500" style="width: 50%;"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[11px] font-semibold text-stone-700 mb-1"><span>Stresshantering</span><span id="prog-stress">50%</span></div>
+                        <div class="w-full bg-stone-200 h-2 rounded-full overflow-hidden"><div id="bar-stress" class="bg-terracotta h-full transition-all duration-500" style="width: 50%;"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[11px] font-semibold text-stone-700 mb-1"><span>Handlingskraft</span><span id="prog-action">50%</span></div>
+                        <div class="w-full bg-stone-200 h-2 rounded-full overflow-hidden"><div id="bar-action" class="bg-deep-olive h-full transition-all duration-500" style="width: 50%;"></div></div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[11px] font-semibold text-stone-700 mb-1"><span>Gränssättning</span><span id="prog-boundaries">50%</span></div>
+                        <div class="w-full bg-stone-200 h-2 rounded-full overflow-hidden"><div id="bar-boundaries" class="bg-soft-sage h-full transition-all duration-500" style="width: 50%;"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 text-center"><p class="text-[10px] font-bold text-stone-400 uppercase">Reflektioner</p><p id="stat-entries-count" class="text-xl font-bold text-deep-olive mt-1">0</p></div>
+                <div class="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 text-center"><p class="text-[10px] font-bold text-stone-400 uppercase">Aktiva Påminnelser</p><p id="stat-reminders-count" class="text-xl font-bold text-terracotta mt-1">0</p></div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN VIEWS CONTAINER -->
+    <main class="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
+        
+        <!-- VY 1: CHATT -->
+        <section id="view-chat" class="flex-1 flex flex-col h-full min-h-0 max-w-2xl w-full mx-auto px-4 pt-4 pb-2">
+            <div id="daily-checkin-card" class="hidden mb-3 bg-white/90 border border-stone-300 p-3.5 rounded-2xl shadow-sm flex justify-between items-center flex-shrink-0">
+                <div>
+                    <p class="text-xs font-bold text-deep-olive" id="daily-checkin-title">Morgonavstämning</p>
+                    <p class="text-[11px] text-stone-500" id="daily-checkin-subtitle">Hur startar du din dag på skalan 1–5?</p>
+                </div>
+                <div class="flex space-x-1">
+                    <button onclick="quickMood(1)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">1</button>
+                    <button onclick="quickMood(2)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">2</button>
+                    <button onclick="quickMood(3)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">3</button>
+                    <button onclick="quickMood(4)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">4</button>
+                    <button onclick="quickMood(5)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">5</button>
+                </div>
+            </div>
+
+            <div id="chat-container" class="flex-1 overflow-y-auto pr-1 mb-2 min-h-0 flex flex-col">
+                <div id="onboarding-cards" class="space-y-2.5 py-2 mb-4">
+                    <div onclick="selectOnboarding('Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
+                        <p class="text-xs font-bold text-stone-800">✨ Mening & livsriktning</p>
+                        <p class="text-xs text-stone-600 italic">"Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det."</p>
+                    </div>
+
+                    <div onclick="selectOnboarding('Hjälp mig sortera tankarna och hitta klarhet.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
+                        <p class="text-xs font-bold text-stone-800">💭 När tankarna tar över</p>
+                        <p class="text-xs text-stone-600 italic">"Hjälp mig sortera tankarna och hitta klarhet."</p>
+                    </div>
+
+                    <div onclick="selectOnboarding('Hjälp mig hantera utmaningar och hitta nästa steg.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
+                        <p class="text-xs font-bold text-stone-800">💼 Jobb, ansvar & ledarskap</p>
+                        <p class="text-xs text-stone-600 italic">"Hjälp mig hantera utmaningar och hitta nästa steg."</p>
+                    </div>
+
+                    <div onclick="selectOnboarding('Jag känner mig stressad eller orolig och behöver landa.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
+                        <p class="text-xs font-bold text-stone-800">🌱 Hitta lugnet igen</p>
+                        <p class="text-xs text-stone-600 italic">"Jag känner mig stressad eller orolig och behöver landa."</p>
+                    </div>
+
+                    <div onclick="selectOnboarding('Hjälp mig komma vidare och få saker att hända.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
+                        <p class="text-xs font-bold text-stone-800">🎯 Från mål till handling</p>
+                        <p class="text-xs text-stone-600 italic">"Hjälp mig komma vidare och få saker att hända."</p>
+                    </div>
+
+                    <div onclick="selectOnboarding('Hjälp mig förstå en situation och kommunicera bättre.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
+                        <p class="text-xs font-bold text-stone-800">💬 Relationer & svåra samtal</p>
+                        <p class="text-xs text-stone-600 italic">"Hjälp mig förstå en situation och kommunicera bättre."</p>
+                    </div>
+
+                    <div onclick="selectOnboarding('Hjälp mig hitta hållbara vanor för sömn, energi och fokus.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
+                        <p class="text-xs font-bold text-stone-800">⚡ Mer energi & balans</p>
+                        <p class="text-xs text-stone-600 italic">"Hjälp mig hitta hållbara vanor för sömn, energi och fokus."</p>
+                    </div>
+
+                    <div onclick="selectOnboarding('Hjälp mig upptäcka mina behov, drivkrafter och mönster.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
+                        <p class="text-xs font-bold text-stone-800">🔍 Förstå mig själv bättre</p>
+                        <p class="text-xs text-stone-600 italic">"Hjälp mig upptäcka mina behov, drivkrafter och mönster."</p>
+                    </div>
+
+                    <div onclick="selectOnboarding('Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet.')" class="bg-white/80 hover:bg-white p-3.5 rounded-2xl border border-stone-200/80 cursor-pointer shadow-sm hover:shadow transition">
+                        <p class="text-xs font-bold text-stone-800">🧩 Utmana mina tankar</p>
+                        <p class="text-xs text-stone-600 italic">"Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet."</p>
+                    </div>
+                </div>
+
+                <div id="chat-messages-list" class="space-y-4"></div>
+            </div>
+
+            <div class="flex-shrink-0 space-y-1.5 pb-2">
+                <form id="chat-form" onsubmit="sendMessage(event)" class="flex items-center space-x-2">
+                    <div class="flex-1 relative flex items-center">
+                        <input type="text" id="message-input" placeholder="Skriv till mig eller välj ett alternativ..." 
+                               class="w-full bg-white border border-stone-300 rounded-full pl-5 pr-11 py-3 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:border-deep-olive shadow-sm">
+                        <button type="button" onclick="toggleSpeechRecognition()" id="mic-btn" class="absolute right-3 text-stone-400 hover:text-deep-olive transition p-1" title="Tala in meddelande">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg>
+                        </button>
+                    </div>
+                    <button type="button" onclick="openFocusModal()" class="p-2.5 rounded-full bg-white border border-stone-300 text-stone-700 hover:bg-stone-100 transition shadow-sm flex items-center justify-center flex-shrink-0" title="Justera Fokus">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+                    </button>
+                    <button type="submit" id="send-btn" class="bg-deep-olive hover:opacity-90 text-amber-50 font-semibold px-5 py-3 rounded-full text-xs transition disabled:opacity-50 shadow-sm flex-shrink-0">Skicka</button>
+                </form>
+                
+                <div class="text-center space-y-0.5">
+                    <p class="text-[9.5px] text-stone-600 font-medium">
+                        🔒 <span class="font-bold text-deep-olive">Integritetstips:</span> Undvik att skriva ut efternamn på kollegor eller känsliga personnummer i klartext.
+                    </p>
+                    <p id="disclaimer-text" class="text-[9px] text-stone-500 leading-tight">FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling (ej sjukvård). Vid akuta kriser, ring 112 eller 90101 (MIND).</p>
+                    <p class="text-[9.5px] font-bold text-stone-400 tracking-wider uppercase">Powered by WAYJS</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- VY 2: REFLEKTION -->
+        <section id="view-journal" class="hidden flex-1 flex flex-col h-full min-h-0 p-4 sm:p-6 max-w-2xl w-full mx-auto overflow-y-auto space-y-6">
+            <div>
+                <h2 class="text-xl font-bold text-deep-olive">Reflektionsdagbok & Utvecklingsanalys</h2>
+                <p class="text-xs text-stone-500 font-medium">En kompass med perspektiv.</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="bg-white p-3.5 rounded-2xl border border-stone-200 shadow-sm flex flex-col justify-between"><span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Klarhets-Streak</span><p id="main-streak-val" class="text-2xl font-extrabold text-deep-olive mt-1">3 dagar 🔥</p><span class="text-[10px] text-stone-500 mt-1">Aktiv daglig reflektion</span></div>
+                <div class="bg-white p-3.5 rounded-2xl border border-stone-200 shadow-sm flex flex-col justify-between"><span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Snitt-Energi</span><p id="main-avg-val" class="text-2xl font-extrabold text-deep-olive mt-1">3.8 / 5</p><span class="text-[10px] text-stone-500 mt-1">Senaste 7 inläggen</span></div>
+                <div class="bg-white p-3.5 rounded-2xl border border-stone-200 shadow-sm flex flex-col justify-between"><span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Dominerande Fokus</span><p id="main-focus-val" class="text-sm font-bold text-terracotta mt-1">Handlingskraft (75%)</p><span class="text-[10px] text-stone-500 mt-1">Aktiv kompassinställning</span></div>
+            </div>
+            <form onsubmit="saveJournalEntry(event)" class="bg-white p-5 rounded-2xl border border-stone-200 space-y-4 shadow-sm">
+                <div>
+                    <label class="block text-xs font-semibold text-stone-600 mb-2">Hur upplever du din energi & bana just nu? (1-5)</label>
+                    <div class="flex space-x-2">
+                        <button type="button" onclick="setMood(1)" class="mood-btn flex-1 py-2 bg-stone-100 border border-stone-300 rounded-xl text-sm font-semibold text-stone-800 transition" data-score="1">😞 1</button>
+                        <button type="button" onclick="setMood(2)" class="mood-btn flex-1 py-2 bg-stone-100 border border-stone-300 rounded-xl text-sm font-semibold text-stone-800 transition" data-score="2">😐 2</button>
+                        <button type="button" onclick="setMood(3)" class="mood-btn flex-1 py-2 bg-deep-olive text-amber-50 border border-deep-olive rounded-xl text-sm font-bold transition" data-score="3">🙂 3</button>
+                        <button type="button" onclick="setMood(4)" class="mood-btn flex-1 py-2 bg-stone-100 border border-stone-300 rounded-xl text-sm font-semibold text-stone-800 transition" data-score="4">😊 4</button>
+                        <button type="button" onclick="setMood(5)" class="mood-btn flex-1 py-2 bg-stone-100 border border-stone-300 rounded-xl text-sm font-semibold text-stone-800 transition" data-score="5">🤩 5</button>
+                    </div>
+                </div>
+                <div><textarea id="journal-text" rows="3" placeholder="Skriv en kort reflektion om vad som påverkar din riktning idag..." class="w-full bg-stone-50 border border-stone-300 rounded-xl p-3 text-xs text-stone-800 focus:outline-none focus:border-deep-olive"></textarea></div>
+                <button type="submit" class="w-full bg-deep-olive text-amber-50 font-semibold py-2.5 rounded-xl text-xs transition">Spara Reflektion</button>
+            </form>
+            <div>
+                <h3 class="text-xs font-bold text-stone-500 uppercase tracking-wider mb-3">Tidigare Reflektioner</h3>
+                <div id="journal-list" class="space-y-3"><p class="text-stone-400 text-xs italic">Inga reflektioner sparade ännu.</p></div>
+            </div>
+        </section>
+
+        <!-- VY 3: KOGNITIVT BIBLIOTEK -->
+        <section id="view-library" class="hidden flex-1 flex flex-col h-full min-h-0 p-4 sm:p-6 max-w-2xl w-full mx-auto overflow-y-auto space-y-6">
+            <div>
+                <h2 class="text-xl font-bold text-deep-olive">Kognitivt Bibliotek</h2>
+                <p class="text-xs text-stone-500 font-medium">Interaktiva NLP-protokoll & kognitiva mikrorutiner.</p>
+            </div>
+            
+            <div id="library-protocols-grid" class="grid grid-cols-1 gap-4">
+                <div class="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm space-y-3">
+                    <div class="flex justify-between items-start"><span class="text-[10px] font-bold text-terracotta bg-amber-50 px-2 py-0.5 rounded-full uppercase">Kognitiv Sanering • 3 min</span></div>
+                    <h3 class="text-sm font-bold text-stone-900">Decatastrophizing (Katastrofrensaren)</h3>
+                    <p class="text-xs text-stone-600 leading-relaxed">När hjärnan skenar iväg i värsta tänkbara scenario. Montera ned skräckbilden systematisk.</p>
+                    <button onclick="launchProtocol('Jag vill köra Decatastrophizing-protokollet. Hjälp mig att först identifiera mitt värsta scenario, skatta dess faktiska sannolikhet (0-100%), och därefter formulera min handlingsplan om det faktiskt händer.')" class="w-full bg-deep-olive hover:opacity-90 text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Starta protokoll i chatten</button>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm space-y-3">
+                    <div class="flex justify-between items-start"><span class="text-[10px] font-bold text-terracotta bg-amber-50 px-2 py-0.5 rounded-full uppercase">Relationer & Ansvar • 5 min</span></div>
+                    <h3 class="text-sm font-bold text-stone-900">Gränssättaren & Nej-Matrisen</h3>
+                    <p class="text-xs text-stone-600 leading-relaxed">Förbered svåra samtal och sätt tydliga gränser utan att drabbas av skuld eller förklara bort dig.</p>
+                    <button onclick="launchProtocol('Jag vill köra Gränssättar-protokollet. Hjälp mig att formulera ett tydligt, lugnt och orubbligt \'nej\' eller en ny gräns gällande en situation som dränerar mig.')" class="w-full bg-deep-olive hover:opacity-90 text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Starta protokoll i chatten</button>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm space-y-3">
+                    <div class="flex justify-between items-start"><span class="text-[10px] font-bold text-terracotta bg-amber-50 px-2 py-0.5 rounded-full uppercase">Akut Stress • 2 min</span></div>
+                    <h3 class="text-sm font-bold text-stone-900">Stop-Thought & Control Triangulation</h3>
+                    <p class="text-xs text-stone-600 leading-relaxed">Sortera direkt vad du kan påverka just nu och vad du måste släppa direkt.</p>
+                    <button onclick="launchProtocol('Jag vill köra Stop-Thought och Kontroll-trianguleringen. Hjälp mig att sortera situationen i tre delar: Det jag kontrollerar till 100%, det jag kan påverka delvis, och det jag måste släppa.')" class="w-full bg-deep-olive hover:opacity-90 text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Starta protokoll i chatten</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- VY 4: INSTÄLLNINGAR -->
+        <section id="view-settings" class="hidden flex-1 flex flex-col h-full min-h-0 p-6 max-w-xl w-full mx-auto overflow-y-auto">
+            <h2 class="text-xl font-bold text-deep-olive">Inställningar & Dataskydd</h2>
+            <p class="text-xs text-stone-500 mb-6 font-medium">En kompass med perspektiv.</p>
+            <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-3 mb-6 shadow-sm"><h3 class="text-xs font-bold text-deep-olive uppercase tracking-wider">Kontostatus</h3><p class="text-xs text-stone-700">Status: <span id="settings-tier" class="font-bold text-stone-900">INLOGGAD</span></p></div>
+            <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-3 mb-6 shadow-sm"><h3 class="text-xs font-bold text-deep-olive uppercase tracking-wider">Dataportabilitet</h3><p class="text-xs text-stone-600 leading-relaxed">Ladda ned en komplett maskinläsbar JSON-fil med all din data.</p><button onclick="exportMyData()" id="export-btn" class="bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold px-4 py-2 rounded-xl text-xs border border-stone-300 transition">📥 Exportera min data (JSON)</button></div>
+            <div class="bg-rose-50 p-5 rounded-2xl border border-rose-200 space-y-3 mb-6"><h3 class="text-xs font-bold text-rose-800 uppercase tracking-wider">Rätten att bli glömd</h3><p class="text-xs text-stone-600 leading-relaxed">Radera ditt konto och all tillhörande data permanent.</p><button onclick="deleteMyData()" class="bg-rose-700 hover:bg-rose-800 text-white font-semibold px-4 py-2 rounded-xl text-xs transition">Radera mitt konto & all data permanent</button></div>
+            <div class="text-center pt-2"><button onclick="openPrivacyPolicyModal()" class="text-xs text-deep-olive hover:underline">Integritetspolicy & DPA-information</button></div>
+        </section>
+    </main>
+
+    <!-- MODALER -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl text-center">
+            <div class="text-center pb-2 border-b border-stone-100"><h3 id="confirm-title" class="text-base font-bold text-deep-olive">Bekräfta åtgärd</h3></div>
+            <p id="confirm-msg" class="text-xs text-stone-700 leading-relaxed py-1"></p>
+            <div class="flex space-x-2 pt-2">
+                <button id="confirm-cancel-btn" onclick="closeConfirmModal(false)" class="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold py-2.5 rounded-xl text-xs transition">Avbryt</button>
+                <button id="confirm-ok-btn" onclick="closeConfirmModal(true)" class="flex-1 bg-rose-700 hover:bg-rose-800 text-white font-bold py-2.5 rounded-xl text-xs transition shadow">Radera</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="reminder-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl">
+            <div class="text-center pb-2 border-b border-stone-100 flex flex-col items-center">
+                <svg class="w-7 h-7 text-deep-olive mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <h3 class="text-base font-bold text-deep-olive">Skapa Påminnelse</h3>
+            </div>
+            <div class="space-y-3 text-xs">
+                <div><label class="block font-bold text-stone-700 mb-1">Citat / Text att bli påmind om:</label><textarea id="reminder-quote-input" rows="3" class="w-full bg-stone-50 border border-stone-300 rounded-xl p-2.5 text-xs text-stone-800 focus:outline-none focus:border-deep-olive leading-relaxed font-normal"></textarea></div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block font-bold text-stone-700 mb-1">Tidpunkt:</label><input type="time" id="reminder-time" value="08:00" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-2.5 py-2 font-semibold"></div>
+                    <div><label class="block font-bold text-stone-700 mb-1">Frekvens:</label><select id="reminder-freq" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-2 py-2 font-semibold text-stone-800"><option value="daily">Varje dag</option><option value="weekly">Varje vecka</option><option value="indefinite">Tillsvidare (Löpande)</option></select></div>
+                </div>
+                <div class="pt-1"><label class="flex items-center space-x-2 text-[11px] text-stone-700 cursor-pointer"><input type="checkbox" id="reminder-save-journal" checked class="rounded border-stone-300 text-deep-olive focus:ring-deep-olive"><span>Spara även som ett inlägg i Reflektionsdagboken</span></label></div>
+            </div>
+            <div class="flex space-x-2 pt-2"><button onclick="closeReminderModal()" class="flex-1 bg-stone-100 text-stone-600 font-bold py-2.5 rounded-xl transition">Avbryt</button><button onclick="saveReminderModalSubmit()" class="flex-1 bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl transition shadow">Spara Påminnelse</button></div>
+        </div>
+    </div>
+
+    <div id="custom-alert-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl text-center">
+            <div class="text-center pb-2 border-b border-stone-100"><h3 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h3><p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p></div>
+            <p id="custom-alert-msg" class="text-xs text-stone-700 leading-relaxed py-2"></p>
+            <button onclick="closeCustomAlert()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Förstått</button>
+        </div>
+    </div>
+
+    <div id="focus-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-5 shadow-2xl">
+            <div class="text-center pb-2 border-b border-stone-100 relative"><h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2><p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p><div class="absolute right-0 top-0 flex items-center space-x-2"><button onclick="resetFocusSliders()" class="text-[11px] font-semibold text-deep-olive hover:underline">Återställ</button><button onclick="closeFocusModal()" class="text-stone-400 hover:text-stone-700 text-base font-bold">✕</button></div></div>
+            <p class="text-xs font-medium text-stone-500">FALK är inställd på att höja:</p>
+            <div class="space-y-4 text-xs">
+                <div><div class="flex justify-between font-bold text-stone-800 mb-1"><span>Självförtroende</span><span id="val-confidence">50%</span></div><input type="range" id="slider-confidence" min="0" max="100" value="50" oninput="updateFocusVal('confidence')" class="w-full h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer focus-slider"></div>
+                <div><div class="flex justify-between font-bold text-stone-800 mb-1"><span>Stresshantering</span><span id="val-stress">50%</span></div><input type="range" id="slider-stress" min="0" max="100" value="50" oninput="updateFocusVal('stress')" class="w-full h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer focus-slider"></div>
+                <div><div class="flex justify-between font-bold text-stone-800 mb-1"><span>Handlingskraft</span><span id="val-action">50%</span></div><input type="range" id="slider-action" min="0" max="100" value="50" oninput="updateFocusVal('action')" class="w-full h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer focus-slider"></div>
+                <div><div class="flex justify-between font-bold text-stone-800 mb-1"><span>Gränssättning</span><span id="val-boundaries">50%</span></div><input type="range" id="slider-boundaries" min="0" max="100" value="50" oninput="updateFocusVal('boundaries')" class="w-full h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer focus-slider"></div>
+            </div>
+            <button onclick="closeFocusModal()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-2xl text-xs transition shadow">Spara fokusinställning</button>
+        </div>
+    </div>
+
+    <!-- AUTH MODAL -->
+    <div id="auth-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl">
+            <div class="text-center pb-2 border-b border-stone-100"><h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2><p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p></div>
+            <div class="flex border-b border-stone-200 pb-2"><button id="tab-btn-login" onclick="setAuthTab('login')" class="flex-1 text-center font-bold text-sm text-deep-olive border-b-2 border-deep-olive pb-1">Logga in</button><button id="tab-btn-signup" onclick="setAuthTab('signup')" class="flex-1 text-center font-bold text-sm text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600">Skapa konto</button></div>
+            <div class="space-y-3">
+                <div id="wrap-username" class="hidden"><input type="text" id="auth-username" placeholder="Välj Användarnamn" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive"></div>
+                <div id="wrap-identifier"><input type="text" id="auth-identifier" placeholder="E-post eller Användarnamn" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive"></div>
+                <div><input type="password" id="auth-password" placeholder="Lösenord" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive"></div>
+                
+                <div id="wrap-gdpr" class="hidden pt-1">
+                    <label class="flex items-start space-x-2 text-[11px] text-stone-600 cursor-pointer">
+                        <input type="checkbox" id="auth-gdpr-check" class="mt-0.5 rounded border-stone-300 text-deep-olive focus:ring-deep-olive">
+                        <span>Jag samtycker <strong>uttryckligen</strong> till att FALK behandlar mina reflektioner och måendeskattningar (hälsodata enl. Art. 9 GDPR) samt godkänner <button type="button" onclick="openTermsModal()" class="text-deep-olive underline font-bold">Användarvillkoren</button> och <button type="button" onclick="openPrivacyPolicyModal()" class="text-deep-olive underline font-bold">Integritetspolicyn</button>.</span>
+                    </label>
+                </div>
+            </div>
+            <div class="pt-2"><button id="auth-submit-btn" onclick="submitAuth()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Logga in</button></div>
+            <button onclick="closeAuthModal()" class="w-full text-center text-stone-400 text-xs mt-1 hover:text-stone-600">Avbryt</button>
+        </div>
+    </div>
+
+    <!-- DUAL-TAB LEGAL HUB -->
+    <div id="privacy-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-lg w-full space-y-4 max-h-[85vh] flex flex-col shadow-2xl">
+            <div class="text-center pb-2 border-b border-stone-100">
+                <h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2>
+                <p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p>
+            </div>
+            
+            <div class="flex border-b border-stone-200 pb-2">
+                <button id="legal-tab-privacy" onclick="setLegalTab('privacy')" class="flex-1 text-center font-bold text-xs text-deep-olive border-b-2 border-deep-olive pb-1">
+                    Integritetspolicy (GDPR)
                 </button>
-            </div>`;
+                <button id="legal-tab-terms" onclick="setLegalTab('terms')" class="flex-1 text-center font-bold text-xs text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600">
+                    Användarvillkor (ToS)
+                </button>
+            </div>
+
+            <div id="legal-content-privacy" class="flex-1 overflow-y-auto text-xs text-stone-600 space-y-3 pr-2 leading-relaxed">
+                <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 font-medium">
+                    MEDICINSK FRISKRIVNING: FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling. FALK tillhandahåller inte medicinsk diagnostik, psykoterapi eller hälso- och sjukvård.
+                </div>
+                <p><strong>Personuppgiftsansvarig:</strong> FALK AI Services.</p>
+                <p><strong>Vilka data behandlas?</strong> E-postadress, användarnamn, samtalsloggar, krypterade minnesvektorer samt stämningsskattningar (hälsodata enligt Art. 9 GDPR).</p>
+                <p><strong>PII-Anonymisering:</strong> Dina samtal tvättas automatiskt på servernivå från e-postadresser, telefonnummer och personnummer innan de behandlas av AI-motorn.</p>
+                <p>Dina rättigheter att begära radering och dataportabilitet finns under Inställningar.</p>
+            </div>
+
+            <div id="legal-content-terms" class="hidden flex-1 overflow-y-auto text-xs text-stone-600 space-y-3 pr-2 leading-relaxed">
+                <p><strong>1. Tjänstens natur:</strong> FALK är en AI-driven samtalskompass för personlig reflektion. Svaren genereras av algoritmer och ska inte betraktas som juridisk, finansiell eller medicinsk rådgivning.</p>
+                <p><strong>2. Användaransvar:</strong> Du ansvarar själv för de beslut du fattar baserat på dina samtal med FALK. Det är förbjudet att använda tjänsten för olagliga ändamål eller att försöka manipulera systemets säkerhetsspärrar.</p>
+                <p><strong>3. Ansvarsbegränsning:</strong> FALK AI Services friskriver sig från allt ansvar för direkt eller indirekt skada som kan uppstå till följd av användning av tjänsten eller tillfälliga avbrott i tillgängligheten.</p>
+                <p><strong>4. Immateriella rättigheter:</strong> All källkod, design och varumärket FALK tillhör FALK AI Services.</p>
+            </div>
+
+            <button onclick="closePrivacyPolicyModal()" class="w-full bg-deep-olive text-amber-50 font-semibold py-2.5 rounded-xl text-xs transition shadow">Jag har tagit del av informationen</button>
+        </div>
+    </div>
+
+    <!-- SKOTTSÄKER JAVASCRIPT-MOTOR MED UPPSTAGSTABELL -->
+    <script>
+        const SUPABASE_URL = "{{ supabase_url }}";
+        const SUPABASE_ANON_KEY = "{{ supabase_anon_key }}";
+        
+        let supabaseClient = null;
+        if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+
+        let userToken = null;
+        let activeSessionId = null;
+        let selectedMood = 3;
+        let userProfile = null;
+        let currentAuthMode = 'login';
+        let pendingReminderText = '';
+        let confirmResolver = null;
+        window.journalEntriesMap = {};
+
+        let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motivation: 50 };
+        let pinnedSessions = JSON.parse(localStorage.getItem('falk_pinned_sessions') || '[]');
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function setLegalTab(tab) {
+            const btnPrivacy = document.getElementById('legal-tab-privacy');
+            const btnTerms = document.getElementById('legal-tab-terms');
+            const contentPrivacy = document.getElementById('legal-content-privacy');
+            const contentTerms = document.getElementById('legal-content-terms');
+
+            if (tab === 'privacy') {
+                btnPrivacy.className = "flex-1 text-center font-bold text-xs text-deep-olive border-b-2 border-deep-olive pb-1";
+                btnTerms.className = "flex-1 text-center font-bold text-xs text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600";
+                contentPrivacy.classList.remove('hidden');
+                contentTerms.classList.add('hidden');
+            } else {
+                btnTerms.className = "flex-1 text-center font-bold text-xs text-deep-olive border-b-2 border-deep-olive pb-1";
+                btnPrivacy.className = "flex-1 text-center font-bold text-xs text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600";
+                contentTerms.classList.remove('hidden');
+                contentPrivacy.classList.add('hidden');
+            }
+        }
+        function openTermsModal() {
+            openPrivacyPolicyModal();
+            setLegalTab('terms');
+        }
+
+        function customConfirm(msg, title = "Bekräfta åtgärd") {
+            return new Promise((resolve) => {
+                document.getElementById('confirm-title').textContent = title;
+                document.getElementById('confirm-msg').textContent = msg;
+                document.getElementById('confirm-modal').classList.remove('hidden');
+                confirmResolver = resolve;
+            });
+        }
+
+        function closeConfirmModal(result) {
+            document.getElementById('confirm-modal').classList.add('hidden');
+            if (confirmResolver) {
+                confirmResolver(result);
+                confirmResolver = null;
+            }
+        }
+
+        function initDisclaimer() {
+            const lang = (navigator.language || 'sv').toLowerCase();
+            const el = document.getElementById('disclaimer-text');
+            if (!el) return;
+            if (lang.startsWith('sv')) {
+                el.textContent = "FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling. Ej sjukvård. Vid akuta kriser, ring 112 eller 90101 (MIND).";
+            } else {
+                el.textContent = "FALK is an AI self-help & personal development tool (not medical care). In acute crisis, contact your local emergency service (112/911).";
+            }
+        }
+
+        function checkForCrisisKeywords(text) {
+            const lower = text.toLowerCase();
+            const crisisWords = ['suicid', 'ta mitt liv', 'skada mig', 'kill myself', 'end my life', 'suicide', 'self harm'];
+            for (let word of crisisWords) {
+                if (lower.includes(word)) {
+                    showAlert("Om du befinner dig i kris, sök hjälp direkt. Ring 112 eller 90101 (MIND Självmordslinjen).");
+                    break;
+                }
+            }
+        }
+
+        function showAlert(msg) {
+            const msgEl = document.getElementById('custom-alert-msg');
+            if (msgEl) msgEl.textContent = msg;
+            const modal = document.getElementById('custom-alert-modal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeCustomAlert() {
+            const modal = document.getElementById('custom-alert-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        async function initAuth() {
+            initDisclaimer();
+            loadJournal();
+            if (!supabaseClient) return;
+
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            await updateAuthUI(session);
+
+            supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+                await updateAuthUI(session);
+            });
+        }
+
+        async function updateAuthUI(session) {
+            const userDisplayBottom = document.getElementById('user-display-bottom');
+            const logoutBtnBottom = document.getElementById('logout-btn-bottom');
+            const loginBtnBottom = document.getElementById('login-btn-bottom');
+            const tierBadge = document.getElementById('tier-badge');
+            const settingsTier = document.getElementById('settings-tier');
+
+            if (session) {
+                userToken = session.access_token;
+                await fetchProfile();
+                const displayName = (userProfile && userProfile.username) ? userProfile.username : session.user.email;
+                if (userDisplayBottom) userDisplayBottom.textContent = displayName;
+                if (logoutBtnBottom) logoutBtnBottom.classList.remove('hidden');
+                if (loginBtnBottom) loginBtnBottom.classList.add('hidden');
+                if (tierBadge) tierBadge.textContent = "INLOGGAD";
+                if (settingsTier) settingsTier.textContent = "INLOGGAD";
+                loadSessions();
+                loadJournal();
+            } else {
+                userToken = null;
+                userProfile = null;
+                if (userDisplayBottom) userDisplayBottom.textContent = "Gäst";
+                if (logoutBtnBottom) logoutBtnBottom.classList.add('hidden');
+                if (loginBtnBottom) loginBtnBottom.classList.remove('hidden');
+                if (tierBadge) tierBadge.textContent = "GÄST";
+                if (settingsTier) settingsTier.textContent = "GÄST";
+                document.getElementById('session-list').innerHTML = `<p class="p-2 text-stone-400 italic">Logga in för samtalshistorik</p>`;
+                loadJournal();
+            }
+        }
+
+        async function fetchProfile() {
+            if (!userToken) return;
+            try {
+                const res = await fetch('/api/profile', { headers: { 'Authorization': `Bearer ${userToken}` } });
+                userProfile = await res.json();
+            } catch (err) { console.error("Profile fetch fail", err); }
+        }
+
+        function closeAllDrawers() {
+            document.getElementById('sidebar-drawer').classList.add('-translate-x-full');
+            document.getElementById('progress-drawer').classList.add('translate-x-full');
+            document.getElementById('sidebar-overlay').classList.add('hidden');
+        }
+
+        function toggleSidebar() {
+            const drawer = document.getElementById('sidebar-drawer');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (drawer.classList.contains('-translate-x-full')) {
+                closeAllDrawers();
+                drawer.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else closeAllDrawers();
+        }
+
+        function toggleProgressDrawer() {
+            const drawer = document.getElementById('progress-drawer');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (drawer.classList.contains('translate-x-full')) {
+                closeAllDrawers();
+                drawer.classList.remove('translate-x-full');
+                overlay.classList.remove('hidden');
+            } else closeAllDrawers();
+        }
+
+        function switchTab(tab) {
+            closeAllDrawers();
+            document.getElementById('view-chat').classList.add('hidden');
+            document.getElementById('view-journal').classList.add('hidden');
+            document.getElementById('view-library').classList.add('hidden');
+            document.getElementById('view-settings').classList.add('hidden');
+
+            if (tab === 'chat') document.getElementById('view-chat').classList.remove('hidden');
+            else if (tab === 'journal') { document.getElementById('view-journal').classList.remove('hidden'); loadJournal(); }
+            else if (tab === 'library') document.getElementById('view-library').classList.remove('hidden');
+            else if (tab === 'settings') document.getElementById('view-settings').classList.remove('hidden');
+        }
+
+        function hidePrompts() {
+            const cards = document.getElementById('onboarding-cards');
+            if (cards) cards.classList.add('hidden');
+            const checkin = document.getElementById('daily-checkin-card');
+            if (checkin) checkin.classList.add('hidden');
+        }
+
+        function selectOnboarding(text) {
+            hidePrompts();
+            const input = document.getElementById('message-input');
+            if (input) input.value = text;
+            sendMessage(new Event('submit'));
+        }
+
+        function launchProtocol(promptText) {
+            switchTab('chat');
+            const input = document.getElementById('message-input');
+            if (input) input.value = promptText;
+            sendMessage(new Event('submit'));
+        }
+
+        async function loadSessions() {
+            if (!userToken) return;
+            const res = await fetch('/api/sessions', { headers: { 'Authorization': `Bearer ${userToken}` } });
+            let sessions = await res.json();
+            const list = document.getElementById('session-list');
+            if (!list) return;
+            list.innerHTML = '';
+
+            sessions.sort((a, b) => {
+                const isAPinned = pinnedSessions.includes(a.id);
+                const isBPinned = pinnedSessions.includes(b.id);
+                if (isAPinned && !isBPinned) return -1;
+                if (!isAPinned && isBPinned) return 1;
+                return 0;
+            });
+
+            sessions.forEach(s => {
+                const isPinned = pinnedSessions.includes(s.id);
+                const item = document.createElement('div');
+                item.className = `group flex items-center justify-between p-2 rounded-lg text-xs transition ${activeSessionId === s.id ? 'bg-stone-200 text-deep-olive font-bold' : 'hover:bg-stone-200/50 text-stone-700'}`;
+                
+                const titleBtn = document.createElement('button');
+                titleBtn.className = "truncate flex-1 text-left flex items-center space-x-1.5";
+                titleBtn.innerHTML = `${isPinned ? '<span class="text-terracotta">📌</span>' : ''}<span class="truncate">${escapeHtml(s.title)}</span>`;
+                titleBtn.onclick = () => selectSession(s.id);
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = "flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition";
+
+                const pinBtn = document.createElement('button');
+                pinBtn.className = "p-1 hover:text-terracotta text-stone-400 transition";
+                pinBtn.title = isPinned ? "Lossa samtal" : "Nåla samtal";
+                pinBtn.innerHTML = `<svg class="w-3.5 h-3.5" fill="${isPinned ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 5h14l-4 4v6l2 2v1H7v-1l2-2V9L5 5z"/></svg>`;
+                pinBtn.onclick = (e) => { e.stopPropagation(); togglePinSession(s.id); };
+
+                const delBtn = document.createElement('button');
+                delBtn.className = "p-1 hover:text-rose-600 text-stone-400 transition";
+                delBtn.title = "Radera samtal";
+                delBtn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`;
+                delBtn.onclick = (e) => { e.stopPropagation(); deleteSession(s.id); };
+
+                actionsDiv.appendChild(pinBtn);
+                actionsDiv.appendChild(delBtn);
+                item.appendChild(titleBtn);
+                item.appendChild(actionsDiv);
+                list.appendChild(item);
+            });
+        }
+
+        function togglePinSession(id) {
+            if (pinnedSessions.includes(id)) pinnedSessions = pinnedSessions.filter(item => item !== id);
+            else pinnedSessions.push(id);
+            localStorage.setItem('falk_pinned_sessions', JSON.stringify(pinnedSessions));
+            loadSessions();
+        }
+
+        async function deleteSession(id) {
+            const confirmed = await customConfirm("Vill du radera detta samtal permanent?", "Radera samtal");
+            if (!confirmed) return;
+            if (userToken) {
+                await fetch(`/api/sessions/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${userToken}` } });
+            }
+            if (activeSessionId === id) {
+                activeSessionId = null;
+                document.getElementById('chat-messages-list').innerHTML = '';
+            }
+            loadSessions();
+        }
+
+        async function createNewSession() {
+            if (!userToken) return openAuthModal();
+            const res = await fetch('/api/sessions', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: "Nytt samtalsrum" })
+            });
+            const s = await res.json();
+            if (s.id) {
+                activeSessionId = s.id;
+                document.getElementById('chat-messages-list').innerHTML = '';
+                const cards = document.getElementById('onboarding-cards');
+                if (cards) cards.classList.remove('hidden');
+                switchTab('chat');
+                loadSessions();
+            }
+        }
+
+        async function selectSession(id) {
+            activeSessionId = id;
+            loadSessions();
+            closeAllDrawers();
+            hidePrompts();
+
+            const res = await fetch(`/api/sessions/${id}/messages`, { headers: { 'Authorization': `Bearer ${userToken}` } });
+            const messages = await res.json();
+            const list = document.getElementById('chat-messages-list');
+            if (!list) return;
+            list.innerHTML = '';
+            
+            if (messages.length > 0) hidePrompts();
+            messages.forEach(m => appendMessage(m.sender === 'user' ? 'Du' : 'FALK', m.content, m.sender));
+        }
+
+        let isRecording = false;
+        let recognition = null;
+
+        function toggleSpeechRecognition() {
+            const micBtn = document.getElementById('mic-btn');
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                return showAlert("Tal-till-text stöds inte i din webbläsare.");
+            }
+
+            if (isRecording) {
+                if (recognition) recognition.stop();
+                isRecording = false;
+                micBtn.classList.remove('text-rose-600', 'animate-pulse');
+                micBtn.classList.add('text-stone-400');
+            } else {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.lang = 'sv-SE';
+                recognition.onstart = function() {
+                    isRecording = true;
+                    micBtn.classList.remove('text-stone-400');
+                    micBtn.classList.add('text-rose-600', 'animate-pulse');
+                };
+                recognition.onresult = function(event) {
+                    document.getElementById('message-input').value += event.results[0][0].transcript;
+                };
+                recognition.onend = function() {
+                    isRecording = false;
+                    micBtn.classList.remove('text-rose-600', 'animate-pulse');
+                    micBtn.classList.add('text-stone-400');
+                };
+                recognition.start();
+            }
+        }
+
+        function updateFocusVal(key) {
+            const val = document.getElementById(`slider-${key}`).value;
+            focusState[key] = parseInt(val);
+            document.getElementById(`val-${key}`).textContent = `${val}%`;
+            const prog = document.getElementById(`prog-${key}`);
+            const bar = document.getElementById(`bar-${key}`);
+            if (prog) prog.textContent = `${val}%`;
+            if (bar) bar.style.width = `${val}%`;
+        }
+
+        function resetFocusSliders() {
+            ['confidence', 'stress', 'action', 'boundaries', 'motivation'].forEach(k => {
+                document.getElementById(`slider-${k}`).value = 50;
+                updateFocusVal(k);
+            });
+        }
+
+        function openFocusModal() { document.getElementById('focus-modal').classList.remove('hidden'); }
+        function closeFocusModal() { document.getElementById('focus-modal').classList.add('hidden'); }
+
+        async function sendMessage(e) {
+            if (e && e.preventDefault) e.preventDefault();
+
+            const input = document.getElementById('message-input');
+            const btn = document.getElementById('send-btn');
+            const message = input ? input.value.trim() : '';
+
+            if (!message) return;
+            checkForCrisisKeywords(message);
+            hidePrompts();
+
+            if (!activeSessionId && userToken) {
+                await createNewSession();
+            }
+
+            appendMessage('Du', message, 'user');
+            if (input) input.value = '';
+            if (btn) btn.disabled = true;
+
+            const thinkingId = showThinkingIndicator();
+
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                if (userToken) headers['Authorization'] = `Bearer ${userToken}`;
+
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ 
+                        message: message, 
+                        session_id: activeSessionId,
+                        focus: focusState
+                    })
+                });
+
+                const data = await res.json();
+                removeThinkingIndicator(thinkingId);
+
+                if (res.ok) {
+                    appendMessage('FALK', data.response, 'bot');
+                    loadSessions();
+                } else {
+                    appendMessage('FALK', data.error || 'Ett fel uppstod.', 'error');
+                }
+            } catch (err) {
+                removeThinkingIndicator(thinkingId);
+                appendMessage('FALK', 'Kunde inte ansluta till servern.', 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        function showThinkingIndicator() {
+            const list = document.getElementById('chat-messages-list');
+            if (!list) return null;
+            const id = 'thinking-' + Math.random().toString(36).substr(2, 9);
+            const container = document.createElement('div');
+            container.id = id;
+            container.className = "flex flex-col items-start space-y-1.5 my-2";
+            container.innerHTML = `<div class="bg-white/90 border border-stone-200/80 px-4 py-3 rounded-2xl text-xs text-stone-600 shadow-sm flex items-center space-x-2"><span class="w-2 h-2 bg-deep-olive rounded-full animate-pulse"></span><span class="italic">FALK tänker...</span></div>`;
+            list.appendChild(container);
+            const containerBox = document.getElementById('chat-container');
+            if (containerBox) containerBox.scrollTop = containerBox.scrollHeight;
+            return id;
+        }
+
+        function removeThinkingIndicator(id) {
+            if (!id) return;
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        function appendMessage(sender, text, type) {
+            const list = document.getElementById('chat-messages-list');
+            if (!list) return;
+            hidePrompts();
+
+            const container = document.createElement('div');
+            if (type === 'user') {
+                container.className = "flex justify-end";
+                container.innerHTML = `<div class="bg-bubble-user text-amber-50 px-4 py-3 rounded-2xl max-w-[85%] text-xs shadow-sm leading-relaxed whitespace-pre-wrap">${escapeHtml(text)}</div>`;
+            } else {
+                container.className = "flex flex-col items-start space-y-1 my-1";
+                const msgId = 'msg-' + Math.random().toString(36).substr(2, 9);
+                
+                container.innerHTML = `
+                    <div class="bg-white/90 border border-stone-200/80 text-stone-800 px-4 py-3 rounded-2xl max-w-[90%] text-xs shadow-sm leading-relaxed font-normal whitespace-pre-wrap break-words" id="${msgId}">${escapeHtml(text)}</div>
+                    
+                    <div class="flex items-center space-x-2 px-1 py-0.5 text-stone-500 text-xs">
+                        <button onclick="speakText('${msgId}')" class="flex items-center space-x-1 p-1.5 hover:text-deep-olive hover:bg-stone-200/60 rounded-lg transition" title="Läs upp meddelande">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 00-1-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+                            <span class="text-[10px] font-semibold">Läs upp</span>
+                        </button>
+                        <span class="text-stone-300">•</span>
+                        <button onclick="openReminderModal('${msgId}')" class="flex items-center space-x-1 p-1.5 hover:text-deep-olive hover:bg-stone-200/60 rounded-lg transition text-deep-olive" title="Skapa påminnelse">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span class="text-[10px] font-semibold">Sätt påminnelse</span>
+                        </button>
+                    </div>`;
             }
             list.appendChild(container);
             const containerBox = document.getElementById('chat-container');
