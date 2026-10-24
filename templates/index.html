@@ -264,6 +264,7 @@
                     <button type="submit" id="send-btn" class="bg-deep-olive hover:opacity-90 text-amber-50 font-semibold px-5 py-3 rounded-full text-xs transition disabled:opacity-50 shadow-sm flex-shrink-0">Skicka</button>
                 </form>
                 
+                <!-- STEG 2: MIKRO-UX INTEGRITETSPÅMINNELSE DIREKT I GRÄNSSNITTET -->
                 <div class="text-center space-y-0.5">
                     <p class="text-[9.5px] text-stone-600 font-medium">
                         🔒 <span class="font-bold text-deep-olive">Integritetstips:</span> Undvik att skriva ut efternamn på kollegor eller känsliga personnummer i klartext.
@@ -399,7 +400,7 @@
         </div>
     </div>
 
-    <!-- AUTH MODAL -->
+    <!-- STEG 1: AUTH MODAL MED EXPLICIT ART. 9 SAMTYCKESTEXT -->
     <div id="auth-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl">
             <div class="text-center pb-2 border-b border-stone-100"><h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2><p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p></div>
@@ -459,7 +460,6 @@
         </div>
     </div>
 
-    <!-- SKOTTSÄKER JAVASCRIPT-MOTOR MED UPPSTAGSTABELL -->
     <script>
         const SUPABASE_URL = "{{ supabase_url }}";
         const SUPABASE_ANON_KEY = "{{ supabase_anon_key }}";
@@ -476,15 +476,9 @@
         let currentAuthMode = 'login';
         let pendingReminderText = '';
         let confirmResolver = null;
-        window.journalEntriesMap = {};
 
         let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motivation: 50 };
         let pinnedSessions = JSON.parse(localStorage.getItem('falk_pinned_sessions') || '[]');
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-        }
 
         function setLegalTab(tab) {
             const btnPrivacy = document.getElementById('legal-tab-privacy');
@@ -695,7 +689,7 @@
                 
                 const titleBtn = document.createElement('button');
                 titleBtn.className = "truncate flex-1 text-left flex items-center space-x-1.5";
-                titleBtn.innerHTML = `${isPinned ? '<span class="text-terracotta">📌</span>' : ''}<span class="truncate">${escapeHtml(s.title)}</span>`;
+                titleBtn.innerHTML = `${isPinned ? '<span class="text-terracotta">📌</span>' : ''}<span class="truncate">${s.title}</span>`;
                 titleBtn.onclick = () => selectSession(s.id);
 
                 const actionsDiv = document.createElement('div');
@@ -903,56 +897,50 @@
         }
 
         function appendMessage(sender, text, type) {
-            const list = document.getElementById("chat-messages-list");
+            const list = document.getElementById('chat-messages-list');
             if (!list) return;
             hidePrompts();
 
-            const container = document.createElement("div");
-            if (type === "user") {
-                container.className = "flex justify-end my-2";
-                container.innerHTML = `<div class="bg-bubble-user text-amber-50 px-4 py-3 rounded-2xl max-w-[85%] text-xs shadow-sm leading-relaxed whitespace-pre-wrap">${escapeHtml(text)}</div>`;
+            const container = document.createElement('div');
+            if (type === 'user') {
+                container.className = "flex justify-end";
+                container.innerHTML = `<div class="bg-bubble-user text-amber-50 px-4 py-3 rounded-2xl max-w-[85%] text-xs shadow-sm">${text}</div>`;
             } else {
-                container.className = "flex flex-col items-start space-y-1 my-2";
-                const msgId = "msg-" + Math.random().toString(36).substr(2, 9);
-                
+                container.className = "flex flex-col items-start space-y-1.5";
+                const msgId = 'msg-' + Math.random().toString(36).substr(2, 9);
                 container.innerHTML = `
-                    <div class="bg-white/90 border border-stone-200/80 text-stone-800 px-4 py-3 rounded-2xl max-w-[90%] text-xs shadow-sm leading-relaxed font-normal whitespace-pre-wrap break-words" id="${msgId}">${escapeHtml(text)}</div>
-                    
+                    <div class="bg-white/90 border border-stone-200/80 text-stone-800 px-4 py-3 rounded-2xl max-w-[90%] text-xs shadow-sm leading-relaxed" id="${msgId}">${text}</div>
                     <div class="icon-bar flex items-center space-x-1 mt-1.5 px-1 py-0.5 text-stone-400">
-                        <!-- 1. Högtalare -->
-                        <button onclick="speakText('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Läs upp meddelande">
-                            <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 00-1-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
-                        </button>
-                        <!-- 2. Generera nytt -->
-                        <button onclick="regenerateLastMessage()" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Generera nytt svar">
-                            <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                        </button>
-                        <!-- 3. Tumme upp -->
-                        <button onclick="rateResponse('${msgId}', 'up', this)" class="btn-thumb-up p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Bra svar">
-                            <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/></svg>
-                        </button>
-                        <!-- 4. Tumme ner -->
-                        <button onclick="rateResponse('${msgId}', 'down', this)" class="btn-thumb-down p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Mindre bra svar">
-                            <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 0117.263 21h-4.018c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714-2.11 1.412-.608-2.006L17 13V4m-7 10h2m5-9h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"/></svg>
-                        </button>
-                        <!-- 5. Minus -->
-                        <button onclick="adjustLastResponse('minus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Gör svaret mer kortfattat">
-                            <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
-                        </button>
-                        <!-- 6. Plus -->
-                        <button onclick="adjustLastResponse('plus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Fördjupa svaret">
-                            <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                        </button>
-                        <!-- 7. Påminnelse -->
-                        <button onclick="openReminderModal('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Skapa påminnelse">
-                            <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        </button>
-                    </div>`;
+                <!-- 1. Högtalare -->
+                <button onclick="speakText('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Läs upp meddelande">
+                    <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 00-1-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+                </button>
+                <!-- 2. Generera nytt -->
+                <button onclick="regenerateLastMessage()" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Generera nytt svar">
+                    <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                </button>
+                <!-- 3. Tumme upp -->
+                <button onclick="rateResponse('${msgId}', 'up', this)" class="btn-thumb-up p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Bra svar">
+                    <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/></svg>
+                </button>
+                <!-- 4. Tumme ner -->
+                <button onclick="rateResponse('${msgId}', 'down', this)" class="btn-thumb-down p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Mindre bra svar">
+                    <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 0117.263 21h-4.018c.163 0 .326.02.485.06L17 4m-7 10v5a2 2 0 002 2h.095c.5 0 .905-.405.905-.905 0-.714-2.11 1.412-.608-2.006L17 13V4m-7 10h2m5-9h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5"/></svg>
+                </button>
+                <!-- 5. Minus -->
+                <button onclick="adjustLastResponse('minus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Gör svaret mer kortfattat">
+                    <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+                </button>
+                <!-- 6. Plus -->
+                <button onclick="adjustLastResponse('plus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Fördjupa svaret">
+                    <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                </button>
+                <!-- 7. Påminnelse -->
+                <button onclick="openReminderModal('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Skapa påminnelse">
+                    <svg class="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </button>
+            </div>`;
             }
-            list.appendChild(container);
-            const containerBox = document.getElementById("chat-container");
-            if (containerBox) containerBox.scrollTop = containerBox.scrollHeight;
-        }
             list.appendChild(container);
             const containerBox = document.getElementById('chat-container');
             if (containerBox) containerBox.scrollTop = containerBox.scrollHeight;
@@ -968,22 +956,12 @@
             }
         }
 
-        function openReminderByJournalId(id) {
-            const text = (window.journalEntriesMap && window.journalEntriesMap[id]) ? window.journalEntriesMap[id] : '';
-            openReminderModalDirect(text);
-        }
-
-        function openReminderModalDirect(text) {
-            pendingReminderText = text || '';
+        function openReminderModal(textOrId) {
+            const el = document.getElementById(textOrId);
+            pendingReminderText = el ? el.textContent.trim() : textOrId;
             const input = document.getElementById('reminder-quote-input');
             if (input) input.value = pendingReminderText;
             document.getElementById('reminder-modal').classList.remove('hidden');
-        }
-
-        function openReminderModal(textOrId) {
-            const el = document.getElementById(textOrId);
-            const text = el ? el.textContent.trim() : textOrId;
-            openReminderModalDirect(text);
         }
 
         function closeReminderModal() { document.getElementById('reminder-modal').classList.add('hidden'); }
@@ -1053,19 +1031,17 @@
             if (entries.length === 0) { list.innerHTML = `<p class="text-stone-400 text-xs italic">Inga reflektioner sparade ännu.</p>`; return; }
 
             const moodEmojis = ['', '😞', '😐', '🙂', '😊', '🤩'];
-            window.journalEntriesMap = {};
-
             entries.forEach(e => {
-                window.journalEntriesMap[e.id] = e.entry_text;
                 const div = document.createElement('div');
                 div.className = "bg-white p-3.5 rounded-xl border border-stone-200 text-xs space-y-1 shadow-sm flex justify-between items-start";
+                const safeText = e.entry_text.replace(/'/g, "\\'");
                 div.innerHTML = `
                     <div class="space-y-1 flex-1 pr-2">
                         <div class="flex justify-between items-center font-bold text-stone-500"><span>Status: ${moodEmojis[e.mood_score] || '🙂'} (${e.mood_score}/5)</span><span>${new Date(e.created_at).toLocaleDateString('sv-SE')}</span></div>
-                        <p class="text-stone-800 leading-relaxed font-normal whitespace-pre-wrap">${escapeHtml(e.entry_text)}</p>
+                        <p class="text-stone-800 leading-relaxed">${e.entry_text}</p>
                     </div>
                     <div class="flex items-center space-x-1">
-                        <button onclick="openReminderByJournalId('${e.id}')" class="p-1 hover:text-deep-olive text-stone-400 transition" title="Sätt påminnelse"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+                        <button onclick="openReminderModal('${safeText}')" class="p-1 hover:text-deep-olive text-stone-400 transition" title="Sätt påminnelse"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
                         <button onclick="deleteJournalEntry('${e.id}')" class="p-1 hover:text-rose-600 text-stone-400 transition" title="Radera reflektion"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
                     </div>`;
                 list.appendChild(div);
