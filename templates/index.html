@@ -877,6 +877,7 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
                 removeThinkingIndicator(thinkingId);
                 appendMessage('FALK', 'Kunde inte ansluta till servern.', 'error');
             } finally {
+                window.isSendingMessage = false;
                 if (btn) btn.disabled = false;
             }
         }
