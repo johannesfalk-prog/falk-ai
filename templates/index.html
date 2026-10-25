@@ -1290,11 +1290,11 @@ window.appendMessage = function(sender, text, type) {
                 </button>
                 <!-- 3. Tumme upp -->
                 <button onclick="rateResponse('${msgId}', 'up', this)" class="btn-thumb-up p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Bra svar">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.633 10.25c.806 0 1.533-.446 1.911-1.158l.751-1.427A2.25 2.25 0 0111.309 6.5h1.22c.98 0 1.832.686 2.014 1.65l.623 3.321a2.25 2.25 0 001.218 1.631l.526.263a2.25 2.25 0 011.218 2.012v.172a2.25 2.25 0 01-.659 1.591l-1.39 1.39a2.25 2.25 0 01-1.591.659H10.5a3.75 3.75 0 01-3.75-3.75v-3.75c0-.828-.672-1.5-1.5-1.5H4.5"/></svg>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.633 10.5c.806 0 1.533-.446 1.911-1.158l.751-1.427A2.25 2.25 0 0111.309 6H12.5c.98 0 1.832.686 2.014 1.65l.623 3.321a2.25 2.25 0 001.218 1.631l.526.263a2.25 2.25 0 011.218 2.012v.172a2.25 2.25 0 01-.659 1.591l-1.39 1.39a2.25 2.25 0 01-1.591.659H10.5A3.75 3.75 0 016.75 15v-3a1.5 1.5 0 00-1.5-1.5H3.75"/></svg>
                 </button>
                 <!-- 4. Tumme ned -->
                 <button onclick="rateResponse('${msgId}', 'down', this)" class="btn-thumb-down p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Mindre bra svar">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.367 13.75c-.806 0-1.533.446-1.911 1.158l-.751 1.427A2.25 2.25 0 0112.691 17.5h-1.22c-.98 0-1.832-.686-2.014-1.65l-.623-3.321a2.25 2.25 0 00-1.218-1.631l-.526-.263a2.25 2.25 0 01-1.218-2.012v-.172c0-.602.239-1.18.659-1.591l1.39-1.39A2.25 2.25 0 019.5 5.5h3.003a3.75 3.75 0 013.75 3.75v3.75c0 .828.672 1.5 1.5 1.5h1.114"/></svg>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.367 13.5c-.806 0-1.533.446-1.911 1.158l-.751 1.427A2.25 2.25 0 0112.691 18H11.5c-.98 0-1.832-.686-2.014-1.65l-.623-3.321a2.25 2.25 0 00-1.218-1.631l-.526-.263a2.25 2.25 0 01-1.218-2.012v-.172c0-.602.239-1.18.659-1.591l1.39-1.39A2.25 2.25 0 019.5 7.5h3.003A3.75 3.75 0 0116.25 11.25v3a1.5 1.5 0 001.5 1.5h1.5"/></svg>
                 </button>
                 <!-- 5. Minus -->
                 <button onclick="adjustLastResponse('minus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Gör svaret mer kortfattat">
@@ -1338,7 +1338,7 @@ window.adjustLastResponse = async function(action) {
 
     // Visa laddningsindikator i bubblan utan att skapa nytt användarmeddelande
     const originalText = contentDiv.innerHTML;
-    contentDiv.innerHTML = `<span class="animate-pulse text-stone-400">FALK skapar en ny variant...</span>`;
+    contentDiv.innerHTML = `<span class="animate-pulse text-stone-400">FALK tänker...</span>`;
 
     try {
         const response = await fetch('/chat', {
