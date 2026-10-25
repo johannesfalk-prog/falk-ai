@@ -40,7 +40,7 @@
     <!-- TOP HEADER -->
     <header class="h-14 border-b border-stone-300/60 flex items-center justify-between px-4 bg-warm-beige/90 backdrop-blur-sm z-30 flex-shrink-0">
         <div class="flex items-center space-x-2">
-            <button onclick="toggleSidebar()" class="flex items-center space-x-1.5 text-deep-olive font-semibold text-xs hover:opacity-80 transition">
+            <button onclick="if(!handleLockedFeature('menu')) toggleSidebar()" class="flex items-center space-x-1.5 text-deep-olive font-semibold text-xs hover:opacity-80 transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                 <span>Meny</span>
             </button>
@@ -76,7 +76,7 @@
                 <button onclick="switchTab('chat')" id="nav-chat" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-deep-olive text-amber-50 flex items-center space-x-2 shadow-sm">
                     <span>💬</span> <span>Chatt</span>
                 </button>
-                <button onclick="switchTab('journal')" id="nav-journal" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
+                <button onclick="if(!handleLockedFeature('dev')) switchTab('journal')" id="nav-journal" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
                     <span>🌱</span> <span>Reflektion & Utveckling</span>
                 </button>
                 <button onclick="switchTab('library')" id="nav-library" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
