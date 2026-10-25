@@ -309,7 +309,8 @@ def chat():
                 c_count, c_date = raw_cookie.split(":", 1)
                 guest_count = int(c_count) if c_date == today_str and c_count.isdigit() else 0
             else:
-                guest_count = int(raw_cookie) if raw_cookie.isdigit() else 0
+                # Gamla cookies utan datumstämpel är ogiltiga -> Nollställ direkt!
+                guest_count = 0
 
             if guest_count >= 6:
                 return jsonify({
@@ -385,7 +386,8 @@ def chat():
                 c_count, c_date = raw_cookie.split(":", 1)
                 guest_count = int(c_count) if c_date == today_str and c_count.isdigit() else 0
             else:
-                guest_count = int(raw_cookie) if raw_cookie.isdigit() else 0
+                # Gamla cookies utan datumstämpel är ogiltiga -> Nollställ direkt!
+                guest_count = 0
             resp.set_cookie("falk_guest_count", f"{guest_count + 1}:{today_str}", max_age=86400)
 
         return resp, 200
