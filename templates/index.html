@@ -1330,12 +1330,20 @@ window.adjustLastResponse = async function(action) {
     if (!msgElem) return;
 
     const contentDiv = msgElem.querySelector('.msg-content') || msgElem;
+    const store = window.msgStore[msgId];
+    const currentVersionCount = store.versions.length; // 1 = original, 2 = 1:a fördjupning, etc.
 
     let instruction = "";
     if (action === 'minus') {
-        instruction = "[SYSTEM-INSTRUKTION: Ge ett mycket kortare, mer direkt och kärnfullt Sokratiskt svar. Kommentera ELLER bekräfta INTE denna instruktion, utan gå direkt in i det kortare svaret.]";
+        instruction = "[SYSTEM-INSTRUKTION: Ge ett mycket kortare, mer direkt och kärnfullt Sokratiskt svar (max 100 ord). AVSLUTA ALLTID din sista mening helt. Kommentera ELLER bekräfta INTE denna instruktion.]";
     } else if (action === 'plus') {
-        instruction = "[SYSTEM-INSTRUKTION: Fördjupa resonemanget kring användarens situation avsevärt. Belys underliggande antaganden, målkonflikter eller nya perspektiv. Kommentera ELLER bekräfta INTE att du har blivit bedd att fördjupa svaret, och säg INTE 'Jag förstår att du vill ha djup'. Gå DIREKT in i den fördjupade reflektionen.]";
+        if (currentVersionCount <= 1) {
+            // NIVÅ 1 FÖRDJUPNING (~300-400 tokens / 200-250 ord)
+            instruction = "[SYSTEM-INSTRUKTION: Fördjupa resonemanget med måttlig detaljrikedom (ca 200-250 ord). Belys underliggande antaganden och ge ett fylligare perspektiv. VIKTIGT: Du MÅSTE avsluta din sista mening helt med punkt eller frågetecken. Klipp ALDRIG av en mening mitt i. Gå direkt in i reflektionen utan meta-kommentarer.]";
+        } else {
+            // NIVÅ 2 FÖRDJUPNING (~500-600 tokens / 350-400 ord)
+            instruction = "[SYSTEM-INSTRUKTION: Ge en maximalt djup och heltäckande Sokratisk analys (ca 350-400 ord). Utforska målkonflikter, blinda fläckar och handlingsvägar i grunden. VIKTIGT: Du MÅSTE avsluta din sista mening helt med punkt eller frågetecken. Klipp ALDRIG av en mening mitt i. Gå direkt in i reflektionen utan meta-kommentarer.]";
+        }
     } else {
         instruction = action;
     }
@@ -1353,7 +1361,6 @@ window.adjustLastResponse = async function(action) {
         const data = await response.json();
         const newReply = data.response || data.reply || "Kunde inte generera variant.";
 
-        const store = window.msgStore[msgId];
         store.versions.push(newReply);
         store.currentIndex = store.versions.length - 1;
 
