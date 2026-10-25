@@ -470,7 +470,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         let pendingReminderText = '';
         let confirmResolver = null;
 
-        let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motivation: 50 };
+        window.isSendingMessage = false;
+let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motivation: 50 };
         let pinnedSessions = JSON.parse(localStorage.getItem('falk_pinned_sessions') || '[]');
 
         function setLegalTab(tab) {
@@ -819,13 +820,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         function closeFocusModal() { document.getElementById('focus-modal').classList.add('hidden'); }
 
         async function sendMessage(e) {
-            if (e && e.preventDefault) e.preventDefault();
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (window.isSendingMessage) return;
 
-            const input = document.getElementById('message-input');
-            const btn = document.getElementById('send-btn');
-            const message = input ? input.value.trim() : '';
+    const input = document.getElementById('message-input');
+    const btn = document.getElementById('send-btn');
+    const message = input ? input.value.trim() : '';
 
-            if (!message) return;
+    if (!message) return;
+
+    window.isSendingMessage = true;
             checkForCrisisKeywords(message);
             hidePrompts();
 
