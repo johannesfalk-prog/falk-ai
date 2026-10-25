@@ -388,7 +388,7 @@ def chat():
             else:
                 # Gamla cookies utan datumstämpel är ogiltiga -> Nollställ direkt!
                 guest_count = 0
-            resp.set_cookie("falk_guest_count", f"{guest_count + 1}:{today_str}", max_age=86400)
+            resp.set_cookie("falk_guest_count", f"{guest_count + 1}:{today_str}", max_age=86400, path="/", samesite="Lax")
 
         return resp, 200
 
