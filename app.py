@@ -86,7 +86,7 @@ def generate_session_title(user_message):
                 {"role": "system", "content": "Skapa en ultrakort sammanfattande rubrik (2-4 ord på svenska) för ett samtal som börjar med användarens meddelande. Svara enbart med rubriken utan citationstecken."},
                 {"role": "user", "content": user_message}
             ],
-            max_tokens=750,
+            max_tokens=effective_max_tokens,
             temperature=0.3
         )
         title = res.choices[0].message.content.strip().replace('"', '')
@@ -324,7 +324,7 @@ def chat():
                             {"role": "user", "content": f"{memory_context}\n\n{user_message}"}
                         ],
                         temperature=0.4,
-                        max_tokens=750
+                        max_tokens=effective_max_tokens
                     )
                     ai_response = completion.choices[0].message.content
                     if ai_response:
@@ -342,7 +342,7 @@ def chat():
                         {"role": "user", "content": f"{memory_context}\n\n{user_message}"}
                     ],
                     temperature=0.4,
-                    max_tokens=750
+                    max_tokens=effective_max_tokens
                 )
                 ai_response = completion.choices[0].message.content
                 used_provider = "OpenAI (gpt-4o-mini)"
