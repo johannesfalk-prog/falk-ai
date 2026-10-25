@@ -74,8 +74,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         <h1 class="text-lg font-bold tracking-widest text-deep-olive absolute left-1/2 -translate-x-1/2">FALK</h1>
 
         <div class="flex items-center space-x-2">
-            <button onclick="if(!handleLockedFeature('dev')) createNewSession()" class="text-deep-olive hover:opacity-80 font-bold text-2xl leading-none px-2 transition" title="Nytt samtal">+</button>
-            <button onclick="if(!handleLockedFeature('dev')) toggleProgressDrawer()" class="flex items-center space-x-1 text-xs font-bold text-deep-olive bg-stone-200/60 hover:bg-stone-300/60 px-2.5 py-1.5 rounded-full transition shadow-sm">
+            <button type="button" onclick="if(!handleLockedFeature('dev')) createNewSession()" class="text-deep-olive hover:opacity-80 font-bold text-2xl leading-none px-2 transition" title="Nytt samtal">+</button>
+            <button type="button" onclick="if(!handleLockedFeature('dev')) toggleProgressDrawer()" class="flex items-center space-x-1 text-xs font-bold text-deep-olive bg-stone-200/60 hover:bg-stone-300/60 px-2.5 py-1.5 rounded-full transition shadow-sm">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
                 <span>Utveckling</span>
             </button>
@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <button onclick="switchTab('chat')" id="nav-chat" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-deep-olive text-amber-50 flex items-center space-x-2 shadow-sm">
                     <span>💬</span> <span>Chatt</span>
                 </button>
-                <button onclick="if(!handleLockedFeature('dev')) switchTab('journal')" id="nav-journal" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
+                <button type="button" onclick="if(!handleLockedFeature('dev')) switchTab('journal')" id="nav-journal" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
                     <span>🌱</span> <span>Reflektion & Utveckling</span>
                 </button>
                 <button onclick="switchTab('library')" id="nav-library" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
@@ -283,7 +283,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg>
                         </button>
                     </div>
-                    <button onclick="handleLockedFeature('dev')" class="flex items-center space-x-1.5 text-stone-700 hover:text-stone-900 font-medium text-xs border border-stone-300 rounded-full px-3 py-1.5"><svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg><span>Utveckling</span></button>
+                    <button type="button" onclick="handleLockedFeature('dev')" class="flex items-center space-x-1.5 text-stone-700 hover:text-stone-900 font-medium text-xs border border-stone-300 rounded-full px-3 py-1.5"><svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg><span>Utveckling</span></button>
                         <button type="button" onclick="setMood(2)" class="mood-btn flex-1 py-2 bg-stone-100 border border-stone-300 rounded-xl text-sm font-semibold text-stone-800 transition" data-score="2">😐 2</button>
                         <button type="button" onclick="setMood(3)" class="mood-btn flex-1 py-2 bg-deep-olive text-amber-50 border border-deep-olive rounded-xl text-sm font-bold transition" data-score="3">🙂 3</button>
                         <button type="button" onclick="setMood(4)" class="mood-btn flex-1 py-2 bg-stone-100 border border-stone-300 rounded-xl text-sm font-semibold text-stone-800 transition" data-score="4">😊 4</button>
