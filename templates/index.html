@@ -64,10 +64,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     <!-- TOP HEADER -->
     <header class="h-14 border-b border-stone-300/60 flex items-center justify-between px-4 bg-warm-beige/90 backdrop-blur-sm z-30 flex-shrink-0">
         <div class="flex items-center space-x-2">
-            <button onclick="toggleSidebar()" class="flex items-center space-x-1.5 text-deep-olive font-semibold text-xs hover:opacity-80 transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-                <span>Meny</span>
-            </button>
+            <button onclick="toggleSidebar()" class="flex items-center space-x-2 text-deep-olive font-semibold text-xs hover:opacity-80 transition">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    <span>Meny</span>
+    <span id="tier-badge" class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-stone-200 text-stone-600 transition">GÄST</span>
+</button>
         </div>
 
         <h1 class="text-lg font-bold tracking-widest text-deep-olive absolute left-1/2 -translate-x-1/2">FALK</h1>
@@ -1405,6 +1406,16 @@ window.navigateVersion = function(msgId, direction) {
 window.userTier = window.userTier || 'GUEST';
 
 window.setUserTier = function(tier) {
+    const badge = document.getElementById('tier-badge');
+    if (badge) {
+        badge.textContent = tier === 'PRO' ? 'PRO' : 'GÄST';
+        if (tier === 'PRO') {
+            badge.className = 'text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-800 border border-amber-500/30 transition';
+        } else {
+            badge.className = 'text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-stone-200 text-stone-600 transition';
+        }
+    }
+
     window.userTier = tier;
     // Uppdatera alla befintliga ikonrader i chatt-historiken
     document.querySelectorAll('.icon-bar').forEach(el => {
