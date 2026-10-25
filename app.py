@@ -301,11 +301,15 @@ def chat():
 
         # Gästkvotering (Max 6 meddelanden)
         if not is_pro:
-            guest_count_str = request.cookies.get("falk_guest_count", "0")
-            try:
-                guest_count = int(guest_count_str)
-            except ValueError:
-                guest_count = 0
+            from datetime import datetime
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            raw_cookie = request.cookies.get("falk_guest_count", "")
+            
+            if ":" in raw_cookie:
+                c_count, c_date = raw_cookie.split(":", 1)
+                guest_count = int(c_count) if c_date == today_str and c_count.isdigit() else 0
+            else:
+                guest_count = int(raw_cookie) if raw_cookie.isdigit() else 0
 
             if guest_count >= 6:
                 return jsonify({
@@ -373,12 +377,16 @@ def chat():
 
         # Uppdatera gästcookie
         if not is_pro:
-            guest_count_str = request.cookies.get("falk_guest_count", "0")
-            try:
-                guest_count = int(guest_count_str)
-            except ValueError:
-                guest_count = 0
-            resp.set_cookie("falk_guest_count", str(guest_count + 1), max_age=86400)
+            from datetime import datetime
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            raw_cookie = request.cookies.get("falk_guest_count", "")
+            
+            if ":" in raw_cookie:
+                c_count, c_date = raw_cookie.split(":", 1)
+                guest_count = int(c_count) if c_date == today_str and c_count.isdigit() else 0
+            else:
+                guest_count = int(raw_cookie) if raw_cookie.isdigit() else 0
+            resp.set_cookie("falk_guest_count", f"{guest_count + 1}:{today_str}", max_age=86400)
 
         return resp, 200
 
