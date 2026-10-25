@@ -282,8 +282,7 @@ def delete_user_data():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/chat", methods=["POST"])
-@limiter.limit(get_rate_limit_val, key_func=get_rate_limit_key)
+@app.route('/chat', methods=['POST'])
 def chat():
     try:
         data = request.json or {}
@@ -295,9 +294,27 @@ def chat():
             return jsonify({"error": "Meddelandet kan inte vara tomt"}), 400
 
         user_id, tier = get_current_user_context()
-        memories = []
 
-        if tier == "PRO" and user_id != "00000000-0000-0000-0000-000000000000":
+        # Bestäm tier och max_tokens
+        is_pro = (tier == "PRO" and user_id != "00000000-0000-0000-0000-000000000000")
+        effective_max_tokens = 750 if is_pro else 200
+
+        # Gästkvotering (Max 6 meddelanden)
+        if not is_pro:
+            guest_count_str = request.cookies.get("falk_guest_count", "0")
+            try:
+                guest_count = int(guest_count_str)
+            except ValueError:
+                guest_count = 0
+
+            if guest_count >= 6:
+                return jsonify({
+                    "error": "GUEST_LIMIT_REACHED",
+                    "message": "Du har nått gränsen för gratis meddelanden i gästläge. Skapa ett konto eller logga in för att fortsätta."
+                }), 403
+
+        memories = []
+        if is_pro:
             try:
                 memories = get_relevant_memories(user_id, user_message)
                 if should_store_memory(user_message):
@@ -349,38 +366,26 @@ def chat():
             except Exception:
                 pass
 
-        if ai_response:
-            if session_id and user_id != "00000000-0000-0000-0000-000000000000":
-                try:
-                    supabase_client.table("chat_messages").insert([
-                        {"session_id": session_id, "sender": "user", "content": user_message},
-                        {"session_id": session_id, "sender": "bot", "content": ai_response}
-                    ]).execute()
+        if not ai_response:
+            return jsonify({"error": "Kunde inte generera svar från AI-tjänsten."}), 500
 
-                    try:
-                        sess_check = supabase_client.table("chat_sessions").select("title").eq("id", session_id).execute()
-                        if sess_check.data and len(sess_check.data) > 0:
-                            current_title = sess_check.data[0].get("title", "")
-                            if current_title.startswith("Samtal") or current_title == "Nytt samtalsrum":
-                                new_title = generate_session_title(user_message)
-                                supabase_client.table("chat_sessions").update({"title": new_title}).eq("id", session_id).execute()
-                    except Exception as title_err:
-                        print(f"[AUTO-TITLE FAIL]: {title_err}", flush=True)
+        resp = jsonify({"response": ai_response, "provider": used_provider})
 
-                except Exception as db_err:
-                    print(f"[CHAT MSG DB SAVE FAIL]: {db_err}", flush=True)
+        # Uppdatera gästcookie om användaren är gäst
+        if not is_pro:
+            guest_count_str = request.cookies.get("falk_guest_count", "0")
+            try:
+                guest_count = int(guest_count_str)
+            except ValueError:
+                guest_count = 0
+            resp.set_cookie("falk_guest_count", str(guest_count + 1), max_age=60*60*24*30)
 
-            return jsonify({
-                "response": ai_response,
-                "tier": tier,
-                "memories_retrieved": len(memories),
-                "provider": used_provider
-            })
-            
-        return jsonify({"error": "Ingen AI-leverantör kunde svara."}), 500
+        return resp, 200
 
     except Exception as e:
-        return jsonify({"error": f"Internt serverfel: {str(e)}"}), 500
+        print(f"[CHAT ERROR]: {e}", flush=True)
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)

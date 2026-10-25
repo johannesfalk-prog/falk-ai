@@ -258,39 +258,7 @@
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg>
                         </button>
                     </div>
-                    <button type="button" onclick="openFocusModal()" class="p-2.5 rounded-full bg-white border border-stone-300 text-stone-700 hover:bg-stone-100 transition shadow-sm flex items-center justify-center flex-shrink-0" title="Justera Fokus">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
-                    </button>
-                    <button type="submit" id="send-btn" class="bg-deep-olive hover:opacity-90 text-amber-50 font-semibold px-5 py-3 rounded-full text-xs transition disabled:opacity-50 shadow-sm flex-shrink-0">Skicka</button>
-                </form>
-                
-                <!-- STEG 2: MIKRO-UX INTEGRITETSPÅMINNELSE DIREKT I GRÄNSSNITTET -->
-                <div class="text-center space-y-0.5">
-                    <p class="text-[9.5px] text-stone-600 font-medium">
-                        🔒 <span class="font-bold text-deep-olive">Integritetstips:</span> Undvik att skriva ut efternamn på kollegor eller känsliga personnummer i klartext.
-                    </p>
-                    <p id="disclaimer-text" class="text-[9px] text-stone-500 leading-tight">FALK är ett AI-baserat verktyg för självhjälp och personlig utveckling (ej sjukvård). Vid akuta kriser, ring 112 eller 90101 (MIND).</p>
-                    <p class="text-[9.5px] font-bold text-stone-400 tracking-wider uppercase">Powered by WAYJS</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- VY 2: REFLEKTION -->
-        <section id="view-journal" class="hidden flex-1 flex flex-col h-full min-h-0 p-4 sm:p-6 max-w-2xl w-full mx-auto overflow-y-auto space-y-6">
-            <div>
-                <h2 class="text-xl font-bold text-deep-olive">Reflektionsdagbok & Utvecklingsanalys</h2>
-                <p class="text-xs text-stone-500 font-medium">En kompass med perspektiv.</p>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div class="bg-white p-3.5 rounded-2xl border border-stone-200 shadow-sm flex flex-col justify-between"><span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Klarhets-Streak</span><p id="main-streak-val" class="text-2xl font-extrabold text-deep-olive mt-1">3 dagar 🔥</p><span class="text-[10px] text-stone-500 mt-1">Aktiv daglig reflektion</span></div>
-                <div class="bg-white p-3.5 rounded-2xl border border-stone-200 shadow-sm flex flex-col justify-between"><span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Snitt-Energi</span><p id="main-avg-val" class="text-2xl font-extrabold text-deep-olive mt-1">3.8 / 5</p><span class="text-[10px] text-stone-500 mt-1">Senaste 7 inläggen</span></div>
-                <div class="bg-white p-3.5 rounded-2xl border border-stone-200 shadow-sm flex flex-col justify-between"><span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Dominerande Fokus</span><p id="main-focus-val" class="text-sm font-bold text-terracotta mt-1">Handlingskraft (75%)</p><span class="text-[10px] text-stone-500 mt-1">Aktiv kompassinställning</span></div>
-            </div>
-            <form onsubmit="saveJournalEntry(event)" class="bg-white p-5 rounded-2xl border border-stone-200 space-y-4 shadow-sm">
-                <div>
-                    <label class="block text-xs font-semibold text-stone-600 mb-2">Hur upplever du din energi & bana just nu? (1-5)</label>
-                    <div class="flex space-x-2">
-                        <button type="button" onclick="setMood(1)" class="mood-btn flex-1 py-2 bg-stone-100 border border-stone-300 rounded-xl text-sm font-semibold text-stone-800 transition" data-score="1">😞 1</button>
+                    <button onclick="handleLockedFeature('dev')" class="flex items-center space-x-1.5 text-stone-700 hover:text-stone-900 font-medium text-xs border border-stone-300 rounded-full px-3 py-1.5"><svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg><span>Utveckling</span></button>
                         <button type="button" onclick="setMood(2)" class="mood-btn flex-1 py-2 bg-stone-100 border border-stone-300 rounded-xl text-sm font-semibold text-stone-800 transition" data-score="2">😐 2</button>
                         <button type="button" onclick="setMood(3)" class="mood-btn flex-1 py-2 bg-deep-olive text-amber-50 border border-deep-olive rounded-xl text-sm font-bold transition" data-score="3">🙂 3</button>
                         <button type="button" onclick="setMood(4)" class="mood-btn flex-1 py-2 bg-stone-100 border border-stone-300 rounded-xl text-sm font-semibold text-stone-800 transition" data-score="4">😊 4</button>
