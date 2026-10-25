@@ -853,9 +853,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     })
                 });
 
-                if (!res.ok) { console.error('Session API Error:', res.status); return; }
-        const data = await res.json();
                 removeThinkingIndicator(thinkingId);
+
+                if (res.status === 403) {
+                    if (typeof window.openPaywallModal === 'function') window.openPaywallModal('limit');
+                    return;
+                }
+
+                if (!res.ok) { console.error('Session API Error:', res.status); return; }
+                const data = await res.json();
 
                 if (res.ok) {
                     appendMessage('FALK', data.response, 'bot');
@@ -1351,6 +1357,17 @@ window.adjustLastResponse = async function(action) {
             body: JSON.stringify({ message: instruction })
         });
 
+        if (response.status === 403) {
+            if (typeof window.openPaywallModal === 'function') window.openPaywallModal('limit');
+            contentDiv.innerHTML = originalText;
+            return;
+        }
+        if (!response.ok) {
+            console.error("Session API Error:", response.status);
+            contentDiv.innerHTML = originalText;
+            return;
+        }
+
         const data = await response.json();
         const newReply = data.response || data.reply || "Kunde inte generera variant.";
 
@@ -1404,6 +1421,17 @@ window.navigateVersion = function(msgId, direction) {
 <script>
 // Global user context
 window.userTier = window.userTier || 'GUEST';
+
+
+window.removeThinkingIndicator = function() {
+    const thinkingEl = document.getElementById('falk-thinking') || document.querySelector('.falk-thinking');
+    if (thinkingEl) thinkingEl.remove();
+    document.querySelectorAll('div, p, span').forEach(el => {
+        if (el.children.length === 0 && el.textContent.includes('FALK tänker...')) {
+            el.closest('.flex') ? el.closest('.flex').remove() : el.remove();
+        }
+    });
+};
 
 window.setUserTier = function(tier) {
     const badge = document.getElementById('tier-badge');
