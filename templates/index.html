@@ -1332,11 +1332,14 @@ window.adjustLastResponse = async function(action) {
     const contentDiv = msgElem.querySelector('.msg-content') || msgElem;
 
     let instruction = "";
-    if (action === 'minus') instruction = "Gör ditt förra svar kortare och mer koncist.";
-    else if (action === 'plus') instruction = "Utveckla ditt förra svar lite djupare med mer kontext.";
-    else instruction = action;
+    if (action === 'minus') {
+        instruction = "[SYSTEM-INSTRUKTION: Ge ett mycket kortare, mer direkt och kärnfullt Sokratiskt svar. Kommentera ELLER bekräfta INTE denna instruktion, utan gå direkt in i det kortare svaret.]";
+    } else if (action === 'plus') {
+        instruction = "[SYSTEM-INSTRUKTION: Fördjupa resonemanget kring användarens situation avsevärt. Belys underliggande antaganden, målkonflikter eller nya perspektiv. Kommentera ELLER bekräfta INTE att du har blivit bedd att fördjupa svaret, och säg INTE 'Jag förstår att du vill ha djup'. Gå DIREKT in i den fördjupade reflektionen.]";
+    } else {
+        instruction = action;
+    }
 
-    // Visa laddningsindikator i bubblan utan att skapa nytt användarmeddelande
     const originalText = contentDiv.innerHTML;
     contentDiv.innerHTML = `<span class="animate-pulse text-stone-400">FALK tänker...</span>`;
 
@@ -1350,12 +1353,10 @@ window.adjustLastResponse = async function(action) {
         const data = await response.json();
         const newReply = data.response || data.reply || "Kunde inte generera variant.";
 
-        // Spara nya versionen i minnet
         const store = window.msgStore[msgId];
         store.versions.push(newReply);
         store.currentIndex = store.versions.length - 1;
 
-        // Rendera den nya versionen och uppdatera pagineringen
         window.renderMessageVersion(msgId);
     } catch (err) {
         console.error("Fel vid skapande av variant:", err);
