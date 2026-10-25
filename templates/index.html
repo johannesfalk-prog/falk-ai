@@ -49,8 +49,8 @@
         <h1 class="text-lg font-bold tracking-widest text-deep-olive absolute left-1/2 -translate-x-1/2">FALK</h1>
 
         <div class="flex items-center space-x-2">
-            <button onclick="createNewSession()" class="text-deep-olive hover:opacity-80 font-bold text-2xl leading-none px-2 transition" title="Nytt samtal">+</button>
-            <button onclick="toggleProgressDrawer()" class="flex items-center space-x-1 text-xs font-bold text-deep-olive bg-stone-200/60 hover:bg-stone-300/60 px-2.5 py-1.5 rounded-full transition shadow-sm">
+            <button onclick="if(!handleLockedFeature('dev')) createNewSession()" class="text-deep-olive hover:opacity-80 font-bold text-2xl leading-none px-2 transition" title="Nytt samtal">+</button>
+            <button onclick="if(!handleLockedFeature('dev')) toggleProgressDrawer()" class="flex items-center space-x-1 text-xs font-bold text-deep-olive bg-stone-200/60 hover:bg-stone-300/60 px-2.5 py-1.5 rounded-full transition shadow-sm">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
                 <span>Utveckling</span>
             </button>
@@ -1380,7 +1380,36 @@ window.navigateVersion = function(msgId, direction) {
 // Global user context
 window.userTier = window.userTier || 'GUEST';
 
+window.setUserTier = function(tier) {
+    window.userTier = tier;
+    // Uppdatera alla befintliga ikonrader i chatt-historiken
+    document.querySelectorAll('.icon-bar').forEach(el => {
+        if (tier === 'PRO') {
+            el.classList.remove('hidden');
+        } else {
+            el.classList.add('hidden');
+        }
+    });
+    // Om användaren blev PRO, stäng ev. öppen paywall
+    if (tier === 'PRO') {
+        document.getElementById('paywall-modal')?.remove();
+    }
+};
+
+
 // Lock menu / dev links for guests
+
+window.handlePaywallAuth = function(mode) {
+    const modal = document.getElementById('paywall-modal');
+    if (modal) modal.remove();
+    if (typeof openAuthModal === 'function') {
+        openAuthModal(mode || 'login');
+    } else if (typeof toggleAuthModal === 'function') {
+        toggleAuthModal();
+    }
+    return false;
+};
+
 window.handleLockedFeature = function(featureName) {
     if (window.userTier !== 'PRO') {
         window.openPaywallModal(featureName);
@@ -1404,8 +1433,8 @@ window.openPaywallModal = function(reason) {
                     <p class="text-xs text-stone-400 leading-relaxed">För att få tillgång till djupgående analyser (600+ tokens), obegränsade samtal, minnesfunktioner och utvecklingsmenyn behöver du ett konto.</p>
                 </div>
                 <div class="space-y-3 pt-2">
-                    <a href="/login?mode=signup" class="block w-full py-3 bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs text-center rounded-xl shadow-lg transition">Skapa Konto & Bli PRO</a>
-                    <a href="/login" class="block w-full py-3 bg-stone-800 hover:bg-stone-700 text-stone-300 font-medium text-xs text-center rounded-xl transition">Redan medlem? Logga in</a>
+                    <a href="#" onclick="return window.handlePaywallAuth('signup');" class="block w-full py-3 bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs text-center rounded-xl shadow-lg transition">Skapa Konto & Bli PRO</a>
+                    <a href="#" onclick="return window.handlePaywallAuth('login');" class="block w-full py-3 bg-stone-800 hover:bg-stone-700 text-stone-300 font-medium text-xs text-center rounded-xl transition">Redan medlem? Logga in</a>
                 </div>
             </div>
         `;

@@ -310,7 +310,7 @@ def chat():
             if guest_count >= 6:
                 return jsonify({
                     "error": "GUEST_LIMIT_REACHED",
-                    "message": "Du har nått gränsen för gratis meddelanden i gästläge. Skapa ett konto eller logga in för att fortsätta."
+                    "message": "Du har nått din dagliga gratiskvot (6 meddelanden). Välkommen tillbaka imorgon när din kvot återställts, eller uppgradera till FALK Premium för obegränsad tillgång direkt."
                 }), 403
 
         memories = []
@@ -378,7 +378,7 @@ def chat():
                 guest_count = int(guest_count_str)
             except ValueError:
                 guest_count = 0
-            resp.set_cookie("falk_guest_count", str(guest_count + 1), max_age=60*60*24*30)
+            resp.set_cookie("falk_guest_count", str(guest_count + 1), max_age=86400)
 
         return resp, 200
 
