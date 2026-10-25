@@ -295,7 +295,7 @@ def chat():
 
         user_id, tier = get_current_user_context()
 
-        # Bestäm tier och max_tokens
+        # Bestäm tier och max_tokens (PRO = 750, Gäst = 200)
         is_pro = (tier == "PRO" and user_id != "00000000-0000-0000-0000-000000000000")
         effective_max_tokens = 750 if is_pro else 200
 
@@ -371,7 +371,7 @@ def chat():
 
         resp = jsonify({"response": ai_response, "provider": used_provider})
 
-        # Uppdatera gästcookie om användaren är gäst
+        # Uppdatera gästcookie
         if not is_pro:
             guest_count_str = request.cookies.get("falk_guest_count", "0")
             try:
