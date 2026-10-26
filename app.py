@@ -1,3 +1,6 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
 from falk_prompt import get_falk_system_prompt
 import os
 import traceback
@@ -112,6 +115,12 @@ def get_current_user_context():
     try:
         user_response = supabase_client.auth.get_user(token)
         if user_response and user_response.user:
+            # Strikt binär modell: Overifierad e-post = Gäst-session
+            email_confirmed = getattr(user_response.user, 'email_confirmed_at', None) or getattr(user_response.user, 'confirmed_at', None)
+            if not email_confirmed:
+                g.user_context = ("00000000-0000-0000-0000-000000000000", "FREE")
+                return g.user_context
+                
             user_id = user_response.user.id
             try:
                 prof = supabase_client.table("profiles").select("tier, trial_ends_at").eq("id", user_id).single().execute()
@@ -196,6 +205,9 @@ def resolve_username():
 
 @app.route('/api/profile', methods=['GET'])
 def get_profile():
+    user_id, _ = get_current_user_context()
+    if user_id == "00000000-0000-0000-0000-000000000000":
+        return jsonify({"error": "Kräver verifierat konto"}), 401
     try:
         auth_header = request.headers.get('Authorization')
         if not auth_header:
@@ -206,6 +218,9 @@ def get_profile():
         return jsonify({"status": "error", "message": str(e)}), 200
 @app.route('/api/sessions', methods=['GET', 'POST'])
 def handle_sessions():
+    user_id, _ = get_current_user_context()
+    if user_id == "00000000-0000-0000-0000-000000000000":
+        return jsonify({"error": "Kräver verifierat konto"}), 401
     try:
         if request.method == 'POST':
             data = request.get_json() or {}
@@ -225,6 +240,9 @@ def get_session_messages(session_id):
 
 @app.route('/api/journal', methods=['GET'])
 def get_journal():
+    user_id, _ = get_current_user_context()
+    if user_id == "00000000-0000-0000-0000-000000000000":
+        return jsonify({"error": "Kräver verifierat konto"}), 401
     try:
         # Returnera tom lista vid fel eller saknad auth istället för 500
         return jsonify([]), 200
@@ -338,7 +356,7 @@ def chat():
         used_provider = None
 
         if groq_client:
-            for model_name in ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"]:
+            for model_name in ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b']:
                 try:
                     completion = groq_client.chat.completions.create(
                         model=model_name,
