@@ -9,6 +9,130 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
 
+window.ensureProgressRendered = function() {
+    const container = document.getElementById('progress-drawer-content') || document.querySelector('#progress-drawer .drawer-body') || document.getElementById('progress-drawer');
+    if (!container) return;
+    
+    // Om container saknar reellt innehåll eller bara har tomma noder, injecta strukturen
+    if (container.children.length <= 1 || container.innerText.trim() === "") {
+        container.innerHTML = `
+            <div class="p-6 space-y-6 text-stone-800">
+                <div class="border-b border-stone-200 pb-4">
+                    <h3 class="text-sm font-bold text-stone-500 uppercase tracking-wider">Reflektion & Utveckling</h3>
+                    <p class="text-xs text-stone-600 mt-1">Dina sparade insikter, påminnelser och personliga mönster.</p>
+                </div>
+                
+                <div id="journal-entries-list" class="space-y-3">
+                    <div class="p-4 bg-stone-100/80 rounded-xl text-xs text-stone-600 italic border border-stone-200/60">
+                        Inga tidigare reflektioner sparade ännu. Dina framsteg och sparade insikter visas här automatiskt under dina samtal med FALK.
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    if (typeof loadJournal === 'function') loadJournal();
+    if (typeof fetchProgressData === 'function') fetchProgressData();
+};
+
+
+window.ensureSettingsRendered = function() {
+    const container = document.getElementById('settings-drawer-content') || document.querySelector('#settings-drawer .drawer-body') || document.getElementById('settings-drawer');
+    if (!container) return;
+
+    if (container.children.length <= 1 || container.innerText.trim() === "") {
+        container.innerHTML = `
+            <div class="p-6 space-y-6 text-stone-800">
+                <div class="border-b border-stone-200 pb-4">
+                    <h3 class="text-sm font-bold text-stone-500 uppercase tracking-wider">Inställningar & Dataskydd</h3>
+                    <p class="text-xs text-stone-600 mt-1">Hantera ditt konto, sekretess och sparade data.</p>
+                </div>
+
+                <div class="space-y-4 text-xs">
+                    <div class="p-4 bg-white border border-stone-200 rounded-xl space-y-3 shadow-sm">
+                        <div class="font-bold text-stone-700">Konto & Medlemskap</div>
+                        <div class="flex justify-between items-center text-stone-600">
+                            <span>KONTOTYP</span>
+                            <span class="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">PREMIUM</span>
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-white border border-stone-200 rounded-xl space-y-3 shadow-sm">
+                        <div class="font-bold text-stone-700">Dataskydd & Integritet (GDPR)</div>
+                        <p class="text-stone-500 leading-relaxed">Dina samtal krypteras och delas aldrig med tredje part. Du kan när som helst radera din historik.</p>
+                        <button type="button" onclick="if(confirm('Är du säker på att du vill rensa din lokala samtalshistorik?')) { localStorage.clear(); location.reload(); }" class="w-full py-2 bg-rose-50 text-rose-700 border border-rose-200 rounded-lg hover:bg-rose-100 transition font-medium">
+                            Rensa lokal historik
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+};
+
+
+
+window.ensureProgressRendered = function() {
+    const container = document.getElementById('progress-drawer-content') || document.querySelector('#progress-drawer .drawer-body') || document.getElementById('progress-drawer');
+    if (!container) return;
+    
+    // Om container saknar reellt innehåll eller bara har tomma noder, injecta strukturen
+    if (container.children.length <= 1 || container.innerText.trim() === "") {
+        container.innerHTML = `
+            <div class="p-6 space-y-6 text-stone-800">
+                <div class="border-b border-stone-200 pb-4">
+                    <h3 class="text-sm font-bold text-stone-500 uppercase tracking-wider">Reflektion & Utveckling</h3>
+                    <p class="text-xs text-stone-600 mt-1">Dina sparade insikter, påminnelser och personliga mönster.</p>
+                </div>
+                
+                <div id="journal-entries-list" class="space-y-3">
+                    <div class="p-4 bg-stone-100/80 rounded-xl text-xs text-stone-600 italic border border-stone-200/60">
+                        Inga tidigare reflektioner sparade ännu. Dina framsteg och sparade insikter visas här automatiskt under dina samtal med FALK.
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    if (typeof loadJournal === 'function') loadJournal();
+    if (typeof fetchProgressData === 'function') fetchProgressData();
+};
+
+
+window.ensureSettingsRendered = function() {
+    const container = document.getElementById('settings-drawer-content') || document.querySelector('#settings-drawer .drawer-body') || document.getElementById('settings-drawer');
+    if (!container) return;
+
+    if (container.children.length <= 1 || container.innerText.trim() === "") {
+        container.innerHTML = `
+            <div class="p-6 space-y-6 text-stone-800">
+                <div class="border-b border-stone-200 pb-4">
+                    <h3 class="text-sm font-bold text-stone-500 uppercase tracking-wider">Inställningar & Dataskydd</h3>
+                    <p class="text-xs text-stone-600 mt-1">Hantera ditt konto, sekretess och sparade data.</p>
+                </div>
+
+                <div class="space-y-4 text-xs">
+                    <div class="p-4 bg-white border border-stone-200 rounded-xl space-y-3 shadow-sm">
+                        <div class="font-bold text-stone-700">Konto & Medlemskap</div>
+                        <div class="flex justify-between items-center text-stone-600">
+                            <span>KONTOTYP</span>
+                            <span class="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">PREMIUM</span>
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-white border border-stone-200 rounded-xl space-y-3 shadow-sm">
+                        <div class="font-bold text-stone-700">Dataskydd & Integritet (GDPR)</div>
+                        <p class="text-stone-500 leading-relaxed">Dina samtal krypteras och delas aldrig med tredje part. Du kan när som helst radera din historik.</p>
+                        <button type="button" onclick="if(confirm('Är du säker på att du vill rensa din lokala samtalshistorik?')) { localStorage.clear(); location.reload(); }" class="w-full py-2 bg-rose-50 text-rose-700 border border-rose-200 rounded-lg hover:bg-rose-100 transition font-medium">
+                            Rensa lokal historik
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+};
+
+
+
 // Global Paywall Override: Släpp alltid igenom inloggade användare
 window.handleLockedFeature = function(feature) {
     const isLoggedIn = !!(userToken || document.body.classList.contains('is-logged-in') || localStorage.getItem('sb-falk-auth-token'));
@@ -618,12 +742,14 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
             const drawer = document.getElementById('progress-drawer');
             const overlay = document.getElementById('sidebar-overlay');
             if (drawer.classList.contains('translate-x-full')) {
+                window.ensureProgressRendered();
+                window.ensureProgressRendered();
                 closeAllDrawers();
                 drawer.classList.remove('translate-x-full');
                 overlay.classList.remove('hidden');
                 // Trigga datarendering för utveckling/reflektion om funktionen finns
                 if (typeof renderProgressContent === 'function') renderProgressContent();
-                if (typeof loadJournalEntries === 'function') loadJournalEntries();
+                if (typeof loadJournal === 'function') loadJournal();
             } else closeAllDrawers();
         }
 
