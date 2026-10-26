@@ -1095,10 +1095,26 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
         function openPrivacyPolicyModal() { document.getElementById('privacy-modal').classList.remove('hidden'); }
         function closePrivacyPolicyModal() { document.getElementById('privacy-modal').classList.add('hidden'); }
 
+        async function resendVerificationEmail() {
+            const email = document.getElementById('auth-identifier')?.value.trim();
+            if (!email) return showAuthError("Ange din e-postadress i fältet ovan.");
+            try {
+                const res = await supabaseClient.auth.resend({ type: 'signup', email: email });
+                if (res.error) {
+                    showAuthError("Kunde inte skicka: " + res.error.message);
+                } else {
+                    showAlert("Ett nytt bekräftelsemail har skickats till " + email);
+                }
+            } catch (err) {
+                showAuthError("Ett fel uppstod vid utskick av bekräftelsemail.");
+            }
+        }
+
         function showAuthError(msg) {
             const errBox = document.getElementById('auth-error-msg');
             if (errBox) {
                 let friendlyMsg = msg;
+                let showResend = false;
                 if (msg.includes("Invalid login credentials")) {
                     friendlyMsg = "Felaktig e-postadress eller lösenord.";
                 } else if (msg.includes("User already registered")) {
@@ -1107,8 +1123,14 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
                     friendlyMsg = "Lösenordet måste vara minst 6 tecken.";
                 } else if (msg.includes("Email not confirmed")) {
                     friendlyMsg = "E-postadressen har inte bekräftats ännu.";
+                    showResend = true;
                 }
-                errBox.textContent = friendlyMsg;
+                
+                if (showResend) {
+                    errBox.innerHTML = `${friendlyMsg} <br><button type="button" onclick="resendVerificationEmail()" class="underline font-bold mt-1 text-amber-900 hover:text-stone-900">Skicka nytt bekräftelsemail</button>`;
+                } else {
+                    errBox.textContent = friendlyMsg;
+                }
                 errBox.classList.remove('hidden');
             }
         }
