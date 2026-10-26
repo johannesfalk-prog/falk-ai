@@ -209,19 +209,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         <!-- VY 1: CHATT -->
         <section id="view-chat" class="flex-1 flex flex-col h-full min-h-0 max-w-2xl w-full mx-auto px-4 pt-4 pb-2">
-            <div id="daily-checkin-card" class="hidden mb-3 bg-white/90 border border-stone-300 p-3.5 rounded-2xl shadow-sm flex justify-between items-center flex-shrink-0">
-                <div>
-                    <p class="text-xs font-bold text-deep-olive" id="daily-checkin-title">Morgonavstämning</p>
-                    <p class="text-[11px] text-stone-500" id="daily-checkin-subtitle">Hur startar du din dag på skalan 1–5?</p>
-                </div>
-                <div class="flex space-x-1">
-                    <button type="button" onclick="quickMood(1)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">1</button>
-                    <button type="button" onclick="quickMood(2)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">2</button>
-                    <button type="button" onclick="quickMood(3)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">3</button>
-                    <button type="button" onclick="quickMood(4)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">4</button>
-                    <button type="button" onclick="quickMood(5)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">5</button>
-                </div>
-            </div>
+            
 
             <div id="chat-container" class="flex-1 overflow-y-auto pr-1 mb-2 min-h-0 flex flex-col">
                 <div id="onboarding-cards" class="space-y-2.5 py-2 mb-4">
@@ -410,7 +398,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </label>
                 </div>
             </div>
-            <div class="pt-2"><button type="button" id="auth-submit-btn" onclick="submitAuth()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Logga in</button></div>
+                            <div id="auth-error-msg" class="hidden text-rose-600 text-xs font-semibold bg-rose-50 border border-rose-200 p-2.5 rounded-xl text-center"></div>
+                <div class="pt-2"><button type="button" id="auth-submit-btn" onclick="submitAuth()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Logga in</button></div>
             <button type="button" onclick="closeAuthModal()" class="w-full text-center text-stone-400 text-xs mt-1 hover:text-stone-600">Avbryt</button>
         </div>
     </div>
@@ -1097,23 +1086,40 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
         function openPrivacyPolicyModal() { document.getElementById('privacy-modal').classList.remove('hidden'); }
         function closePrivacyPolicyModal() { document.getElementById('privacy-modal').classList.add('hidden'); }
 
+        function showAuthError(msg) {
+            const errBox = document.getElementById('auth-error-msg');
+            if (errBox) {
+                errBox.textContent = msg;
+                errBox.classList.remove('hidden');
+            }
+        }
+
+        function clearAuthError() {
+            const errBox = document.getElementById('auth-error-msg');
+            if (errBox) {
+                errBox.textContent = '';
+                errBox.classList.add('hidden');
+            }
+        }
+
         async function submitAuth() {
+            clearAuthError();
             const identifier = document.getElementById('auth-identifier').value.trim();
             const password = document.getElementById('auth-password').value.trim();
-            if (!identifier || !password) return showAlert("Fyll i alla fält.");
+            if (!identifier || !password) return showAuthError("Fyll i alla fält.");
 
             if (currentAuthMode === 'signup') {
                 const username = document.getElementById('auth-username').value.trim();
                 const gdprCheck = document.getElementById('auth-gdpr-check').checked;
-                if (!username || !gdprCheck) return showAlert("Godkänn villkoren och fyll i användarnamn.");
+                if (!username || !gdprCheck) return showAuthError("Godkänn villkoren och fyll i användarnamn.");
 
                 let res = await supabaseClient.auth.signUp({ email: identifier, password });
-                if (res.error) return showAlert("Fel: " + res.error.message);
+                if (res.error) return showAuthError("Fel: " + res.error.message);
                 showAlert("Konto skapat! Logga in.");
                 setAuthTab('login');
             } else {
                 let res = await supabaseClient.auth.signInWithPassword({ email: identifier, password });
-                if (res.error) showAlert("Fel: " + res.error.message);
+                if (res.error) showAuthError("Fel: " + res.error.message);
                 else closeAuthModal();
             }
         }
