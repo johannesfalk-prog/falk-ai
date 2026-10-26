@@ -1353,24 +1353,7 @@ window.lastBotMsgId = null;
 // 1. REFFA APPENDMESSAGE FÖR ATT SPÅRA VERSIONER
 const originalAppendMessage = window.appendMessage;
 
-window.appendMessage = function(sender, text, type) {
-    const list = document.getElementById('chat-messages-list');
-    if (!list) return;
-    if (typeof hidePrompts === 'function') hidePrompts();
 
-    const container = document.createElement('div');
-    if (type === 'user') {
-        container.className = "flex justify-end";
-        container.innerHTML = `<div class="bg-bubble-user text-amber-50 px-4 py-3 rounded-2xl max-w-[85%] text-xs shadow-sm">${text}</div>`;
-    } else {
-        container.className = "flex flex-col items-start space-y-1.5";
-        const msgId = 'msg-' + Math.random().toString(36).substr(2, 9);
-        window.lastBotMsgId = msgId;
-
-        window.msgStore[msgId] = {
-            versions: [text],
-            currentIndex: 0
-        };
 
         container.innerHTML = `
             <div class="bg-white/90 border border-stone-200/80 text-stone-800 px-4 py-3 rounded-2xl max-w-[90%] text-xs shadow-sm leading-relaxed relative" id="${msgId}">
