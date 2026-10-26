@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     <!-- TOP HEADER -->
     <header class="h-14 border-b border-stone-300/60 flex items-center justify-between px-4 bg-warm-beige/90 backdrop-blur-sm z-30 flex-shrink-0">
         <div class="flex items-center space-x-2">
-            <button onclick="toggleSidebar()" class="flex items-center space-x-2 text-deep-olive font-semibold text-xs hover:opacity-80 transition">
+            <button type="button" onclick="toggleSidebar()" class="flex items-center space-x-2 text-deep-olive font-semibold text-xs hover:opacity-80 transition">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
     <span>Meny</span>
     <span id="tier-badge" class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-stone-200 text-stone-600 transition">GÄST</span>
@@ -92,22 +92,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2>
                     <p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p>
                 </div>
-                <button onclick="toggleSidebar()" class="text-stone-400 hover:text-stone-700 p-1">
+                <button type="button" onclick="toggleSidebar()" class="text-stone-400 hover:text-stone-700 p-1">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
 
             <nav class="space-y-1 mb-5">
-                <button onclick="switchTab('chat')" id="nav-chat" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-deep-olive text-amber-50 flex items-center space-x-2 shadow-sm">
+                <button type="button" onclick="switchTab('chat')" id="nav-chat" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-deep-olive text-amber-50 flex items-center space-x-2 shadow-sm">
                     <span>💬</span> <span>Chatt</span>
                 </button>
                 <button type="button" onclick="if(!handleLockedFeature('dev')) switchTab('journal')" id="nav-journal" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
                     <span>🌱</span> <span>Reflektion & Utveckling</span>
                 </button>
-                <button onclick="switchTab('library')" id="nav-library" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
+                <button type="button" onclick="switchTab('library')" id="nav-library" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
                     <span>📚</span> <span>Kognitivt Bibliotek</span>
                 </button>
-                <button onclick="switchTab('settings')" id="nav-settings" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
+                <button type="button" onclick="switchTab('settings')" id="nav-settings" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
                     <span>⚙️</span> <span>Inställningar & Dataskydd</span>
                 </button>
             </nav>
@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="flex-1 flex flex-col min-h-0">
                 <div class="flex justify-between items-center mb-2 px-1">
                     <span class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">SAMTAL</span>
-                    <button onclick="createNewSession()" class="text-base text-deep-olive hover:opacity-80 font-bold px-1" title="Nytt samtal">+</button>
+                    <button type="button" onclick="createNewSession()" class="text-base text-deep-olive hover:opacity-80 font-bold px-1" title="Nytt samtal">+</button>
                 </div>
                 <div id="session-list" class="flex-1 overflow-y-auto space-y-1 pr-1 text-xs text-stone-600">
                     <p class="p-2 text-stone-400 italic">Logga in för samtalshistorik</p>
@@ -125,8 +125,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="pt-4 border-t border-stone-200 flex flex-col space-y-2">
                 <div id="sidebar-user-block" class="flex justify-between items-center text-xs">
                     <span id="user-display-bottom" class="font-bold text-deep-olive truncate">Gäst</span>
-                    <button id="logout-btn-bottom" onclick="logout()" class="hidden text-terracotta hover:underline font-semibold">Logga ut</button>
-                    <button id="login-btn-bottom" onclick="openAuthModal()" class="text-deep-olive font-bold hover:underline">Logga in</button>
+                    <button type="button" id="logout-btn-bottom" onclick="logout()" class="hidden text-terracotta hover:underline font-semibold">Logga ut</button>
+                    <button type="button" id="login-btn-bottom" onclick="openAuthModal()" class="text-deep-olive font-bold hover:underline">Logga in</button>
                 </div>
                 <div class="text-center">
                     <span id="tier-badge" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-stone-200 text-stone-600">INLOGGAD</span>
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <h2 class="text-lg font-bold text-deep-olive tracking-wider">Min Utveckling</h2>
                     <p class="text-[11px] text-stone-500">Visuell analys & kognitiva framsteg</p>
                 </div>
-                <button onclick="toggleProgressDrawer()" class="text-stone-400 hover:text-stone-700 p-1">
+                <button type="button" onclick="toggleProgressDrawer()" class="text-stone-400 hover:text-stone-700 p-1">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
@@ -215,11 +215,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <p class="text-[11px] text-stone-500" id="daily-checkin-subtitle">Hur startar du din dag på skalan 1–5?</p>
                 </div>
                 <div class="flex space-x-1">
-                    <button onclick="quickMood(1)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">1</button>
-                    <button onclick="quickMood(2)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">2</button>
-                    <button onclick="quickMood(3)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">3</button>
-                    <button onclick="quickMood(4)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">4</button>
-                    <button onclick="quickMood(5)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">5</button>
+                    <button type="button" onclick="quickMood(1)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">1</button>
+                    <button type="button" onclick="quickMood(2)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">2</button>
+                    <button type="button" onclick="quickMood(3)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">3</button>
+                    <button type="button" onclick="quickMood(4)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">4</button>
+                    <button type="button" onclick="quickMood(5)" class="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-xs">5</button>
                 </div>
             </div>
 
@@ -311,21 +311,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="flex justify-between items-start"><span class="text-[10px] font-bold text-terracotta bg-amber-50 px-2 py-0.5 rounded-full uppercase">Kognitiv Sanering • 3 min</span></div>
                     <h3 class="text-sm font-bold text-stone-900">Decatastrophizing (Katastrofrensaren)</h3>
                     <p class="text-xs text-stone-600 leading-relaxed">När hjärnan skenar iväg i värsta tänkbara scenario. Montera ned skräckbilden systematisk.</p>
-                    <button onclick="launchProtocol('Jag vill köra Decatastrophizing-protokollet. Hjälp mig att först identifiera mitt värsta scenario, skatta dess faktiska sannolikhet (0-100%), och därefter formulera min handlingsplan om det faktiskt händer.')" class="w-full bg-deep-olive hover:opacity-90 text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Starta protokoll i chatten</button>
+                    <button type="button" onclick="launchProtocol('Jag vill köra Decatastrophizing-protokollet. Hjälp mig att först identifiera mitt värsta scenario, skatta dess faktiska sannolikhet (0-100%), och därefter formulera min handlingsplan om det faktiskt händer.')" class="w-full bg-deep-olive hover:opacity-90 text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Starta protokoll i chatten</button>
                 </div>
 
                 <div class="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm space-y-3">
                     <div class="flex justify-between items-start"><span class="text-[10px] font-bold text-terracotta bg-amber-50 px-2 py-0.5 rounded-full uppercase">Relationer & Ansvar • 5 min</span></div>
                     <h3 class="text-sm font-bold text-stone-900">Gränssättaren & Nej-Matrisen</h3>
                     <p class="text-xs text-stone-600 leading-relaxed">Förbered svåra samtal och sätt tydliga gränser utan att drabbas av skuld eller förklara bort dig.</p>
-                    <button onclick="launchProtocol('Jag vill köra Gränssättar-protokollet. Hjälp mig att formulera ett tydligt, lugnt och orubbligt \'nej\' eller en ny gräns gällande en situation som dränerar mig.')" class="w-full bg-deep-olive hover:opacity-90 text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Starta protokoll i chatten</button>
+                    <button type="button" onclick="launchProtocol('Jag vill köra Gränssättar-protokollet. Hjälp mig att formulera ett tydligt, lugnt och orubbligt \'nej\' eller en ny gräns gällande en situation som dränerar mig.')" class="w-full bg-deep-olive hover:opacity-90 text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Starta protokoll i chatten</button>
                 </div>
 
                 <div class="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm space-y-3">
                     <div class="flex justify-between items-start"><span class="text-[10px] font-bold text-terracotta bg-amber-50 px-2 py-0.5 rounded-full uppercase">Akut Stress • 2 min</span></div>
                     <h3 class="text-sm font-bold text-stone-900">Stop-Thought & Control Triangulation</h3>
                     <p class="text-xs text-stone-600 leading-relaxed">Sortera direkt vad du kan påverka just nu och vad du måste släppa direkt.</p>
-                    <button onclick="launchProtocol('Jag vill köra Stop-Thought och Kontroll-trianguleringen. Hjälp mig att sortera situationen i tre delar: Det jag kontrollerar till 100%, det jag kan påverka delvis, och det jag måste släppa.')" class="w-full bg-deep-olive hover:opacity-90 text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Starta protokoll i chatten</button>
+                    <button type="button" onclick="launchProtocol('Jag vill köra Stop-Thought och Kontroll-trianguleringen. Hjälp mig att sortera situationen i tre delar: Det jag kontrollerar till 100%, det jag kan påverka delvis, och det jag måste släppa.')" class="w-full bg-deep-olive hover:opacity-90 text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Starta protokoll i chatten</button>
                 </div>
             </div>
         </section>
@@ -335,9 +335,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             <h2 class="text-xl font-bold text-deep-olive">Inställningar & Dataskydd</h2>
             <p class="text-xs text-stone-500 mb-6 font-medium">En kompass med perspektiv.</p>
             <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-3 mb-6 shadow-sm"><h3 class="text-xs font-bold text-deep-olive uppercase tracking-wider">Kontostatus</h3><p class="text-xs text-stone-700">Status: <span id="settings-tier" class="font-bold text-stone-900">INLOGGAD</span></p></div>
-            <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-3 mb-6 shadow-sm"><h3 class="text-xs font-bold text-deep-olive uppercase tracking-wider">Dataportabilitet</h3><p class="text-xs text-stone-600 leading-relaxed">Ladda ned en komplett maskinläsbar JSON-fil med all din data.</p><button onclick="exportMyData()" id="export-btn" class="bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold px-4 py-2 rounded-xl text-xs border border-stone-300 transition">📥 Exportera min data (JSON)</button></div>
-            <div class="bg-rose-50 p-5 rounded-2xl border border-rose-200 space-y-3 mb-6"><h3 class="text-xs font-bold text-rose-800 uppercase tracking-wider">Rätten att bli glömd</h3><p class="text-xs text-stone-600 leading-relaxed">Radera ditt konto och all tillhörande data permanent.</p><button onclick="deleteMyData()" class="bg-rose-700 hover:bg-rose-800 text-white font-semibold px-4 py-2 rounded-xl text-xs transition">Radera mitt konto & all data permanent</button></div>
-            <div class="text-center pt-2"><button onclick="openPrivacyPolicyModal()" class="text-xs text-deep-olive hover:underline">Integritetspolicy & DPA-information</button></div>
+            <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-3 mb-6 shadow-sm"><h3 class="text-xs font-bold text-deep-olive uppercase tracking-wider">Dataportabilitet</h3><p class="text-xs text-stone-600 leading-relaxed">Ladda ned en komplett maskinläsbar JSON-fil med all din data.</p><button type="button" onclick="exportMyData()" id="export-btn" class="bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold px-4 py-2 rounded-xl text-xs border border-stone-300 transition">📥 Exportera min data (JSON)</button></div>
+            <div class="bg-rose-50 p-5 rounded-2xl border border-rose-200 space-y-3 mb-6"><h3 class="text-xs font-bold text-rose-800 uppercase tracking-wider">Rätten att bli glömd</h3><p class="text-xs text-stone-600 leading-relaxed">Radera ditt konto och all tillhörande data permanent.</p><button type="button" onclick="deleteMyData()" class="bg-rose-700 hover:bg-rose-800 text-white font-semibold px-4 py-2 rounded-xl text-xs transition">Radera mitt konto & all data permanent</button></div>
+            <div class="text-center pt-2"><button type="button" onclick="openPrivacyPolicyModal()" class="text-xs text-deep-olive hover:underline">Integritetspolicy & DPA-information</button></div>
         </section>
     </main>
 
@@ -347,8 +347,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="text-center pb-2 border-b border-stone-100"><h3 id="confirm-title" class="text-base font-bold text-deep-olive">Bekräfta åtgärd</h3></div>
             <p id="confirm-msg" class="text-xs text-stone-700 leading-relaxed py-1"></p>
             <div class="flex space-x-2 pt-2">
-                <button id="confirm-cancel-btn" onclick="closeConfirmModal(false)" class="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold py-2.5 rounded-xl text-xs transition">Avbryt</button>
-                <button id="confirm-ok-btn" onclick="closeConfirmModal(true)" class="flex-1 bg-rose-700 hover:bg-rose-800 text-white font-bold py-2.5 rounded-xl text-xs transition shadow">Radera</button>
+                <button type="button" id="confirm-cancel-btn" onclick="closeConfirmModal(false)" class="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold py-2.5 rounded-xl text-xs transition">Avbryt</button>
+                <button type="button" id="confirm-ok-btn" onclick="closeConfirmModal(true)" class="flex-1 bg-rose-700 hover:bg-rose-800 text-white font-bold py-2.5 rounded-xl text-xs transition shadow">Radera</button>
             </div>
         </div>
     </div>
@@ -367,7 +367,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
                 <div class="pt-1"><label class="flex items-center space-x-2 text-[11px] text-stone-700 cursor-pointer"><input type="checkbox" id="reminder-save-journal" checked class="rounded border-stone-300 text-deep-olive focus:ring-deep-olive"><span>Spara även som ett inlägg i Reflektionsdagboken</span></label></div>
             </div>
-            <div class="flex space-x-2 pt-2"><button onclick="closeReminderModal()" class="flex-1 bg-stone-100 text-stone-600 font-bold py-2.5 rounded-xl transition">Avbryt</button><button onclick="saveReminderModalSubmit()" class="flex-1 bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl transition shadow">Spara Påminnelse</button></div>
+            <div class="flex space-x-2 pt-2"><button type="button" onclick="closeReminderModal()" class="flex-1 bg-stone-100 text-stone-600 font-bold py-2.5 rounded-xl transition">Avbryt</button><button type="button" onclick="saveReminderModalSubmit()" class="flex-1 bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl transition shadow">Spara Påminnelse</button></div>
         </div>
     </div>
 
@@ -375,13 +375,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl text-center">
             <div class="text-center pb-2 border-b border-stone-100"><h3 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h3><p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p></div>
             <p id="custom-alert-msg" class="text-xs text-stone-700 leading-relaxed py-2"></p>
-            <button onclick="closeCustomAlert()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Förstått</button>
+            <button type="button" onclick="closeCustomAlert()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Förstått</button>
         </div>
     </div>
 
     <div id="focus-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-5 shadow-2xl">
-            <div class="text-center pb-2 border-b border-stone-100 relative"><h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2><p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p><div class="absolute right-0 top-0 flex items-center space-x-2"><button onclick="resetFocusSliders()" class="text-[11px] font-semibold text-deep-olive hover:underline">Återställ</button><button onclick="closeFocusModal()" class="text-stone-400 hover:text-stone-700 text-base font-bold">✕</button></div></div>
+            <div class="text-center pb-2 border-b border-stone-100 relative"><h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2><p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p><div class="absolute right-0 top-0 flex items-center space-x-2"><button type="button" onclick="resetFocusSliders()" class="text-[11px] font-semibold text-deep-olive hover:underline">Återställ</button><button type="button" onclick="closeFocusModal()" class="text-stone-400 hover:text-stone-700 text-base font-bold">✕</button></div></div>
             <p class="text-xs font-medium text-stone-500">FALK är inställd på att höja:</p>
             <div class="space-y-4 text-xs">
                 <div><div class="flex justify-between font-bold text-stone-800 mb-1"><span>Självförtroende</span><span id="val-confidence">50%</span></div><input type="range" id="slider-confidence" min="0" max="100" value="50" oninput="updateFocusVal('confidence')" class="w-full h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer focus-slider"></div>
@@ -389,7 +389,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div><div class="flex justify-between font-bold text-stone-800 mb-1"><span>Handlingskraft</span><span id="val-action">50%</span></div><input type="range" id="slider-action" min="0" max="100" value="50" oninput="updateFocusVal('action')" class="w-full h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer focus-slider"></div>
                 <div><div class="flex justify-between font-bold text-stone-800 mb-1"><span>Gränssättning</span><span id="val-boundaries">50%</span></div><input type="range" id="slider-boundaries" min="0" max="100" value="50" oninput="updateFocusVal('boundaries')" class="w-full h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer focus-slider"></div>
             </div>
-            <button onclick="closeFocusModal()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-2xl text-xs transition shadow">Spara fokusinställning</button>
+            <button type="button" onclick="closeFocusModal()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-2xl text-xs transition shadow">Spara fokusinställning</button>
         </div>
     </div>
 
@@ -397,7 +397,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     <div id="auth-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl">
             <div class="text-center pb-2 border-b border-stone-100"><h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2><p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p></div>
-            <div class="flex border-b border-stone-200 pb-2"><button id="tab-btn-login" onclick="setAuthTab('login')" class="flex-1 text-center font-bold text-sm text-deep-olive border-b-2 border-deep-olive pb-1">Logga in</button><button id="tab-btn-signup" onclick="setAuthTab('signup')" class="flex-1 text-center font-bold text-sm text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600">Skapa konto</button></div>
+            <div class="flex border-b border-stone-200 pb-2"><button type="button" id="tab-btn-login" onclick="setAuthTab('login')" class="flex-1 text-center font-bold text-sm text-deep-olive border-b-2 border-deep-olive pb-1">Logga in</button><button type="button" id="tab-btn-signup" onclick="setAuthTab('signup')" class="flex-1 text-center font-bold text-sm text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600">Skapa konto</button></div>
             <div class="space-y-3">
                 <div id="wrap-username" class="hidden"><input type="text" id="auth-username" placeholder="Välj Användarnamn" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive"></div>
                 <div id="wrap-identifier"><input type="text" id="auth-identifier" placeholder="E-post eller Användarnamn" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive"></div>
@@ -410,8 +410,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </label>
                 </div>
             </div>
-            <div class="pt-2"><button id="auth-submit-btn" onclick="submitAuth()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Logga in</button></div>
-            <button onclick="closeAuthModal()" class="w-full text-center text-stone-400 text-xs mt-1 hover:text-stone-600">Avbryt</button>
+            <div class="pt-2"><button type="button" id="auth-submit-btn" onclick="submitAuth()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Logga in</button></div>
+            <button type="button" onclick="closeAuthModal()" class="w-full text-center text-stone-400 text-xs mt-1 hover:text-stone-600">Avbryt</button>
         </div>
     </div>
 
@@ -424,10 +424,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
             
             <div class="flex border-b border-stone-200 pb-2">
-                <button id="legal-tab-privacy" onclick="setLegalTab('privacy')" class="flex-1 text-center font-bold text-xs text-deep-olive border-b-2 border-deep-olive pb-1">
+                <button type="button" id="legal-tab-privacy" onclick="setLegalTab('privacy')" class="flex-1 text-center font-bold text-xs text-deep-olive border-b-2 border-deep-olive pb-1">
                     Integritetspolicy (GDPR)
                 </button>
-                <button id="legal-tab-terms" onclick="setLegalTab('terms')" class="flex-1 text-center font-bold text-xs text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600">
+                <button type="button" id="legal-tab-terms" onclick="setLegalTab('terms')" class="flex-1 text-center font-bold text-xs text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600">
                     Användarvillkor (ToS)
                 </button>
             </div>
@@ -449,7 +449,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <p><strong>4. Immateriella rättigheter:</strong> All källkod, design och varumärket FALK tillhör FALK AI Services.</p>
             </div>
 
-            <button onclick="closePrivacyPolicyModal()" class="w-full bg-deep-olive text-amber-50 font-semibold py-2.5 rounded-xl text-xs transition shadow">Jag har tagit del av informationen</button>
+            <button type="button" onclick="closePrivacyPolicyModal()" class="w-full bg-deep-olive text-amber-50 font-semibold py-2.5 rounded-xl text-xs transition shadow">Jag har tagit del av informationen</button>
         </div>
     </div>
 
@@ -918,31 +918,31 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
                     <div class="bg-white/90 border border-stone-200/80 text-stone-800 px-4 py-3 rounded-2xl max-w-[90%] text-xs shadow-sm leading-relaxed" id="${msgId}">${text}</div>
                     <div class="icon-bar ${window.userTier === 'PRO' ? '' : 'hidden'} flex items-center space-x-1 mt-1.5 px-1 py-0.5 text-stone-400">
                 <!-- 1. Högtalare -->
-                <button onclick="speakText('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Läs upp meddelande">
+                <button type="button" onclick="speakText('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Läs upp meddelande">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5 5 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.414 0-.75-.336-.75-.75V9c0-.414.336-.75.75-.75h2.24z"/></svg>
                 </button>
                 <!-- 2. Generera nytt -->
-                <button onclick="regenerateLastMessage()" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Generera nytt svar">
+                <button type="button" onclick="regenerateLastMessage()" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Generera nytt svar">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
                 </button>
                 <!-- 3. Tumme upp -->
-                <button onclick="rateResponse('${msgId}', 'up', this)" class="btn-thumb-up p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Bra svar">
+                <button type="button" onclick="rateResponse('${msgId}', 'up', this)" class="btn-thumb-up p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Bra svar">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.633 10.5c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75A2.25 2.25 0 0116.5 4.5c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.128 1.2-.083 2.408-.52 3.518l-1.572 3.93a2.25 2.25 0 01-2.09 1.414H9.728c-.538 0-1.054-.195-1.458-.55L5.25 16.5M6.633 10.55V18a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18v-5.25c0-1.243 1.007-2.25 2.25-2.25h2.883z"/></svg>
                 </button>
                 <!-- 4. Tumme ner -->
-                <button onclick="rateResponse('${msgId}', 'down', this)" class="btn-thumb-down p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Mindre bra svar">
+                <button type="button" onclick="rateResponse('${msgId}', 'down', this)" class="btn-thumb-down p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Mindre bra svar">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.367 13.5c-.806 0-1.533.446-2.031 1.08a9.041 9.041 0 01-2.861 2.4c-.723.384-1.35.956-1.653 1.715a4.498 4.498 0 00-.322 1.672V21a.75.75 0 01-.75.75A2.25 2.25 0 017.5 19.5c0-1.152.26-2.243.723-3.218.266-.558-.107-1.282-.725-1.282H4.372c-1.026 0-1.945-.694-2.054-1.715a12.137 12.137 0 01.52-3.518l1.572-3.93a2.25 2.25 0 012.09-1.414h7.901c.538 0 1.054.195 1.458.55l3.02 2.55M17.367 13.45V6a2.25 2.25 0 012.25-2.25h.375A2.25 2.25 0 0122.5 6v5.25c0 1.243-1.007 2.25-2.25 2.25h-2.883z"/></svg>
                 </button>
                 <!-- 5. Minus -->
-                <button onclick="adjustLastResponse('minus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Gör svaret mer kortfattat">
+                <button type="button" onclick="adjustLastResponse('minus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Gör svaret mer kortfattat">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15"/></svg>
                 </button>
                 <!-- 6. Plus -->
-                <button onclick="adjustLastResponse('plus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Fördjupa svaret">
+                <button type="button" onclick="adjustLastResponse('plus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Fördjupa svaret">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
                 </button>
                 <!-- 7. Påminnelse -->
-                <button onclick="openReminderModal('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Skapa påminnelse">
+                <button type="button" onclick="openReminderModal('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Skapa påminnelse">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </button>
             </div>`;
@@ -1048,8 +1048,8 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
                         <p class="text-stone-800 leading-relaxed">${e.entry_text}</p>
                     </div>
                     <div class="flex items-center space-x-1">
-                        <button onclick="openReminderModal('${safeText}')" class="p-1 hover:text-deep-olive text-stone-400 transition" title="Sätt påminnelse"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
-                        <button onclick="deleteJournalEntry('${e.id}')" class="p-1 hover:text-rose-600 text-stone-400 transition" title="Radera reflektion"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                        <button type="button" onclick="openReminderModal('${safeText}')" class="p-1 hover:text-deep-olive text-stone-400 transition" title="Sätt påminnelse"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+                        <button type="button" onclick="deleteJournalEntry('${e.id}')" class="p-1 hover:text-rose-600 text-stone-400 transition" title="Radera reflektion"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
                     </div>`;
                 list.appendChild(div);
             });
@@ -1285,31 +1285,31 @@ window.appendMessage = function(sender, text, type) {
             </div>
             <div class="icon-bar flex items-center space-x-1 mt-1.5 px-1 py-0.5 text-stone-400 ${window.userTier === "PRO" ? "" : "hidden"}" id="bar-${msgId}">
                 <!-- 1. Högtalare -->
-                <button onclick="speakText('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Läs upp meddelande">
+                <button type="button" onclick="speakText('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Läs upp meddelande">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5 5 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.414 0-.75-.336-.75-.75V9c0-.414.336-.75.75-.75h2.24z"/></svg>
                 </button>
                 <!-- 2. Generera nytt -->
-                <button onclick="regenerateLastMessage()" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Generera nytt svar">
+                <button type="button" onclick="regenerateLastMessage()" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Generera nytt svar">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
                 </button>
                 <!-- 3. Tumme upp (RENSAD FEATHER VEKTOR) -->
-                <button onclick="rateResponse('${msgId}', 'up', this)" class="btn-thumb-up p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Bra svar">
+                <button type="button" onclick="rateResponse('${msgId}', 'up', this)" class="btn-thumb-up p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Bra svar">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
                 </button>
                 <!-- 4. Tumme ned (RENSAD FEATHER VEKTOR) -->
-                <button onclick="rateResponse('${msgId}', 'down', this)" class="btn-thumb-down p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Mindre bra svar">
+                <button type="button" onclick="rateResponse('${msgId}', 'down', this)" class="btn-thumb-down p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Mindre bra svar">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/></svg>
                 </button>
                 <!-- 5. Minus -->
-                <button onclick="adjustLastResponse('minus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Gör svaret mer kortfattat">
+                <button type="button" onclick="adjustLastResponse('minus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Gör svaret mer kortfattat">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15"/></svg>
                 </button>
                 <!-- 6. Plus -->
-                <button onclick="adjustLastResponse('plus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Fördjupa svaret">
+                <button type="button" onclick="adjustLastResponse('plus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Fördjupa svaret">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
                 </button>
                 <!-- 7. Påminnelse / Klocka -->
-                <button onclick="openReminderModal('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Skapa påminnelse">
+                <button type="button" onclick="openReminderModal('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Skapa påminnelse">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </button>
                 <!-- Paginering för versioner -->
@@ -1402,9 +1402,9 @@ window.renderMessageVersion = function(msgId) {
     if (pageControls && store.versions.length > 1) {
         pageControls.classList.remove('hidden');
         pageControls.innerHTML = `
-            <button onclick="window.navigateVersion('${msgId}', -1)" class="hover:text-stone-900 px-0.5 ${store.currentIndex === 0 ? 'opacity-30 cursor-default' : ''}">&lt;</button>
+            <button type="button" onclick="window.navigateVersion('${msgId}', -1)" class="hover:text-stone-900 px-0.5 ${store.currentIndex === 0 ? 'opacity-30 cursor-default' : ''}">&lt;</button>
             <span>${store.currentIndex + 1}/${store.versions.length}</span>
-            <button onclick="window.navigateVersion('${msgId}', 1)" class="hover:text-stone-900 px-0.5 ${store.currentIndex === store.versions.length - 1 ? 'opacity-30 cursor-default' : ''}">&gt;</button>
+            <button type="button" onclick="window.navigateVersion('${msgId}', 1)" class="hover:text-stone-900 px-0.5 ${store.currentIndex === store.versions.length - 1 ? 'opacity-30 cursor-default' : ''}">&gt;</button>
         `;
     }
 };
@@ -1494,7 +1494,7 @@ window.openPaywallModal = function(reason) {
         modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
         modal.innerHTML = `
             <div class="bg-stone-900 border border-stone-800 text-stone-100 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl relative">
-                <button onclick="document.getElementById('paywall-modal').classList.add('hidden')" class="absolute top-4 right-4 text-stone-400 hover:text-white text-lg">&times;</button>
+                <button type="button" onclick="document.getElementById('paywall-modal').classList.add('hidden')" class="absolute top-4 right-4 text-stone-400 hover:text-white text-lg">&times;</button>
                 <div class="text-center space-y-2">
                     <span class="inline-block px-3 py-1 bg-amber-500/10 text-amber-400 text-xs font-semibold rounded-full border border-amber-500/20">FALK PRO</span>
                     <h3 class="text-xl font-bold text-white">Lås upp hela FALK AI</h3>
