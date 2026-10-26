@@ -265,26 +265,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="flex-shrink-0 space-y-1.5 pb-2">
                 <form id="chat-form" onsubmit="sendMessage(event)" class="flex items-center space-x-2">
                     <div class="flex-1 relative flex items-center">
-                        <input type="text" id="message-input" placeholder="Skriv till mig eller välj ett alternativ..." 
+                        <input type="text" id="message-input" placeholder="Skriv till mig eller välj ett alternativ..."
                                class="w-full bg-white border border-stone-300 rounded-full pl-5 pr-11 py-3 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:border-deep-olive shadow-sm">
                         <button type="button" onclick="toggleSpeechRecognition()" id="mic-btn" class="absolute right-3 text-stone-400 hover:text-deep-olive transition p-1" title="Tala in meddelande">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg>
                         </button>
                     </div>
-                    <button type="button" onclick="handleLockedFeature('dev')" class="flex items-center space-x-1.5 text-stone-700 hover:text-stone-900 font-medium text-xs border border-stone-300 rounded-full px-3 py-1.5"><svg class="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg><span>Utveckling</span></button>
-                        <button type="button" onclick="setMood(2)" class="mood-btn flex-1 py-2 bg-stone-100 border border-stone-300 rounded-xl text-sm font-semibold text-stone-800 transition" data-score="2">😐 2</button>
-                        <button type="button" onclick="setMood(3)" class="mood-btn flex-1 py-2 bg-deep-olive text-amber-50 border border-deep-olive rounded-xl text-sm font-bold transition" data-score="3">🙂 3</button>
-                        <button type="button" onclick="setMood(4)" class="mood-btn flex-1 py-2 bg-stone-100 border border-stone-300 rounded-xl text-sm font-semibold text-stone-800 transition" data-score="4">😊 4</button>
-                        <button type="button" onclick="setMood(5)" class="mood-btn flex-1 py-2 bg-stone-100 border border-stone-300 rounded-xl text-sm font-semibold text-stone-800 transition" data-score="5">🤩 5</button>
-                    </div>
-                </div>
-                <div><textarea id="journal-text" rows="3" placeholder="Skriv en kort reflektion om vad som påverkar din riktning idag..." class="w-full bg-stone-50 border border-stone-300 rounded-xl p-3 text-xs text-stone-800 focus:outline-none focus:border-deep-olive"></textarea></div>
-                <button type="submit" class="w-full bg-deep-olive text-amber-50 font-semibold py-2.5 rounded-xl text-xs transition">Spara Reflektion</button>
-            </form>
-            <div>
-                <h3 class="text-xs font-bold text-stone-500 uppercase tracking-wider mb-3">Tidigare Reflektioner</h3>
-                <div id="journal-list" class="space-y-3"><p class="text-stone-400 text-xs italic">Inga reflektioner sparade ännu.</p></div>
-            </div>
+                    <button type="submit" class="bg-deep-olive hover:opacity-90 text-amber-50 px-5 py-3 rounded-full text-xs font-bold transition shadow-sm">Skicka</button>
+                </form>
         </section>
 
         <!-- VY 3: KOGNITIVT BIBLIOTEK -->
@@ -658,6 +646,11 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
             list.innerHTML = '';
 
             if (!Array.isArray(sessions)) return;
+            // Om användaren har en aktiv chatt i DOM, nollställ inte vyn
+            const hasMessages = document.getElementById('chat-messages-list')?.children.length > 0;
+            if (hasMessages && !activeSessionId && sessions.length > 0) {
+                activeSessionId = sessions[0].id;
+            }
         sessions.sort((a, b) => {
                 const isAPinned = pinnedSessions.includes(a.id);
                 const isBPinned = pinnedSessions.includes(b.id);
