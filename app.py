@@ -295,10 +295,10 @@ def chat():
 
         user_id, tier = get_current_user_context()
 
-        # Identifiera om användaren är oinloggad gäst eller registrerad medlem
+        # Identifiera om användaren är oinloggad gäst eller registrerad medlem (Alla inloggade = Premium/PRO)
         is_guest = (user_id == "00000000-0000-0000-0000-000000000000" or not user_id)
-        is_pro = (tier == "PRO" and not is_guest)
-        effective_max_tokens = 750 if is_pro else 350
+        is_pro = not is_guest
+        effective_max_tokens = 750 if is_pro else 200
 
         # Gästkvotering (Max 6 meddelanden) gäller ENBART oinloggade gäster
         if is_guest:
