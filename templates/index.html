@@ -546,6 +546,13 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
             const settingsTier = document.getElementById('settings-tier');
 
             if (session) {
+                if (session.user && !session.user.email_confirmed_at) {
+                    await supabaseClient.auth.signOut();
+                    userToken = null;
+                    showAuthError("E-postadressen har inte bekräftats ännu. Kontrollera din inkorg eller begär en ny länk.");
+                    openAuthModal();
+                    return;
+                }
                 userToken = session.access_token;
                 await fetchProfile();
                 const displayName = (userProfile && userProfile.username) ? userProfile.username : session.user.email;
@@ -1176,7 +1183,10 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
 
                 let res = await supabaseClient.auth.signUp({ email: identifier, password });
                 if (res.error) return showAuthError("Fel: " + res.error.message);
-                showAlert("Konto skapat! Ett bekräftelsemail har skickats. Du måste verifiera din e-postadress via länken i mailet innan du kan logga in.");
+                // Tvinga urloggning omedelbart för att förhindra auto-login innan e-post är verifierad
+                await supabaseClient.auth.signOut();
+                userToken = null;
+                showAlert("Konto skapat! Ett bekräftelsemail har skickats till " + identifier + ". Du MÅSTE klicka på länken i mailet för att aktivera kontot innan du kan logga in.");
                 setAuthTab('login');
             } else {
                 document.cookie = "falk_guest_count=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
