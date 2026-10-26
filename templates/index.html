@@ -8,6 +8,16 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+
+// Global Paywall Override: Släpp alltid igenom inloggade användare
+window.handleLockedFeature = function(feature) {
+    const isLoggedIn = !!(userToken || document.body.classList.contains('is-logged-in') || localStorage.getItem('sb-falk-auth-token'));
+    if (isLoggedIn) return false;
+    if (typeof openPaywallModal === 'function') openPaywallModal(feature || 'limit');
+    return true;
+};
+function handleLockedFeature(feature) { return window.handleLockedFeature(feature); }
+
         tailwind.config = {
             theme: {
                 extend: {
@@ -79,7 +89,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         <div class="flex items-center space-x-2">
             <button type="button" onclick="createNewSession()" class="text-deep-olive hover:opacity-80 font-bold text-2xl leading-none px-2 transition" title="Nytt samtal">+</button>
-            <button type="button" onclick="if(!handleLockedFeature('dev')) toggleProgressDrawer()" class="flex items-center space-x-1 text-xs font-bold text-deep-olive bg-stone-200/60 hover:bg-stone-300/60 px-2.5 py-1.5 rounded-full transition shadow-sm">
+            <button type="button" onclick="toggleProgressDrawer()" class="flex items-center space-x-1 text-xs font-bold text-deep-olive bg-stone-200/60 hover:bg-stone-300/60 px-2.5 py-1.5 rounded-full transition shadow-sm">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
                 <span>Utveckling</span>
             </button>
@@ -611,6 +621,9 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
                 closeAllDrawers();
                 drawer.classList.remove('translate-x-full');
                 overlay.classList.remove('hidden');
+                // Trigga datarendering för utveckling/reflektion om funktionen finns
+                if (typeof renderProgressContent === 'function') renderProgressContent();
+                if (typeof loadJournalEntries === 'function') loadJournalEntries();
             } else closeAllDrawers();
         }
 
