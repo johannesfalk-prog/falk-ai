@@ -822,10 +822,17 @@ function switchTab(tab) {
             sendMessage(new Event('submit'));
         }
 
-        async function loadSessions() {
+       async function loadSessions() {
             if (!userToken) return;
-            const res = await fetch('/api/sessions', { headers: { 'Authorization': `Bearer ${userToken}` } });
-            let sessions = await res.json();
+            let sessions = [];
+            try {
+                const res = await fetch('/api/sessions', { headers: { 'Authorization': `Bearer ${userToken}` } });
+                if (!res.ok) throw new Error(`API returnerade status ${res.status}`);
+                sessions = await res.json();
+            } catch (err) {
+                console.error("[NETWORK ERROR] Misslyckades att hämta sessioner:", err);
+                sessions = []; // Fallback för att förhindra krasch i gränssnittet
+            }
             const list = document.getElementById('session-list');
             if (!list) return;
             list.innerHTML = '';
@@ -1222,24 +1229,46 @@ function switchTab(tab) {
             const list = document.getElementById('journal-list') || document.getElementById('journal-entries-list');
             if (!list) return;
             list.innerHTML = '';
+            
             const statCount = document.getElementById('stat-entries-count');
-            if (statCount) if (statCount) statCount.textContent = entries.length;
-            if (entries.length === 0) { list.innerHTML = `<p class="text-stone-400 text-xs italic">Inga reflektioner sparade ännu.</p>`; return; }
+            if (statCount) statCount.textContent = entries.length;
+            
+            if (entries.length === 0) { 
+                list.innerHTML = `<p class="text-stone-400 text-xs italic">Inga reflektioner sparade ännu.</p>`; 
+                return; 
+            }
 
             const moodEmojis = ['', '😞', '😐', '🙂', '😊', '🤩'];
             entries.forEach(e => {
                 const div = document.createElement('div');
                 div.className = "bg-white p-3.5 rounded-xl border border-stone-200 text-xs space-y-1 shadow-sm flex justify-between items-start";
-                const safeText = e.entry_text.replace(/'/g, "\\'");
+                
+                // 1. Bygg det ofarliga skelettet utan användardata
                 div.innerHTML = `
                     <div class="space-y-1 flex-1 pr-2">
-                        <div class="flex justify-between items-center font-bold text-stone-500"><span>Status: ${moodEmojis[e.mood_score] || '🙂'} (${e.mood_score}/5)</span><span>${new Date(e.created_at).toLocaleDateString('sv-SE')}</span></div>
-                        <p class="text-stone-800 leading-relaxed">${e.entry_text}</p>
+                        <div class="flex justify-between items-center font-bold text-stone-500">
+                            <span>Status: ${moodEmojis[e.mood_score] || '🙂'} (${e.mood_score}/5)</span>
+                            <span>${new Date(e.created_at).toLocaleDateString('sv-SE')}</span>
+                        </div>
+                        <p class="entry-text-container text-stone-800 leading-relaxed whitespace-pre-wrap"></p>
                     </div>
                     <div class="flex items-center space-x-1">
-                        <button type="button" onclick="openReminderModal('${safeText}')" class="p-1 hover:text-deep-olive text-stone-400 transition" title="Sätt påminnelse"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
-                        <button type="button" onclick="deleteJournalEntry('${e.id}')" class="p-1 hover:text-rose-600 text-stone-400 transition" title="Radera reflektion"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
-                    </div>`;
+                        <button type="button" class="reminder-btn p-1 hover:text-deep-olive text-stone-400 transition" title="Sätt påminnelse">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </button>
+                        <button type="button" class="delete-btn p-1 hover:text-rose-600 text-stone-400 transition" title="Radera reflektion">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                    </div>
+                `;
+
+                // 2. Injicera farlig text säkert via textContent (neutraliserar HTML/XSS)
+                div.querySelector('.entry-text-container').textContent = e.entry_text;
+
+                // 3. Koppla händelser programmatiskt (immunt mot citattecken och radbrytningar)
+                div.querySelector('.reminder-btn').addEventListener('click', () => openReminderModal(e.entry_text));
+                div.querySelector('.delete-btn').addEventListener('click', () => deleteJournalEntry(e.id));
+
                 list.appendChild(div);
             });
         }
@@ -1406,7 +1435,11 @@ function switchTab(tab) {
             location.reload();
         }
 
-        initAuth();
+        try {
+            initAuth();
+        } catch (err) {
+            console.error("[BOOT ERROR] initAuth failed:", err);
+        }
     </script>
 <script>
 // ==========================================
