@@ -1010,8 +1010,11 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
             if (userToken) {
                 try {
                     const res = await fetch('/api/journal', { headers: { 'Authorization': `Bearer ${userToken}` } });
-                    if (res.ok) if (!res.ok) { console.error('Journal API Error:', res.status); return; }
-        entries = await res.json();
+                    if (res.ok) {
+                        entries = await res.json();
+                    } else {
+                        console.error('Journal API Error:', res.status);
+                    }
                 } catch (err) { console.error("API error", err); }
             }
             if (!entries || entries.length === 0) entries = JSON.parse(localStorage.getItem('falk_guest_journal') || '[]');
