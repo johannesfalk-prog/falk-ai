@@ -1184,10 +1184,9 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
         function renderJournalList(entries) {
             const list = document.getElementById('journal-list') || document.getElementById('journal-entries-list');
             if (!list) return;
-            if (!list) return;
             list.innerHTML = '';
             const statCount = document.getElementById('stat-entries-count');
-            if (statCount) statCount.textContent = entries.length;
+            if (statCount) if (statCount) statCount.textContent = entries.length;
             if (entries.length === 0) { list.innerHTML = `<p class="text-stone-400 text-xs italic">Inga reflektioner sparade ännu.</p>`; return; }
 
             const moodEmojis = ['', '😞', '😐', '🙂', '😊', '🤩'];
