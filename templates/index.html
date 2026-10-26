@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 </button>
         </div>
 
-        <h1 class="text-lg font-bold tracking-widest text-deep-olive absolute left-1/2 -translate-x-1/2">FALK</h1>
+        <h1 onclick="closeAllDrawers(); switchTab('chat');" class="text-lg font-bold tracking-widest text-deep-olive absolute left-1/2 -translate-x-1/2 cursor-pointer hover:opacity-80 transition" title="Gå till chatten">FALK</h1>
 
         <div class="flex items-center space-x-2">
             <button type="button" onclick="createNewSession()" class="text-deep-olive hover:opacity-80 font-bold text-2xl leading-none px-2 transition" title="Nytt samtal">+</button>
@@ -876,6 +876,8 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
         }
 
         async function createNewSession() {
+    closeAllDrawers();
+    if (typeof switchTab === 'function') switchTab('chat');
             if (!userToken) return openAuthModal();
             const res = await fetch('/api/sessions', {
                 method: 'POST',
