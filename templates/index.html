@@ -753,15 +753,48 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
             } else closeAllDrawers();
         }
 
-        function switchTab(tab) {
-            closeAllDrawers();
-            document.getElementById('view-chat').classList.add('hidden');
-            document.getElementById('view-journal').classList.add('hidden');
-            document.getElementById('view-library').classList.add('hidden');
-            document.getElementById('view-settings').classList.add('hidden');
+        
+function switchTab(tab) {
+    console.log("Navigerar till vy:", tab);
+    try {
+        if (typeof closeAllDrawers === 'function') closeAllDrawers();
+        
+        // Dölj alla kända vyer säkert
+        const allViews = ['view-chat', 'view-journal', 'view-library', 'view-settings'];
+        allViews.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
+        });
 
-            if (tab === 'chat') document.getElementById('view-chat').classList.remove('hidden');
-            else if (tab === 'journal') { document.getElementById('view-journal').classList.remove('hidden'); loadJournal(); }
+        // Bestäm mål-ID
+        let targetId = 'view-chat';
+        if (tab === 'library') targetId = 'view-library';
+        else if (tab === 'settings') targetId = 'view-settings';
+        else if (tab === 'journal') targetId = 'view-journal';
+        else if (tab === 'chat') targetId = 'view-chat';
+        else if (tab) targetId = 'view-' + tab;
+
+        const targetEl = document.getElementById(targetId);
+        if (targetEl) {
+            targetEl.classList.remove('hidden');
+            console.log("Framgångsrikt visade vy:", targetId);
+        } else {
+            console.warn("Vy hittades inte för targetId:", targetId, "- Kör fallback till view-chat");
+            const defaultView = document.getElementById('view-chat');
+            if (defaultView) defaultView.classList.remove('hidden');
+        }
+
+        // Om vi växlar till inställningar, hämta profil
+        if (targetId === 'view-settings' && typeof fetchProfile === 'function') {
+            fetchProfile();
+        }
+    } catch (err) {
+        console.error("Fel i switchTab, återgår säkert till chatten:", err);
+        const defaultView = document.getElementById('view-chat');
+        if (defaultView) defaultView.classList.remove('hidden');
+    }
+}
+
             else if (tab === 'library') document.getElementById('view-library').classList.remove('hidden');
             else if (tab === 'settings') { document.getElementById('view-settings').classList.remove('hidden'); if (typeof fetchProfile === 'function') fetchProfile(); }
         }
