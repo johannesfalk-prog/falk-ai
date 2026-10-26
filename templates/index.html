@@ -646,10 +646,22 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
             list.innerHTML = '';
 
             if (!Array.isArray(sessions)) return;
-            // Om användaren har en aktiv chatt i DOM, nollställ inte vyn
+            // Om användaren har en aktiv chatt i DOM men saknar session-ID, skapa en ny session för användaren
             const hasMessages = document.getElementById('chat-messages-list')?.children.length > 0;
-            if (hasMessages && !activeSessionId && sessions.length > 0) {
-                activeSessionId = sessions[0].id;
+            if (hasMessages && !activeSessionId) {
+                try {
+                    const createRes = await fetch('/api/sessions', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title: "Samtal från gästsession" })
+                    });
+                    if (createRes.ok) {
+                        const newSess = await createRes.json();
+                        activeSessionId = newSess.id;
+                    }
+                } catch (e) {
+                    console.error("Kunde inte migrera gästsession:", e);
+                }
             }
         sessions.sort((a, b) => {
                 const isAPinned = pinnedSessions.includes(a.id);
