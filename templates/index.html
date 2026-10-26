@@ -1147,7 +1147,7 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
                 }
                 
                 if (showResend) {
-                    errBox.innerHTML = `${friendlyMsg} <br><button type="button" onclick="resendVerificationEmail(this)" class="underline font-bold mt-1 text-amber-900 hover:text-stone-900">Skicka nytt bekräftelsemail</button>`;
+                    errBox.innerHTML = `<div>${friendlyMsg}</div><button type="button" onclick="resendVerificationEmail(this)" class="underline font-bold mt-1.5 text-amber-900 hover:text-stone-900 block text-xs">Skicka nytt bekräftelsemail</button><div id="resend-status-msg" class="text-[11px] text-rose-700 font-normal mt-1 hidden"></div>`;
                 } else {
                     errBox.textContent = friendlyMsg;
                 }
