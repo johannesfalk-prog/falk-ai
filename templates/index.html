@@ -1095,18 +1095,38 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
         function openPrivacyPolicyModal() { document.getElementById('privacy-modal').classList.remove('hidden'); }
         function closePrivacyPolicyModal() { document.getElementById('privacy-modal').classList.add('hidden'); }
 
-        async function resendVerificationEmail() {
+        async function resendVerificationEmail(btnEl) {
             const email = document.getElementById('auth-identifier')?.value.trim();
             if (!email) return showAuthError("Ange din e-postadress i fältet ovan.");
+            
+            if (btnEl) {
+                btnEl.disabled = true;
+                btnEl.textContent = "Skickar nytt mail...";
+            }
+            
             try {
-                const res = await supabaseClient.auth.resend({ type: 'signup', email: email });
+                const redirectUrl = window.location.origin;
+                const res = await supabaseClient.auth.resend({
+                    type: 'signup',
+                    email: email,
+                    options: { emailRedirectTo: redirectUrl }
+                });
+                
                 if (res.error) {
-                    showAuthError("Kunde inte skicka: " + res.error.message);
+                    let errStr = res.error.message;
+                    if (errStr.includes("rate limit")) errStr = "Du måste vänta en stund innan du skickar igen.";
+                    showAuthError("Kunde inte skicka: " + errStr);
                 } else {
                     showAlert("Ett nytt bekräftelsemail har skickats till " + email);
+                    if (btnEl) btnEl.textContent = "Bekräftelsemail skickat!";
                 }
             } catch (err) {
                 showAuthError("Ett fel uppstod vid utskick av bekräftelsemail.");
+            } finally {
+                if (btnEl && !btnEl.textContent.includes("skickat")) {
+                    btnEl.disabled = false;
+                    btnEl.textContent = "Skicka nytt bekräftelsemail";
+                }
             }
         }
 
@@ -1127,7 +1147,7 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
                 }
                 
                 if (showResend) {
-                    errBox.innerHTML = `${friendlyMsg} <br><button type="button" onclick="resendVerificationEmail()" class="underline font-bold mt-1 text-amber-900 hover:text-stone-900">Skicka nytt bekräftelsemail</button>`;
+                    errBox.innerHTML = `${friendlyMsg} <br><button type="button" onclick="resendVerificationEmail(this)" class="underline font-bold mt-1 text-amber-900 hover:text-stone-900">Skicka nytt bekräftelsemail</button>`;
                 } else {
                     errBox.textContent = friendlyMsg;
                 }
