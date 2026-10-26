@@ -34,8 +34,8 @@
             cursor: pointer;
         }
     
-        body:not(.is-logged-in) .user-icon-bar { display: none !important; }
-        body.is-logged-in .user-icon-bar { display: flex !important; }
+        
+        
 
 </style>
 <script>
@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button type="button" id="login-btn-bottom" onclick="openAuthModal()" class="text-deep-olive font-bold hover:underline">Logga in</button>
                 </div>
                 <div class="text-center">
-                    <span id="tier-badge" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-stone-200 text-stone-600">INLOGGAD</span>
+                    <span id="tier-badge" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-stone-200 text-stone-600">PREMIUM</span>
                 </div>
             </div>
         </div>
@@ -314,7 +314,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <section id="view-settings" class="hidden flex-1 flex flex-col h-full min-h-0 p-6 max-w-xl w-full mx-auto overflow-y-auto">
             <h2 class="text-xl font-bold text-deep-olive">Inställningar & Dataskydd</h2>
             <p class="text-xs text-stone-500 mb-6 font-medium">En kompass med perspektiv.</p>
-            <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-3 mb-6 shadow-sm"><h3 class="text-xs font-bold text-deep-olive uppercase tracking-wider">Kontostatus</h3><p class="text-xs text-stone-700">Status: <span id="settings-tier" class="font-bold text-stone-900">INLOGGAD</span></p></div>
+            <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-3 mb-6 shadow-sm"><h3 class="text-xs font-bold text-deep-olive uppercase tracking-wider">Kontostatus</h3><p class="text-xs text-stone-700">Status: <span id="settings-tier" class="font-bold text-stone-900">PREMIUM</span></p></div>
             <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-3 mb-6 shadow-sm"><h3 class="text-xs font-bold text-deep-olive uppercase tracking-wider">Dataportabilitet</h3><p class="text-xs text-stone-600 leading-relaxed">Ladda ned en komplett maskinläsbar JSON-fil med all din data.</p><button type="button" onclick="exportMyData()" id="export-btn" class="bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold px-4 py-2 rounded-xl text-xs border border-stone-300 transition">📥 Exportera min data (JSON)</button></div>
             <div class="bg-rose-50 p-5 rounded-2xl border border-rose-200 space-y-3 mb-6"><h3 class="text-xs font-bold text-rose-800 uppercase tracking-wider">Rätten att bli glömd</h3><p class="text-xs text-stone-600 leading-relaxed">Radera ditt konto och all tillhörande data permanent.</p><button type="button" onclick="deleteMyData()" class="bg-rose-700 hover:bg-rose-800 text-white font-semibold px-4 py-2 rounded-xl text-xs transition">Radera mitt konto & all data permanent</button></div>
             <div class="text-center pt-2"><button type="button" onclick="openPrivacyPolicyModal()" class="text-xs text-deep-olive hover:underline">Integritetspolicy & DPA-information</button></div>
@@ -563,8 +563,8 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
                 if (userDisplayBottom) userDisplayBottom.textContent = displayName;
                 if (logoutBtnBottom) logoutBtnBottom.classList.remove('hidden');
                 if (loginBtnBottom) loginBtnBottom.classList.add('hidden');
-                if (tierBadge) tierBadge.textContent = "INLOGGAD";
-                if (settingsTier) settingsTier.textContent = "INLOGGAD";
+                if (tierBadge) tierBadge.textContent = "PREMIUM";
+                if (settingsTier) settingsTier.textContent = "PREMIUM";
                 loadSessions();
                 loadJournal();
             } else {
@@ -922,7 +922,7 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
                 const msgId = 'msg-' + Math.random().toString(36).substr(2, 9);
                 container.innerHTML = `
                     <div class="bg-white/90 border border-stone-200/80 text-stone-800 px-4 py-3 rounded-2xl max-w-[90%] text-xs shadow-sm leading-relaxed" id="${msgId}">${text}</div>
-                    <div class="icon-bar user-icon-bar flex items-center space-x-1 mt-1.5 px-1 py-0.5 text-stone-400">
+                    <div class="icon-bar ${userToken ? 'flex' : 'hidden'} items-center space-x-1 mt-1.5 px-1 py-0.5 text-stone-400">
                 <!-- 1. Högtalare -->
                 <button type="button" onclick="speakText('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Läs upp meddelande">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5 5 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.414 0-.75-.336-.75-.75V9c0-.414.336-.75.75-.75h2.24z"/></svg>
