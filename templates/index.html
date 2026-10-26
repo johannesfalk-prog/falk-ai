@@ -763,7 +763,7 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
             if (tab === 'chat') document.getElementById('view-chat').classList.remove('hidden');
             else if (tab === 'journal') { document.getElementById('view-journal').classList.remove('hidden'); loadJournal(); }
             else if (tab === 'library') document.getElementById('view-library').classList.remove('hidden');
-            else if (tab === 'settings') document.getElementById('view-settings').classList.remove('hidden');
+            else if (tab === 'settings') { document.getElementById('view-settings').classList.remove('hidden'); if (typeof fetchProfile === 'function') fetchProfile(); }
         }
 
         function hidePrompts() {
