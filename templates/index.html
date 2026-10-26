@@ -1137,6 +1137,7 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
                 showAlert("Konto skapat! Logga in.");
                 setAuthTab('login');
             } else {
+                document.cookie = "falk_guest_count=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                 let res = await supabaseClient.auth.signInWithPassword({ email: identifier, password });
                 if (res.error) showAuthError("Fel: " + res.error.message);
                 else closeAuthModal();
