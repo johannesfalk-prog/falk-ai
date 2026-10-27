@@ -441,51 +441,48 @@ def add_journal_entry():
 
 
 # --- DASHBOARD ANALYTICS ENDPOINT (PREMIUM ONLY) ---
+
+# --- DASHBOARD ANALYTICS ENDPOINT (REAL DB + PREMIUM GUARD) ---
 @app.route('/api/dashboard-data', methods=['GET'])
 def get_dashboard_data():
     auth_header = request.headers.get('Authorization', '')
     has_bearer = bool(auth_header and auth_header.startswith('Bearer ') and len(auth_header.split()) > 1 and auth_header.split()[1] not in ['', 'null', 'undefined'])
     
-    # HARDENED PREMIUM GUARD: Avvisa gäster och oautentiserade anrop
     if not has_bearer:
-        return jsonify({
-            "error": "Premium required",
-            "message": "Min Utveckling är enbart tillgänglig för Premium-användare."
-        }), 403
+        return jsonify({"error": "Premium required", "message": "Min Utveckling är enbart tillgänglig för Premium-användare."}), 403
 
     user_id, tier = get_current_user_context()
     if tier != 'PRO' and tier != 'PREMIUM':
+        return jsonify({"error": "Premium required", "message": "Uppgradera till Premium för att se din utvecklingsdashboard."}), 403
+
+    try:
+        # Fetch real scores or fallback to initial defaults if first time
+        scores_res = supabase_client.table('user_scores').select('*').eq('user_id', user_id).execute()
+        scores = scores_res.data[0] if scores_res.data else {
+            "mindset": 50, "halsa": 50, "relationer": 50, "produktivitet": 50, "sjalvkannedom": 50
+        }
+
+        # Fetch active habits
+        habits_res = supabase_client.table('user_habits').select('*').eq('user_id', user_id).execute()
+        habits = [{"id": h['id'], "title": h['title'], "rate": h.get('completion_rate', 0)} for h in habits_res.data] if habits_res.data else []
+
+        # Fetch recent insights
+        insights_res = supabase_client.table('user_insights').select('content').eq('user_id', user_id).order('created_at', desc=True).limit(3).execute()
+        insights = [i['content'] for i in insights_res.data] if insights_res.data else ["Skriv dina första reflektioner i chatten för att få insikter."]
+
+        # Fetch daily metrics summary
+        metrics_res = supabase_client.table('user_daily_metrics').select('*').eq('user_id', user_id).order('metric_date', desc=True).limit(30).execute()
+        metrics = metrics_res.data if metrics_res.data else []
+
         return jsonify({
-            "error": "Premium required",
-            "message": "Uppgradera till Premium för att se din utvecklingsdashboard."
-        }), 403
+            "user_id": user_id,
+            "scores": scores,
+            "habits": habits,
+            "insights": insights,
+            "metrics_count": len(metrics)
+        }), 200
 
-    # Exempel på strukturerad datastruktur som returneras till frontend
-    # (När Supabase-tabellerna fylls hämtas detta via supabase_client)
-    mock_analytics = {
-        "user_id": user_id,
-        "scores": {
-            "mindset": 80,
-            "halsa": 72,
-            "relationer": 65,
-            "produktivitet": 58,
-            "sjalvkannedom": 85
-        },
-        "streak": {
-            "current_days": 23,
-            "best_days": 41
-        },
-        "reflections_this_month": 18,
-        "habits": [
-            {"title": "Morgonrutin", "rate": 86},
-            {"title": "Meditation", "rate": 71},
-            {"title": "Träning", "rate": 57},
-            {"title": "Läsa", "rate": 86}
-        ],
-        "insights": [
-            "Du är som mest produktiv på förmiddagen.",
-            "När du mediterar regelbundet sover du bättre."
-        ]
-    }
+    except Exception as e:
+        print(f"Error fetching dashboard data: {str(e)}")
+        return jsonify({"error": "Database query failed", "details": str(e)}), 500
 
-    return jsonify(mock_analytics), 200
