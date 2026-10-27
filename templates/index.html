@@ -1129,6 +1129,18 @@ function switchTab(tab) {
                         focus: focusState
                     })
                 });
+                if (res.status === 403 || res.status === 429) {
+                    window.isSendingMessage = false;
+                    if (typeof removeThinkingIndicator === 'function' && typeof thinkingId !== 'undefined') {
+                        removeThinkingIndicator(thinkingId);
+                    }
+                    if (typeof openPaywallModal === 'function') openPaywallModal();
+                    else {
+                        const pm = document.getElementById('paywall-modal');
+                        if (pm) pm.classList.remove('hidden');
+                    }
+                    return;
+                }
 
                 removeThinkingIndicator(thinkingId);
 
