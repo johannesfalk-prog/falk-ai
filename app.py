@@ -335,7 +335,11 @@ def chat():
             from datetime import datetime
             today_str = datetime.now().strftime("%Y-%m-%d")
             
-            client_ip = request.headers.get("CF-Connecting-IP")
+            # Strikt IP-identifiering bakom proxy
+    raw_xff = request.headers.get('X-Forwarded-For', '')
+    client_ip = request.headers.get('CF-Connecting-IP') or (raw_xff.split(',')[0].strip() if raw_xff else None) or request.remote_addr
+
+    print(f"[RATE-LIMIT CHECK] Client IP: {client_ip} | Current Usage: {GUEST_USAGE.get(client_ip, 0)}/6")
             if not client_ip:
                 forwarded_for = request.headers.get("X-Forwarded-For", "")
                 client_ip = forwarded_for.split(",")[-1].strip() if forwarded_for else (request.remote_addr or "127.0.0.1")
