@@ -21,9 +21,12 @@ from memory_engine import store_memory, get_relevant_memories, should_store_memo
 app = Flask(__name__)
 from flask_cors import CORS
 
+from flask_cors import CORS
+
 CORS(app, resources={
     r"/*": {
         "origins": [
+            "https://falk-backend.onrender.com",
             "https://falkai.wayjs.com",
             "http://localhost:3000",
             "http://127.0.0.1:5000"
@@ -435,3 +438,54 @@ def add_journal_entry():
     except Exception as e:
         print(f"[JOURNAL POST ERROR]: {str(e)}")
         return jsonify({"error": "Kunde inte spara i databasen"}), 500
+
+
+# --- DASHBOARD ANALYTICS ENDPOINT (PREMIUM ONLY) ---
+@app.route('/api/dashboard-data', methods=['GET'])
+def get_dashboard_data():
+    auth_header = request.headers.get('Authorization', '')
+    has_bearer = bool(auth_header and auth_header.startswith('Bearer ') and len(auth_header.split()) > 1 and auth_header.split()[1] not in ['', 'null', 'undefined'])
+    
+    # HARDENED PREMIUM GUARD: Avvisa gäster och oautentiserade anrop
+    if not has_bearer:
+        return jsonify({
+            "error": "Premium required",
+            "message": "Min Utveckling är enbart tillgänglig för Premium-användare."
+        }), 403
+
+    user_id, tier = get_current_user_context()
+    if tier != 'PRO' and tier != 'PREMIUM':
+        return jsonify({
+            "error": "Premium required",
+            "message": "Uppgradera till Premium för att se din utvecklingsdashboard."
+        }), 403
+
+    # Exempel på strukturerad datastruktur som returneras till frontend
+    # (När Supabase-tabellerna fylls hämtas detta via supabase_client)
+    mock_analytics = {
+        "user_id": user_id,
+        "scores": {
+            "mindset": 80,
+            "halsa": 72,
+            "relationer": 65,
+            "produktivitet": 58,
+            "sjalvkannedom": 85
+        },
+        "streak": {
+            "current_days": 23,
+            "best_days": 41
+        },
+        "reflections_this_month": 18,
+        "habits": [
+            {"title": "Morgonrutin", "rate": 86},
+            {"title": "Meditation", "rate": 71},
+            {"title": "Träning", "rate": 57},
+            {"title": "Läsa", "rate": 86}
+        ],
+        "insights": [
+            "Du är som mest produktiv på förmiddagen.",
+            "När du mediterar regelbundet sover du bättre."
+        ]
+    }
+
+    return jsonify(mock_analytics), 200
