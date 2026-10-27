@@ -1,3 +1,4 @@
+GUEST_USAGE = {}  # Server-side IP tracking for guest limits
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -319,14 +320,27 @@ def chat():
         effective_max_tokens = 750 if is_pro else 200
 
         # Gästkvotering (Max 6 meddelanden) gäller ENBART oinloggade gäster
+        # Gästkvotering (Max 6 meddelanden per dygn baserat på IP)
         if is_guest:
             from datetime import datetime
             today_str = datetime.now().strftime("%Y-%m-%d")
-            raw_cookie = request.cookies.get("falk_guest_count", "")
             
-            if ":" in raw_cookie:
-                c_count, c_date = raw_cookie.split(":", 1)
-                guest_count = int(c_count) if c_date == today_str and c_count.isdigit() else 0
+            # Extrahera riktig klient-IP bakom Render/Cloudflare proxy
+            forwarded_for = request.headers.get("X-Forwarded-For", "")
+            client_ip = forwarded_for.split(",")[0].strip() if forwarded_for else (request.remote_addr or "127.0.0.1")
+
+            ip_data = GUEST_USAGE.get(client_ip, {"count": 0, "date": today_str})
+            if ip_data.get("date") != today_str:
+                ip_data = {"count": 0, "date": today_str}
+
+            if ip_data["count"] >= 6:
+                return jsonify({
+                    "error": "Gästkvot nådd",
+                    "message": "Du har nått gränsen för kostnadsfria gästmeddelanden idag."
+                }), 403
+
+            ip_data["count"] += 1
+            GUEST_USAGE[client_ip] = ip_data
             else:
                 # Gamla cookies utan datumstämpel är ogiltiga -> Nollställ direkt!
                 guest_count = 0
@@ -407,7 +421,7 @@ def chat():
             else:
                 # Gamla cookies utan datumstämpel är ogiltiga -> Nollställ direkt!
                 guest_count = 0
-            resp.set_cookie("falk_guest_count", f"{guest_count + 1}:{today_str}", max_age=86400, path="/", samesite="Lax")
+            # resp.set_cookie("falk_guest_count", f"{guest_count + 1}:{today_str}", max_age=86400, path="/", samesite="Lax")
 
         return resp, 200
 
