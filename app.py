@@ -531,3 +531,111 @@ def update_dashboard_data():
     except Exception as e:
         print(f"[DASHBOARD UPDATE ERROR]: {e}", flush=True)
         return jsonify({"error": "Update failed", "details": str(e)}), 500
+
+
+
+# --- AUTOMATIC AI METRIC EXTRACTION & RESET ENGINE ---
+import threading
+
+def analyze_chat_and_update_metrics_async(user_id, user_message, ai_response):
+    """Analyserar chatten asynkront i bakgrunden och uppdaterar Supabase utan att fördröja chatten."""
+    def _bg_task():
+        try:
+            if not openai_client or len(user_message.strip()) < 15:
+                return
+
+            system_prompt = """Du är en datadriven analysmotor för FALK. Analysera användarens meddelande och AI-svaret.
+Returnera ETT strikt JSON-objekt med uppskattade förändringar (-10 till +10) eller absoluta poäng (0-100) samt ev. nya insikter.
+Format:
+{
+  "scores_delta": {
+    "mindset": 0,
+    "halsa": 0,
+    "relationer": 0,
+    "produktivitet": 0,
+    "sjalvkannedom": 0
+  },
+  "detected_insight": null
+}"""
+
+            user_payload = f"""Användare: {user_message}
+AI: {ai_response}"""
+
+            completion = openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                response_format={"type": "json_object"},
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_payload}
+                ],
+                temperature=0.2
+            )
+
+            import json
+            res = json.loads(completion.choices[0].message.content)
+            deltas = res.get("scores_delta", {})
+            insight = res.get("detected_insight")
+
+            # Fetch current scores
+            scores_res = supabase_client.table('user_scores').select('*').eq('user_id', user_id).execute()
+            current = scores_res.data[0] if scores_res.data else {
+                "mindset": 50, "halsa": 50, "relationer": 50, "produktivitet": 50, "sjalvkannedom": 50
+            }
+
+            # Apply bounded deltas (0-100)
+            new_scores = {
+                "user_id": user_id,
+                "mindset": max(0, min(100, current.get("mindset", 50) + int(deltas.get("mindset", 0)))),
+                "halsa": max(0, min(100, current.get("halsa", 50) + int(deltas.get("halsa", 0)))),
+                "relationer": max(0, min(100, current.get("relationer", 50) + int(deltas.get("relationer", 0)))),
+                "produktivitet": max(0, min(100, current.get("produktivitet", 50) + int(deltas.get("produktivitet", 0)))),
+                "sjalvkannedom": max(0, min(100, current.get("sjalvkannedom", 50) + int(deltas.get("sjalvkannedom", 0)))),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+
+            supabase_client.table('user_scores').upsert(new_scores).execute()
+
+            if insight and isinstance(insight, str) and len(insight) > 5:
+                supabase_client.table('user_insights').insert({
+                    "user_id": user_id,
+                    "content": insight
+                }).execute()
+
+            print(f"✅ [AI AUTO-EXTRACTION SUCCESS] Metrics updated for {user_id}", flush=True)
+
+        except Exception as e:
+            print(f"⚠️ [AI AUTO-EXTRACTION ERROR]: {e}", flush=True)
+
+    threading.Thread(target=_bg_task).start()
+
+@app.route('/api/dashboard-reset', methods=['POST'])
+def reset_dashboard_data():
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    user_id, tier = get_current_user_context()
+    if tier not in ['PRO', 'PREMIUM']:
+        return jsonify({"error": "Premium required"}), 403
+
+    try:
+        # Nollställ poäng till baseline (50%)
+        supabase_client.table('user_scores').upsert({
+            "user_id": user_id,
+            "mindset": 50,
+            "halsa": 50,
+            "relationer": 50,
+            "produktivitet": 50,
+            "sjalvkannedom": 50,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }).execute()
+
+        # Rensa historiska insikter och vanor för användaren
+        supabase_client.table('user_insights').delete().eq('user_id', user_id).execute()
+        supabase_client.table('user_daily_metrics').delete().eq('user_id', user_id).execute()
+
+        return jsonify({"status": "success", "message": "Din utveckling har nollställts!"}), 200
+
+    except Exception as e:
+        print(f"[DASHBOARD RESET ERROR]: {e}", flush=True)
+        return jsonify({"error": "Reset failed", "details": str(e)}), 500
