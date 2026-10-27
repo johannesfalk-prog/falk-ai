@@ -424,3 +424,26 @@ if __name__ == "__main__":
 def handle_500_error(e):
     from flask import jsonify
     return jsonify({"error": "Internal server error", "details": str(e)}), 500
+
+@app.route('/api/journal', methods=['POST'])
+def add_journal_entry():
+    user_id, _ = get_current_user_context()
+    if user_id == "00000000-0000-0000-0000-000000000000":
+        return jsonify({"error": "Kräver verifierat konto"}), 401
+    
+    try:
+        data = request.get_json()
+        if not data or 'entry_text' not in data:
+            return jsonify({"error": "Ogiltig data: entry_text saknas"}), 400
+            
+        new_entry = {
+            "user_id": user_id,
+            "mood_score": data.get('mood_score', 3),
+            "entry_text": data.get('entry_text', '')
+        }
+        
+        result = supabase.table('journal_entries').insert(new_entry).execute()
+        return jsonify(result.data[0] if result.data else {}), 201
+    except Exception as e:
+        print(f"[JOURNAL POST ERROR]: {str(e)}")
+        return jsonify({"error": "Kunde inte spara i databasen"}), 500
