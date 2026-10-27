@@ -314,14 +314,11 @@ def chat():
 
         user_id, tier = get_current_user_context()
 
-        # Identifiera om användaren är oinloggad gäst eller registrerad medlem (Alla inloggade = Premium/PRO)
         is_guest = (user_id == "00000000-0000-0000-0000-000000000000" or not user_id)
         is_pro = not is_guest
         effective_max_tokens = 750 if is_pro else 200
 
-        # Gästkvotering (Max 6 meddelanden) gäller ENBART oinloggade gäster
-        # Gästkvotering (Max 6 meddelanden per dygn baserat på IP)
-        # Server-side IP Guest Enforcement
+        # --- SERVER-SIDE IP GUEST GUARD ---
         if is_guest:
             from datetime import datetime
             today_str = datetime.now().strftime("%Y-%m-%d")
@@ -343,7 +340,10 @@ def chat():
 
             ip_data["count"] += 1
             GUEST_USAGE[client_ip] = ip_data
+
+        memory_context = ""
         system_prompt = get_falk_system_prompt() + "\n\n" + build_system_prompt(focus_data)
+        user_content = f"{memory_context}\n\n{user_message}".strip() if memory_context else user_message
 
         ai_response = None
         used_provider = None
@@ -355,7 +355,7 @@ def chat():
                         model=model_name,
                         messages=[
                             {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": f"{memory_context}\n\n{user_message}"}
+                            {"role": "user", "content": user_content}
                         ],
                         temperature=0.4,
                         max_tokens=effective_max_tokens
@@ -364,8 +364,8 @@ def chat():
                     if ai_response:
                         used_provider = f"Groq ({model_name})"
                         break
-                except Exception:
-                    pass
+                except Exception as err:
+                    print(f"[GROQ MODEL ERROR ({model_name})]: {err}", flush=True)
 
         if not ai_response and openai_client:
             try:
@@ -373,41 +373,24 @@ def chat():
                     model="gpt-4o-mini",
                     messages=[
                         {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": f"{memory_context}\n\n{user_message}"}
+                        {"role": "user", "content": user_content}
                     ],
                     temperature=0.4,
                     max_tokens=effective_max_tokens
                 )
                 ai_response = completion.choices[0].message.content
                 used_provider = "OpenAI (gpt-4o-mini)"
-            except Exception:
-                pass
+            except Exception as err:
+                print(f"[OPENAI MODEL ERROR]: {err}", flush=True)
 
         if not ai_response:
             return jsonify({"error": "Kunde inte generera svar från AI-tjänsten."}), 500
 
-        resp = jsonify({"response": ai_response, "provider": used_provider})
-
-        # Uppdatera gästcookie
-        if not is_pro:
-            from datetime import datetime
-            today_str = datetime.now().strftime("%Y-%m-%d")
-            raw_cookie = request.cookies.get("falk_guest_count", "")
-            
-            if ":" in raw_cookie:
-                c_count, c_date = raw_cookie.split(":", 1)
-                guest_count = int(c_count) if c_date == today_str and c_count.isdigit() else 0
-            else:
-                # Gamla cookies utan datumstämpel är ogiltiga -> Nollställ direkt!
-                guest_count = 0
-            # resp.set_cookie("falk_guest_count", f"{guest_count + 1}:{today_str}", max_age=86400, path="/", samesite="Lax")
-
-        return resp, 200
+        return jsonify({"response": ai_response, "provider": used_provider}), 200
 
     except Exception as e:
         print(f"[CHAT ERROR]: {e}", flush=True)
         return jsonify({"error": str(e)}), 500
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)
