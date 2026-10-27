@@ -52,7 +52,7 @@ window.ensureSettingsRendered = function() {
                         <div class="font-bold text-stone-700">Konto & Medlemskap</div>
                         <div class="flex justify-between items-center text-stone-600">
                             <span>KONTOTYP</span>
-                            <span class="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">PREMIUM</span>
+                            <span class="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">GÄST</span>
                         </div>
                     </div>
 
@@ -114,7 +114,7 @@ window.ensureSettingsRendered = function() {
                         <div class="font-bold text-stone-700">Konto & Medlemskap</div>
                         <div class="flex justify-between items-center text-stone-600">
                             <span>KONTOTYP</span>
-                            <span class="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">PREMIUM</span>
+                            <span class="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">GÄST</span>
                         </div>
                     </div>
 
@@ -285,7 +285,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button type="button" onclick="toggleSidebar()" class="flex items-center space-x-2 text-deep-olive font-semibold text-xs hover:opacity-80 transition">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
     <span>Meny</span>
-    <span id="tier-badge" class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-stone-200 text-stone-600 transition">GÄST</span>
+    <span class="tier-badge-element text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-stone-200 text-stone-600 transition" class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-stone-200 text-stone-600 transition">GÄST</span>
 </button>
         </div>
 
@@ -347,7 +347,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button type="button" id="login-btn-bottom" onclick="openAuthModal()" class="text-deep-olive font-bold hover:underline">Logga in</button>
                 </div>
                 <div class="text-center">
-                    <span id="tier-badge" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-stone-200 text-stone-600">PREMIUM</span>
+                    <span class="tier-badge-element text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-stone-200 text-stone-600 transition" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-stone-200 text-stone-600">GÄST</span>
                 </div>
             </div>
         </div>
@@ -528,7 +528,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <section id="view-settings" class="hidden flex-1 flex flex-col h-full min-h-0 p-6 max-w-xl w-full mx-auto overflow-y-auto">
             <h2 class="text-xl font-bold text-deep-olive">Inställningar & Dataskydd</h2>
             <p class="text-xs text-stone-500 mb-6 font-medium">En kompass med perspektiv.</p>
-            <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-3 mb-6 shadow-sm"><h3 class="text-xs font-bold text-deep-olive uppercase tracking-wider">Kontostatus</h3><p class="text-xs text-stone-700">Status: <span id="settings-tier" class="font-bold text-stone-900">PREMIUM</span></p></div>
+            <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-3 mb-6 shadow-sm"><h3 class="text-xs font-bold text-deep-olive uppercase tracking-wider">Kontostatus</h3><p class="text-xs text-stone-700">Status: <span class="settings-tier-element font-bold text-stone-900" class="font-bold text-stone-900">GÄST</span></p></div>
             <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-3 mb-6 shadow-sm"><h3 class="text-xs font-bold text-deep-olive uppercase tracking-wider">Dataportabilitet</h3><p class="text-xs text-stone-600 leading-relaxed">Ladda ned en komplett maskinläsbar JSON-fil med all din data.</p><button type="button" onclick="exportMyData()" id="export-btn" class="bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold px-4 py-2 rounded-xl text-xs border border-stone-300 transition">📥 Exportera min data (JSON)</button></div>
             <div class="bg-rose-50 p-5 rounded-2xl border border-rose-200 space-y-3 mb-6"><h3 class="text-xs font-bold text-rose-800 uppercase tracking-wider">Rätten att bli glömd</h3><p class="text-xs text-stone-600 leading-relaxed">Radera ditt konto och all tillhörande data permanent.</p><button type="button" onclick="deleteMyData()" class="bg-rose-700 hover:bg-rose-800 text-white font-semibold px-4 py-2 rounded-xl text-xs transition">Radera mitt konto & all data permanent</button></div>
             <div class="text-center pt-2"><button type="button" onclick="openPrivacyPolicyModal()" class="text-xs text-deep-olive hover:underline">Integritetspolicy & DPA-information</button></div>
@@ -760,7 +760,7 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
             const userDisplayBottom = document.getElementById('user-display-bottom');
             const logoutBtnBottom = document.getElementById('logout-btn-bottom');
             const loginBtnBottom = document.getElementById('login-btn-bottom');
-            const tierBadge = document.getElementById('tier-badge');
+            // Tier badge update refactored
             const settingsTier = document.getElementById('settings-tier');
 
             if (session) {
@@ -777,7 +777,19 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
                 if (userDisplayBottom) userDisplayBottom.textContent = displayName;
                 if (logoutBtnBottom) logoutBtnBottom.classList.remove('hidden');
                 if (loginBtnBottom) loginBtnBottom.classList.add('hidden');
-                if (tierBadge) tierBadge.textContent = "PREMIUM";
+                const badges = document.querySelectorAll('.tier-badge-element');
+        const settingsTiers = document.querySelectorAll('.settings-tier-element');
+        const isProUser = !!session;
+        const text = isProUser ? "PREMIUM" : "GÄST";
+        const badgeClasses = isProUser 
+            ? 'tier-badge-element text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-800 border border-amber-500/30 transition'
+            : 'tier-badge-element text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-stone-200 text-stone-600 transition';
+        
+        badges.forEach(b => {
+            b.textContent = text;
+            b.className = badgeClasses;
+        });
+        settingsTiers.forEach(s => s.textContent = text);
                 if (settingsTier) settingsTier.textContent = "PREMIUM";
                 loadSessions();
                 loadJournal();
@@ -1789,9 +1801,9 @@ window.removeThinkingIndicator = function() {
 };
 
 window.setUserTier = function(tier) {
-    const badge = document.getElementById('tier-badge');
-    if (badge) {
-        badge.textContent = tier === 'PRO' ? 'PRO' : 'GÄST';
+    const badges = document.querySelectorAll('.tier-badge-element');
+    badges.forEach(badge => {
+        badge.textContent = (tier === 'PRO' || tier === 'PREMIUM') ? 'PREMIUM' : 'GÄST';
         if (tier === 'PRO') {
             badge.className = 'text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-800 border border-amber-500/30 transition';
         } else {
