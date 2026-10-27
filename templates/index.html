@@ -322,6 +322,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </button>
                 <button type="button" onclick="closeAllDrawers(); toggleProgressDrawer()" id="nav-journal" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
                     <span>🌱</span> <span>Reflektioner</span>
+        </a>
+        <!-- Min utveckling (Premium Dashboard) -->
+        <a href="#" onclick="openDashboardView(); return false;" class="flex items-center gap-3 px-3 py-2 rounded-xl text-stone-700 hover:bg-stone-200/60 font-medium text-sm transition">
+          <svg class="w-5 h-5 text-[#2C3E35]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z"/></svg>
+          <span>Min utveckling</span>
+          <span class="ml-auto bg-[#2C3E35] text-white text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">PRO</span>
                 </button>
                 <button type="button" onclick="switchTab('library')" id="nav-library" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
                     <span>📚</span> <span>Kognitivt Bibliotek</span>
