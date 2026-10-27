@@ -321,13 +321,15 @@ def chat():
 
         # Gästkvotering (Max 6 meddelanden) gäller ENBART oinloggade gäster
         # Gästkvotering (Max 6 meddelanden per dygn baserat på IP)
+        # Server-side IP Guest Enforcement
         if is_guest:
             from datetime import datetime
             today_str = datetime.now().strftime("%Y-%m-%d")
             
-            # Extrahera riktig klient-IP bakom Render/Cloudflare proxy
-            forwarded_for = request.headers.get("X-Forwarded-For", "")
-            client_ip = forwarded_for.split(",")[0].strip() if forwarded_for else (request.remote_addr or "127.0.0.1")
+            client_ip = request.headers.get("CF-Connecting-IP")
+            if not client_ip:
+                forwarded_for = request.headers.get("X-Forwarded-For", "")
+                client_ip = forwarded_for.split(",")[-1].strip() if forwarded_for else (request.remote_addr or "127.0.0.1")
 
             ip_data = GUEST_USAGE.get(client_ip, {"count": 0, "date": today_str})
             if ip_data.get("date") != today_str:
@@ -341,29 +343,6 @@ def chat():
 
             ip_data["count"] += 1
             GUEST_USAGE[client_ip] = ip_data
-            else:
-                # Gamla cookies utan datumstämpel är ogiltiga -> Nollställ direkt!
-                guest_count = 0
-
-            if guest_count >= 6:
-                return jsonify({
-                    "error": "GUEST_LIMIT_REACHED",
-                    "message": "Du har nått din dagliga gratiskvot (6 meddelanden). Välkommen tillbaka imorgon när din kvot återställts, eller uppgradera till FALK Premium för obegränsad tillgång direkt."
-                }), 403
-
-        memories = []
-        if is_pro:
-            try:
-                memories = get_relevant_memories(user_id, user_message)
-                if should_store_memory(user_message):
-                    store_memory(user_id, user_message)
-            except Exception as mem_err:
-                print(f"[RAG ERROR]: {mem_err}", flush=True)
-
-        memory_context = ""
-        if memories:
-            memory_context = "\nRelevant historisk kontext om användaren:\n" + "\n".join([f"- {m}" for m in memories])
-
         system_prompt = get_falk_system_prompt() + "\n\n" + build_system_prompt(focus_data)
 
         ai_response = None
