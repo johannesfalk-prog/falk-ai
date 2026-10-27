@@ -316,26 +316,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </button>
             </div>
 
-            <nav class="space-y-1 mb-5">
-                <button type="button" onclick="switchTab('chat')" id="nav-chat" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-deep-olive text-amber-50 flex items-center space-x-2 shadow-sm">
-                    <span>💬</span> <span>Chatt</span>
-                </button>
-                <button type="button" onclick="closeAllDrawers(); toggleProgressDrawer()" id="nav-journal" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
-                    <span>🌱</span> <span>Reflektioner</span>
+            <!-- NAVIGATION MENU -->
+      <nav class="space-y-1 px-2 py-4">
+        <!-- Chatt -->
+        <a href="#" onclick="showChatView(); return false;" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-stone-700 hover:bg-stone-200/60 font-medium text-sm transition">
+          <svg class="w-5 h-5 text-[#2C3E35]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+          <span>Chatt</span>
         </a>
-        <!-- Min utveckling (Premium Dashboard) -->
-        <a href="#" onclick="openDashboardView(); return false;" class="flex items-center gap-3 px-3 py-2 rounded-xl text-stone-700 hover:bg-stone-200/60 font-medium text-sm transition">
+
+        <!-- Reflektioner (Återställd länk) -->
+        <a href="#" onclick="toggleReflectionsPanel(); return false;" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-stone-700 hover:bg-stone-200/60 font-medium text-sm transition">
+          <svg class="w-5 h-5 text-[#2C3E35]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+          <span>Reflektioner</span>
+        </a>
+
+        <!-- Min utveckling (PRO Dashboard - Isolerad klickhändelse) -->
+        <a href="#" onclick="openDashboardView(); return false;" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-stone-700 hover:bg-stone-200/60 font-medium text-sm transition">
           <svg class="w-5 h-5 text-[#2C3E35]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z"/></svg>
           <span>Min utveckling</span>
           <span class="ml-auto bg-[#2C3E35] text-white text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">PRO</span>
-                </button>
-                <button type="button" onclick="switchTab('library')" id="nav-library" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
-                    <span>📚</span> <span>Kognitivt Bibliotek</span>
-                </button>
-                <button type="button" onclick="switchTab('settings')" id="nav-settings" class="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-200 transition flex items-center space-x-2">
-                    <span>⚙️</span> <span>Inställningar & Dataskydd</span>
-                </button>
-            </nav>
+        </a>
+      </nav>
 
             <div class="flex-1 flex flex-col min-h-0">
                 <div class="flex justify-between items-center mb-2 px-1">
@@ -1950,14 +1951,10 @@ window.openPaywallModal = function(reason) {
 let falkRadarChartInstance = null;
 
 async function openDashboardView() {
-  // Always trigger fresh background fetch when switching to dashboard view
-  setTimeout(() => { fetchAndRenderDashboardData(); }, 100);
-  const mainChatView = document.getElementById('chat-container') || document.querySelector('main');
-  const dashView = document.getElementById('dashboard-view');
-  
-  if (!dashView) return;
+  // Stäng höger reflektionspanel om den är öppen
+  const refPanel = document.getElementById('reflections-panel');
+  if (refPanel) refPanel.classList.add('translate-x-full');
 
-  // Check user token / guest status
   // Asynkron säkerställande av Supabase token vid snabba klick
   if (typeof userToken === 'undefined' || !userToken) {
     if (window.supabaseClient && window.supabaseClient.auth) {
@@ -1972,18 +1969,32 @@ async function openDashboardView() {
     }
   }
 
+  // Om användaren saknar token, öppna auth-modal
   if (typeof userToken === 'undefined' || !userToken) {
     if (typeof openAuthModal === 'function') openAuthModal('signup');
-    else if (window.handlePaywallAuth) window.handlePaywallAuth('signup');
     return;
   }
 
-  // Switch views
-  if (mainChatView) mainChatView.classList.add('hidden');
-  dashView.classList.remove('hidden');
+  // Växla vy: Dölj chatt, visa dashboard
+  const mainChatView = document.getElementById('main-chat-view') || document.getElementById('chat-view');
+  const dashView = document.getElementById('dashboard-view');
 
-  // Load backend analytics
+  if (mainChatView) mainChatView.classList.add('hidden');
+  if (dashView) dashView.classList.remove('hidden');
+
+  // Hämta och rendera mätvärden
   await fetchAndRenderDashboardData();
+
+  if (window.falkRadarChartInstance) {
+    window.falkRadarChartInstance.resize();
+  }
+}
+
+function showChatView() {
+  const mainChatView = document.getElementById('main-chat-view') || document.getElementById('chat-view');
+  const dashView = document.getElementById('dashboard-view');
+  if (dashView) dashView.classList.add('hidden');
+  if (mainChatView) mainChatView.classList.remove('hidden');
 }
 
 function closeDashboardView() {
