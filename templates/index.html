@@ -1639,11 +1639,11 @@ window.rateResponse = function(msgId, direction, btnElement) {
         method: 'POST',
         headers: (function() {
         const h = { 'Content-Type': 'application/json' };
-        if (window.supabaseClient) {
-          const session = window.supabaseClient.auth.session ? window.supabaseClient.auth.session() : null;
-          if (session && session.access_token) {
-            h['Authorization'] = 'Bearer ' + session.access_token;
-          }
+        if (typeof userToken !== 'undefined' && userToken) {
+          h['Authorization'] = 'Bearer ' + userToken;
+        } else if (window.supabaseClient && window.supabaseClient.auth) {
+          const session = typeof supabaseClient.auth.session === 'function' ? supabaseClient.auth.session() : null;
+          if (session && session.access_token) h['Authorization'] = 'Bearer ' + session.access_token;
         }
         return h;
       })(),
@@ -1701,11 +1701,11 @@ window.adjustLastResponse = async function(action) {
             method: 'POST',
             headers: (function() {
         const h = { 'Content-Type': 'application/json' };
-        if (window.supabaseClient) {
-          const session = window.supabaseClient.auth.session ? window.supabaseClient.auth.session() : null;
-          if (session && session.access_token) {
-            h['Authorization'] = 'Bearer ' + session.access_token;
-          }
+        if (typeof userToken !== 'undefined' && userToken) {
+          h['Authorization'] = 'Bearer ' + userToken;
+        } else if (window.supabaseClient && window.supabaseClient.auth) {
+          const session = typeof supabaseClient.auth.session === 'function' ? supabaseClient.auth.session() : null;
+          if (session && session.access_token) h['Authorization'] = 'Bearer ' + session.access_token;
         }
         return h;
       })(),
@@ -1818,7 +1818,7 @@ window.setUserTier = function(tier) {
 // Lock menu / dev links for guests
 
 window.handlePaywallAuth = function(mode, event) {
-    if (event) event.preventDefault(); {
+    if (event) event.preventDefault();
     const modal = document.getElementById('paywall-modal');
     if (modal) modal.remove();
     if (typeof openAuthModal === 'function') {
