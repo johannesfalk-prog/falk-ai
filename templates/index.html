@@ -239,6 +239,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 </style>
 
+
+<style id="falk-dyn-paywall-styles">
+    .falk-modal-card {
+        background-color: #3f4738 !important;
+        color: #f5f2eb !important;
+        border: 1px solid rgba(234, 179, 8, 0.3) !important;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.5) !important;
+    }
+    .falk-gold-badge-styled {
+        color: #eab308 !important;
+        border: 1px solid #eab308 !important;
+        background-color: rgba(234, 179, 8, 0.15) !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.05em !important;
+    }
+    .falk-paywall-btn {
+        background-color: #d6d3d1 !important;
+        color: #000000 !important;
+        font-weight: 700 !important;
+        border: 1px solid transparent !important;
+        transition: all 0.2s ease-in-out !important;
+        display: block !important;
+        width: 100% !important;
+        padding: 0.75rem 1rem !important;
+        border-radius: 0.75rem !important;
+        text-align: center !important;
+        text-decoration: none !important;
+        font-size: 0.875rem !important;
+    }
+    .falk-paywall-btn:hover {
+        background-color: #2a3026 !important;
+        color: #eab308 !important;
+        border-color: #eab308 !important;
+        box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3) !important;
+    }
+</style>
+
 </head>
 <body class="bg-warm-beige text-slate-800 h-screen max-h-screen flex flex-col font-sans overflow-hidden">
 
@@ -1776,20 +1813,23 @@ window.openPaywallModal = function(reason) {
         modal.id = 'paywall-modal';
         modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
         modal.innerHTML = `
-            <div class="bg-[#f5f2eb] text-stone-800 border border-stone-800 text-stone-100 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl relative">
-                <button type="button" onclick="document.getElementById('paywall-modal').classList.add('hidden')" class="absolute top-4 right-4 text-stone-600 hover:text-white text-lg">&times;</button>
-                <div class="text-center space-y-2">
-                    <span class="paywall-gold-badge px-4 py-1.5 rounded-full text-sm inline-block mb-3">FALK Premium</span>
-                    <h3 class="text-xl font-bold text-stone-900">Lås upp FALK Premium</h3>
-                    <p class="text-xs text-stone-600 leading-relaxed">För att få tillgång till djupgående analyser, obegränsade samtal, minnesfunktioner och utvecklingsmenyn behöver du ett konto.</p>
+            <div class="falk-modal-card rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl relative text-center">
+                <button type="button" onclick="document.getElementById('paywall-modal').classList.add('hidden')" class="absolute top-4 right-4 text-stone-300 hover:text-white text-xl font-bold p-1">&times;</button>
+                <div class="space-y-2">
+                    <span class="falk-gold-badge-styled px-4 py-1.5 rounded-full text-xs uppercase inline-block mb-2">FALK Premium</span>
+                    <h3 class="text-xl font-bold text-white">Lås upp FALK Premium</h3>
+                    <p class="text-xs text-stone-200 leading-relaxed px-2">För att få tillgång till djupgående analyser, obegränsade samtal, minnesfunktioner och utvecklingsmenyn behöver du ett konto.</p>
                 </div>
                 <div class="space-y-3 pt-2">
-                    <a href="#" onclick="return window.handlePaywallAuth('signup');" class="block w-full py-3 bg-[#3f4738] hover:bg-[#2f352a] text-white shadow-md font-medium text-xs text-center rounded-xl shadow-lg transition">Skaffa Premium</a>
-                    <a href="#" onclick="return window.handlePaywallAuth('login');" class="block w-full py-3 bg-stone-200 text-stone-800 hover:bg-stone-700 text-stone-300 font-medium text-xs text-center rounded-xl transition">Logga in</a>
+                    <a href="#" onclick="return window.handlePaywallAuth('signup');" class="falk-paywall-btn">Skaffa Premium</a>
+                    <a href="#" onclick="return window.handlePaywallAuth('login');" class="falk-paywall-btn">Logga in</a>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
+    } else {
+        modal.classList.remove('hidden');
+    }
     } else {
         modal.classList.remove('hidden');
     }
