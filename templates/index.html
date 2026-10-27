@@ -2694,24 +2694,27 @@ async function openDashboardView(e) {
     if (typeof e.stopPropagation === 'function') e.stopPropagation();
   }
 
-  // Stäng reflektionspanelen om öppen
+  // AUTO-STÄNG SIDOMENYN OCH BACKDROP PÅ MOBIL OCH DESKTOP
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (sidebar) sidebar.classList.add('-translate-x-full');
+  if (backdrop) backdrop.classList.add('hidden');
+  if (typeof closeSidebar === 'function') closeSidebar();
+
+  // Stäng reflektionspanelen om den är öppen
   const refPanel = document.getElementById('reflections-panel');
   if (refPanel) refPanel.classList.add('translate-x-full');
 
-  // Hydrera token
   const token = await getOrHydrateUserToken();
-
   if (!token) {
     window.pendingViewAfterAuth = 'dashboard';
     if (typeof openAuthModal === 'function') openAuthModal('login');
     return false;
   }
 
-  // DÖLJ CHATT OCH VISA DASHBOARD PERMANENT
-  const mainChat = document.getElementById('main-chat-view') || document.getElementById('chat-view');
+  // DÖLJ CHATT & VISA DASHBOARD
+  document.querySelectorAll('#main-chat-view, #chat-view, .chat-container').forEach(el => el.classList.add('hidden'));
   const dashView = document.getElementById('dashboard-view');
-
-  if (mainChat) mainChat.classList.add('hidden');
   if (dashView) {
     dashView.classList.remove('hidden');
     dashView.style.display = 'block';
@@ -2720,11 +2723,7 @@ async function openDashboardView(e) {
   try {
     await fetchAndRenderDashboardData();
   } catch (err) {
-    console.error("Dashboard fetch error caught safely:", err);
-  }
-
-  if (window.falkRadarChartInstance) {
-    window.falkRadarChartInstance.resize();
+    console.error("Dashboard error caught safely:", err);
   }
 
   return false;
