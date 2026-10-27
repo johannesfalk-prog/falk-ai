@@ -470,7 +470,7 @@ def get_dashboard_data():
 
     try:
         # Fetch real scores or fallback to initial defaults if first time
-        scores_res = supabase_client.table('user_scores').select('*').eq('user_id', user_id).execute()
+        scores_res = supabase_admin.table('user_scores').select('*').eq('user_id', user_id).execute()
         scores = scores_res.data[0] if scores_res.data else {
             "mindset": 50, "halsa": 50, "relationer": 50, "produktivitet": 50, "sjalvkannedom": 50
         }
@@ -480,7 +480,7 @@ def get_dashboard_data():
         habits = [{"id": h['id'], "title": h['title'], "rate": h.get('completion_rate', 0)} for h in habits_res.data] if habits_res.data else []
 
         # Fetch recent insights
-        insights_res = supabase_client.table('user_insights').select('content').eq('user_id', user_id).order('created_at', desc=True).limit(3).execute()
+        insights_res = supabase_admin.table('user_insights').select('content').eq('user_id', user_id).order('created_at', desc=True).limit(3).execute()
         insights = [i['content'] for i in insights_res.data] if insights_res.data else ["Skriv dina första reflektioner i chatten för att få insikter."]
 
         # Fetch daily metrics summary
@@ -516,7 +516,7 @@ def update_dashboard_data():
     
     try:
         if scores:
-            supabase_client.table('user_scores').upsert({
+            supabase_admin.table('user_scores').upsert({
                 "user_id": user_id,
                 "mindset": int(scores.get('mindset', 50)),
                 "halsa": int(scores.get('halsa', 50)),
@@ -577,7 +577,7 @@ AI: {ai_response}"""
             insight = res.get("detected_insight")
 
             # Fetch current scores
-            scores_res = supabase_client.table('user_scores').select('*').eq('user_id', user_id).execute()
+            scores_res = supabase_admin.table('user_scores').select('*').eq('user_id', user_id).execute()
             current = scores_res.data[0] if scores_res.data else {
                 "mindset": 50, "halsa": 50, "relationer": 50, "produktivitet": 50, "sjalvkannedom": 50
             }
@@ -593,10 +593,10 @@ AI: {ai_response}"""
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
 
-            supabase_client.table('user_scores').upsert(new_scores).execute()
+            supabase_admin.table('user_scores').upsert(new_scores).execute()
 
             if insight and isinstance(insight, str) and len(insight) > 5:
-                supabase_client.table('user_insights').insert({
+                supabase_admin.table('user_insights').insert({
                     "user_id": user_id,
                     "content": insight
                 }).execute()
@@ -620,7 +620,7 @@ def reset_dashboard_data():
 
     try:
         # Nollställ poäng till baseline (50%)
-        supabase_client.table('user_scores').upsert({
+        supabase_admin.table('user_scores').upsert({
             "user_id": user_id,
             "mindset": 50,
             "halsa": 50,
@@ -631,7 +631,7 @@ def reset_dashboard_data():
         }).execute()
 
         # Rensa historiska insikter och vanor för användaren
-        supabase_client.table('user_insights').delete().eq('user_id', user_id).execute()
+        supabase_admin.table('user_insights').delete().eq('user_id', user_id).execute()
         supabase_client.table('user_daily_metrics').delete().eq('user_id', user_id).execute()
 
         return jsonify({"status": "success", "message": "Din utveckling har nollställts!"}), 200
