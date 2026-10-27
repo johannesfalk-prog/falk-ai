@@ -329,33 +329,22 @@ def chat():
         is_guest = (user_id == "00000000-0000-0000-0000-000000000000" or not user_id)
         is_pro = not is_guest
         effective_max_tokens = 750 if is_pro else 200
-
         # --- SERVER-SIDE IP GUEST GUARD ---
         if is_guest:
-            from datetime import datetime
-            today_str = datetime.now().strftime("%Y-%m-%d")
+            raw_xff = request.headers.get('X-Forwarded-For', '')
+            client_ip = request.headers.get('CF-Connecting-IP') or (raw_xff.split(',')[0].strip() if raw_xff else None) or request.remote_addr or '127.0.0.1'
             
-            # Strikt IP-identifiering bakom proxy
-    raw_xff = request.headers.get('X-Forwarded-For', '')
-    client_ip = request.headers.get('CF-Connecting-IP') or (raw_xff.split(',')[0].strip() if raw_xff else None) or request.remote_addr
-
-    print(f"[RATE-LIMIT CHECK] Client IP: {client_ip} | Current Usage: {GUEST_USAGE.get(client_ip, 0)}/6")
-            if not client_ip:
-                forwarded_for = request.headers.get("X-Forwarded-For", "")
-                client_ip = forwarded_for.split(",")[-1].strip() if forwarded_for else (request.remote_addr or "127.0.0.1")
-
-            ip_data = GUEST_USAGE.get(client_ip, {"count": 0, "date": today_str})
-            if ip_data.get("date") != today_str:
-                ip_data = {"count": 0, "date": today_str}
-
-            if ip_data["count"] >= 6:
+            current_usage = GUEST_USAGE.get(client_ip, 0)
+            print(f"[RATE-LIMIT CHECK] Client IP: {client_ip} | Current Usage: {current_usage}/6")
+            
+            if current_usage >= 6:
                 return jsonify({
-                    "error": "Gästkvot nådd",
-                    "message": "Du har nått gränsen för kostnadsfria gästmeddelanden idag."
+                    "error": "Guest limit reached",
+                    "message": "Du har nått gränsen på 6 gratis meddelanden som gäst."
                 }), 403
+            
+            GUEST_USAGE[client_ip] = current_usage + 1
 
-            ip_data["count"] += 1
-            GUEST_USAGE[client_ip] = ip_data
 
         memory_context = ""
         system_prompt = get_falk_system_prompt() + "\n\n" + build_system_prompt(focus_data)
