@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <button type="button" onclick="createNewSession()" class="text-deep-olive hover:opacity-80 font-bold text-2xl leading-none px-2 transition" title="Nytt samtal">+</button>
             <button type="button" onclick="toggleProgressDrawer()" class="flex items-center space-x-1 text-xs font-bold text-deep-olive bg-stone-200/60 hover:bg-stone-300/60 px-2.5 py-1.5 rounded-full transition shadow-sm">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
-                <span>Utveckling</span>
+                <span>Reflektioner</span>
             </button>
         </div>
     </header>
@@ -424,8 +424,60 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
 
             <div class="grid grid-cols-2 gap-3">
-                <div class="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 text-center"><p class="text-[10px] font-bold text-stone-600 uppercase">Reflektioner</p><p id="stat-entries-count" class="text-xl font-bold text-deep-olive mt-1">0</p></div>
-                <div class="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 text-center"><p class="text-[10px] font-bold text-stone-600 uppercase">Aktiva Påminnelser</p><p id="stat-reminders-count" class="text-xl font-bold text-terracotta mt-1">0</p></div>
+                <!-- USER PROFILE & AUTH FOOTER -->
+      <div id="sidebar-user-footer" class="mt-auto border-t border-stone-200/80 p-3 bg-stone-100/60 rounded-2xl">
+        <div id="user-profile-logged-in" class="hidden flex items-center justify-between">
+          <div class="flex items-center gap-2.5 overflow-hidden">
+            <div id="user-avatar" class="w-8 h-8 rounded-full bg-[#2C3E35] text-white flex items-center justify-center text-xs font-bold shrink-0">
+              U
+            </div>
+            <div class="truncate">
+              <p id="user-email-display" class="text-xs font-semibold text-stone-800 truncate">anvandare@falk.se</p>
+              <span id="user-tier-badge" class="inline-block bg-[#2C3E35] text-white text-[9px] font-bold px-1.5 py-0.2 rounded uppercase">PREMIUM</span>
+            </div>
+          </div>
+          <button onclick="handleLogout()" title="Logga ut" class="text-stone-400 hover:text-red-600 p-1.5 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1m0-10V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2h4a2 2 0 002-2v-1"/></svg>
+          </button>
+        </div>
+
+        <div id="user-profile-logged-out" class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-stone-400"></span>
+            <span class="text-xs font-medium text-stone-600">Gästkonto</span>
+          </div>
+          <button onclick="openAuthModal('login')" class="text-xs font-bold text-[#2C3E35] hover:underline px-2 py-1 bg-white rounded-lg border border-stone-200 shadow-sm">
+            Logga in
+          </button>
+        </div>
+      </div>
+                <!-- USER PROFILE & AUTH FOOTER -->
+      <div id="sidebar-user-footer" class="mt-auto border-t border-stone-200/80 p-3 bg-stone-100/60 rounded-2xl">
+        <div id="user-profile-logged-in" class="hidden flex items-center justify-between">
+          <div class="flex items-center gap-2.5 overflow-hidden">
+            <div id="user-avatar" class="w-8 h-8 rounded-full bg-[#2C3E35] text-white flex items-center justify-center text-xs font-bold shrink-0">
+              U
+            </div>
+            <div class="truncate">
+              <p id="user-email-display" class="text-xs font-semibold text-stone-800 truncate">anvandare@falk.se</p>
+              <span id="user-tier-badge" class="inline-block bg-[#2C3E35] text-white text-[9px] font-bold px-1.5 py-0.2 rounded uppercase">PREMIUM</span>
+            </div>
+          </div>
+          <button onclick="handleLogout()" title="Logga ut" class="text-stone-400 hover:text-red-600 p-1.5 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1m0-10V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2h4a2 2 0 002-2v-1"/></svg>
+          </button>
+        </div>
+
+        <div id="user-profile-logged-out" class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-stone-400"></span>
+            <span class="text-xs font-medium text-stone-600">Gästkonto</span>
+          </div>
+          <button onclick="openAuthModal('login')" class="text-xs font-bold text-[#2C3E35] hover:underline px-2 py-1 bg-white rounded-lg border border-stone-200 shadow-sm">
+            Logga in
+          </button>
+        </div>
+      </div>
             </div>
         </div>
     </aside>
@@ -1950,43 +2002,79 @@ window.openPaywallModal = function(reason) {
 // === FALK DASHBOARD CONTROLLER ===
 let falkRadarChartInstance = null;
 
-async function openDashboardView() {
-  // Stäng höger reflektionspanel om den är öppen
+async function openDashboardView(e) {
+  if (e && e.preventDefault) e.preventDefault();
+
+  // Stäng reflektionspanelen om öppen
   const refPanel = document.getElementById('reflections-panel');
   if (refPanel) refPanel.classList.add('translate-x-full');
 
-  // Asynkron säkerställande av Supabase token vid snabba klick
-  if (typeof userToken === 'undefined' || !userToken) {
-    if (window.supabaseClient && window.supabaseClient.auth) {
-      try {
-        const { data: { session } } = await window.supabaseClient.auth.getSession();
-        if (session && session.access_token) {
-          window.userToken = session.access_token;
-        }
-      } catch (e) {
-        console.warn('Session check delay:', e);
-      }
-    }
+  // Hämta session om userToken saknas
+  if (!window.userToken && window.supabaseClient && window.supabaseClient.auth) {
+    try {
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      if (session) window.userToken = session.access_token;
+    } catch (err) { console.warn('Auth check issue:', err); }
   }
 
-  // Om användaren saknar token, öppna auth-modal
-  if (typeof userToken === 'undefined' || !userToken) {
+  // Om oautentiserad, öppna login-modal utan att krascha vyn
+  if (!window.userToken) {
     if (typeof openAuthModal === 'function') openAuthModal('signup');
-    return;
+    return false;
   }
 
-  // Växla vy: Dölj chatt, visa dashboard
-  const mainChatView = document.getElementById('main-chat-view') || document.getElementById('chat-view');
+  // LÅS VYN: Dölj alla chattvyer och visa enbart dashboarden
+  document.querySelectorAll('#main-chat-view, #chat-view, .chat-container').forEach(el => el.classList.add('hidden'));
   const dashView = document.getElementById('dashboard-view');
-
-  if (mainChatView) mainChatView.classList.add('hidden');
   if (dashView) dashView.classList.remove('hidden');
 
-  // Hämta och rendera mätvärden
-  await fetchAndRenderDashboardData();
+  // Hämta data utan att tillåta att fel kastar vyn tillbaka till chatten
+  try {
+    await fetchAndRenderDashboardData();
+  } catch (err) {
+    console.error('Kunde inte läsa in mätvärden:', err);
+  }
 
   if (window.falkRadarChartInstance) {
     window.falkRadarChartInstance.resize();
+  }
+  return false;
+}
+
+function filterDashboardCategory(cat) {
+  document.querySelectorAll('.dash-filter-btn').forEach(btn => {
+    btn.classList.remove('bg-[#2C3E35]', 'text-white');
+    btn.classList.add('bg-white', 'text-stone-600');
+  });
+  if (event && event.target) {
+    event.target.classList.remove('bg-white', 'text-stone-600');
+    event.target.classList.add('bg-[#2C3E35]', 'text-white');
+  }
+  
+  // Filtrera kort baserat på vald kategori
+  document.querySelectorAll('.insight-card, .metric-card').forEach(card => {
+    if (cat === 'all' || card.dataset.category === cat) {
+      card.style.display = 'block';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+
+function updateAuthUI(user) {
+  const loggedInBox = document.getElementById('user-profile-logged-in');
+  const loggedOutBox = document.getElementById('user-profile-logged-out');
+  const emailDisplay = document.getElementById('user-email-display');
+  const avatar = document.getElementById('user-avatar');
+
+  if (user && user.email) {
+    if (loggedInBox) loggedInBox.classList.remove('hidden');
+    if (loggedOutBox) loggedOutBox.classList.add('hidden');
+    if (emailDisplay) emailDisplay.innerText = user.email;
+    if (avatar) avatar.innerText = user.email.charAt(0).toUpperCase();
+  } else {
+    if (loggedInBox) loggedInBox.classList.add('hidden');
+    if (loggedOutBox) loggedOutBox.classList.remove('hidden');
   }
 }
 
