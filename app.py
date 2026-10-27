@@ -325,8 +325,15 @@ def chat():
             return jsonify({"error": "Meddelandet kan inte vara tomt"}), 400
 
         user_id, tier = get_current_user_context()
-
-        is_guest = (user_id == "00000000-0000-0000-0000-000000000000" or not user_id)
+        
+        # Hardened Auth Check: Require valid Bearer token for Pro status
+        auth_header = request.headers.get('Authorization', '')
+        has_bearer = bool(auth_header and auth_header.startswith('Bearer ') and len(auth_header.split()) > 1 and auth_header.split()[1] not in ['', 'null', 'undefined'])
+        
+        # Force guest mode if no Bearer token is present
+        is_guest = not has_bearer
+        if is_guest:
+            user_id = '00000000-0000-0000-0000-000000000000'
         is_pro = not is_guest
         effective_max_tokens = 750 if is_pro else 200
         # --- SERVER-SIDE IP GUEST GUARD ---
