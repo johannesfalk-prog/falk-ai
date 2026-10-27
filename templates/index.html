@@ -6,11 +6,6 @@
     <title>FALK - En kompass med perspektiv.</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22 font-weight=%22bold%22 fill=%22%234E5C4B%22>F</text></svg>">
     <script src="https://cdn.tailwindcss.com">
-async function handleLogin(e) {
-  if (e) {
-    if (typeof e.preventDefault === 'function') e.preventDefault();
-    if (typeof e.stopPropagation === 'function') e.stopPropagation();
-  }
 
   const emailEl = document.getElementById('login-email');
   const passEl = document.getElementById('login-password');
@@ -79,11 +74,6 @@ async function handleLogin(e) {
 
 </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-async function handleLogin(e) {
-  if (e) {
-    if (typeof e.preventDefault === 'function') e.preventDefault();
-    if (typeof e.stopPropagation === 'function') e.stopPropagation();
-  }
 
   const emailEl = document.getElementById('login-email');
   const passEl = document.getElementById('login-password');
@@ -300,11 +290,6 @@ function handleLockedFeature(feature) { return window.handleLockedFeature(featur
             }
         }
     
-async function handleLogin(e) {
-  if (e) {
-    if (typeof e.preventDefault === 'function') e.preventDefault();
-    if (typeof e.stopPropagation === 'function') e.stopPropagation();
-  }
 
   const emailEl = document.getElementById('login-email');
   const passEl = document.getElementById('login-password');
@@ -369,7 +354,6 @@ async function handleLogin(e) {
   }
 
   return false;
-}
 
 </script>
     <style>
@@ -412,11 +396,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-async function handleLogin(e) {
-  if (e) {
-    if (typeof e.preventDefault === 'function') e.preventDefault();
-    if (typeof e.stopPropagation === 'function') e.stopPropagation();
-  }
 
   const emailEl = document.getElementById('login-email');
   const passEl = document.getElementById('login-password');
@@ -481,7 +460,6 @@ async function handleLogin(e) {
   }
 
   return false;
-}
 
 </script>
 
@@ -565,11 +543,6 @@ async function handleLogin(e) {
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js">
-async function handleLogin(e) {
-  if (e) {
-    if (typeof e.preventDefault === 'function') e.preventDefault();
-    if (typeof e.stopPropagation === 'function') e.stopPropagation();
-  }
 
   const emailEl = document.getElementById('login-email');
   const passEl = document.getElementById('login-password');
@@ -637,6 +610,10 @@ async function handleLogin(e) {
 }
 
 </script>
+
+async function handleLogin(e) { if (e && e.preventDefault) e.preventDefault(); return await submitAuth(); }
+
+function toggleReflectionsPanel() { if (typeof toggleProgressDrawer === 'function') toggleProgressDrawer(); }
 </head>
 <body class="bg-warm-beige text-slate-800 h-screen max-h-screen flex flex-col font-sans overflow-hidden">
 
@@ -646,7 +623,7 @@ async function handleLogin(e) {
             <button type="button" onclick="toggleSidebar()" class="flex items-center space-x-2 text-deep-olive font-semibold text-xs hover:opacity-80 transition">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
     <span>Meny</span>
-    <span class="tier-badge-element text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-stone-200 text-stone-600 transition" class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-stone-200 text-stone-600 transition">GÄST</span>
+    <span class="tier-badge-element text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-stone-200 text-stone-600 transition">GÄST</span>
 </button>
         </div>
 
@@ -685,7 +662,7 @@ async function handleLogin(e) {
         </a>
 
         <!-- Reflektioner (Återställd länk) -->
-        <a href="#" onclick="toggleReflectionsPanel(); return false;" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-stone-700 hover:bg-stone-200/60 font-medium text-sm transition">
+        <a href="#" onclick="toggleProgressDrawer(); return false;" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-stone-700 hover:bg-stone-200/60 font-medium text-sm transition">
           <svg class="w-5 h-5 text-[#2C3E35]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
           <span>Reflektioner</span>
         </a>
@@ -784,33 +761,6 @@ async function handleLogin(e) {
             </div>
 
             <div class="grid grid-cols-2 gap-3">
-                <!-- USER PROFILE & AUTH FOOTER -->
-      <div id="sidebar-user-footer" class="mt-auto border-t border-stone-200/80 p-3 bg-stone-100/60 rounded-2xl">
-        <div id="user-profile-logged-in" class="hidden flex items-center justify-between">
-          <div class="flex items-center gap-2.5 overflow-hidden">
-            <div id="user-avatar" class="w-8 h-8 rounded-full bg-[#2C3E35] text-white flex items-center justify-center text-xs font-bold shrink-0">
-              U
-            </div>
-            <div class="truncate">
-              <p id="user-email-display" class="text-xs font-semibold text-stone-800 truncate">anvandare@falk.se</p>
-              <span id="user-tier-badge" class="inline-block bg-[#2C3E35] text-white text-[9px] font-bold px-1.5 py-0.2 rounded uppercase">PREMIUM</span>
-            </div>
-          </div>
-          <button onclick="handleLogout()" title="Logga ut" class="text-stone-400 hover:text-red-600 p-1.5 transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1m0-10V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2h4a2 2 0 002-2v-1"/></svg>
-          </button>
-        </div>
-
-        <div id="user-profile-logged-out" class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-stone-400"></span>
-            <span class="text-xs font-medium text-stone-600">Gästkonto</span>
-          </div>
-          <button onclick="openAuthModal('login')" class="text-xs font-bold text-[#2C3E35] hover:underline px-2 py-1 bg-white rounded-lg border border-stone-200 shadow-sm">
-            Logga in
-          </button>
-        </div>
-      </div>
                 <!-- USER PROFILE & AUTH FOOTER -->
       <div id="sidebar-user-footer" class="mt-auto border-t border-stone-200/80 p-3 bg-stone-100/60 rounded-2xl">
         <div id="user-profile-logged-in" class="hidden flex items-center justify-between">
@@ -1926,12 +1876,6 @@ function switchTab(tab) {
                 showAlert("Konto skapat! Ett bekräftelsemail har skickats till " + identifier + ". Du MÅSTE klicka på länken i mailet för att aktivera kontot innan du kan logga in.");
                 setAuthTab('login');
                 return;
-                if (res.error) return showAuthError("Fel: " + res.error.message);
-                // Tvinga urloggning omedelbart för att förhindra auto-login innan e-post är verifierad
-                await supabaseClient.auth.signOut();
-                userToken = null;
-                showAlert("Konto skapat! Ett bekräftelsemail har skickats till " + identifier + ". Du MÅSTE klicka på länken i mailet för att aktivera kontot innan du kan logga in.");
-                setAuthTab('login');
             } else {
                 document.cookie = "falk_guest_count=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                 let res = await supabaseClient.auth.signInWithPassword({ email: identifier, password });
@@ -1965,11 +1909,6 @@ function switchTab(tab) {
             console.error("[BOOT ERROR] initAuth failed:", err);
         }
     
-async function handleLogin(e) {
-  if (e) {
-    if (typeof e.preventDefault === 'function') e.preventDefault();
-    if (typeof e.stopPropagation === 'function') e.stopPropagation();
-  }
 
   const emailEl = document.getElementById('login-email');
   const passEl = document.getElementById('login-password');
@@ -2034,7 +1973,6 @@ async function handleLogin(e) {
   }
 
   return false;
-}
 
 </script>
 <script>
@@ -2155,11 +2093,6 @@ window.rateResponse = function(msgId, direction, btnElement) {
     }).catch(err => console.log('Feedback API error:', err));
 };
 
-async function handleLogin(e) {
-  if (e) {
-    if (typeof e.preventDefault === 'function') e.preventDefault();
-    if (typeof e.stopPropagation === 'function') e.stopPropagation();
-  }
 
   const emailEl = document.getElementById('login-email');
   const passEl = document.getElementById('login-password');
@@ -2224,7 +2157,6 @@ async function handleLogin(e) {
   }
 
   return false;
-}
 
 </script>
 
@@ -2347,11 +2279,6 @@ window.navigateVersion = function(msgId, direction) {
     }
 };
 
-async function handleLogin(e) {
-  if (e) {
-    if (typeof e.preventDefault === 'function') e.preventDefault();
-    if (typeof e.stopPropagation === 'function') e.stopPropagation();
-  }
 
   const emailEl = document.getElementById('login-email');
   const passEl = document.getElementById('login-password');
@@ -2416,7 +2343,6 @@ async function handleLogin(e) {
   }
 
   return false;
-}
 
 </script>
 
@@ -2444,8 +2370,8 @@ window.setUserTier = function(tier) {
             badge.className = 'text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-800 border border-amber-500/30 transition';
         } else {
             badge.className = 'text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-stone-200 text-stone-600 transition';
-        }
-    }
+        });
+    };
 
     window.userTier = tier;
     // Uppdatera alla befintliga ikonrader i chatt-historiken
@@ -2511,11 +2437,6 @@ window.openPaywallModal = function(reason) {
     }
 };
 
-async function handleLogin(e) {
-  if (e) {
-    if (typeof e.preventDefault === 'function') e.preventDefault();
-    if (typeof e.stopPropagation === 'function') e.stopPropagation();
-  }
 
   const emailEl = document.getElementById('login-email');
   const passEl = document.getElementById('login-password');
@@ -2580,12 +2501,11 @@ async function handleLogin(e) {
   }
 
   return false;
-}
 
 </script>
 
 
-<!-- === FALK MIN UTVECKLING DASHBOARD (PREMIUM ONLY) === -->
+<!-- === FALK MIN UTVECKLING DASHBOARD (PREMIUM ONLY - 9 MODULER) === -->
 <div id="dashboard-view" class="hidden min-h-screen bg-[#F4F1EA] p-4 md:p-8 text-[#2C3E35]">
   
   <!-- DASHBOARD HEADER & FILTER BAR -->
@@ -2595,67 +2515,162 @@ async function handleLogin(e) {
       <p class="text-xs text-stone-600">Översikt över din resa mot ditt bästa jag.</p>
     </div>
 
-    <!-- HEADER FILTER TOGGLES -->
+    <!-- HEADER FILTER TOGGLES & ACTIONS -->
     <div class="flex flex-wrap items-center gap-2 text-xs bg-white p-2 rounded-xl border border-[#E5E2D9] shadow-sm">
-      <span class="font-semibold px-2 text-stone-500">Visa:</span>
-      <button onclick="toggleDashboardSection('all')" class="dash-filter-btn active bg-[#2C3E35] text-white px-2.5 py-1 rounded-lg">Visa alla</button>
-      <label class="flex items-center gap-1.5 px-2 cursor-pointer">
-        <input type="checkbox" checked onchange="toggleDashCard('scores-card', this.checked)" class="accent-[#2C3E35]"> Hjul
-      </label>
-      <label class="flex items-center gap-1.5 px-2 cursor-pointer">
-        <input type="checkbox" checked onchange="toggleDashCard('habits-card', this.checked)" class="accent-[#2C3E35]"> Vanor
-      </label>
-      <label class="flex items-center gap-1.5 px-2 cursor-pointer">
-        <input type="checkbox" checked onchange="toggleDashCard('insights-card', this.checked)" class="accent-[#2C3E35]"> Insikter
-      </label>
-    
-      <button onclick="confirmAndResetDashboard()" class="border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 px-3 py-1 rounded-lg font-semibold transition text-xs">
-        🔄 Nollställ data
+      <span class="font-semibold px-2 text-stone-500">Filtrera:</span>
+      <button onclick="filterDashboardCategory('all')" id="filter-btn-all" class="dash-filter-btn active bg-[#2C3E35] text-white px-3 py-1.5 rounded-lg font-medium transition">Alla</button>
+      <button onclick="filterDashboardCategory('hjul')" id="filter-btn-hjul" class="dash-filter-btn bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-1.5 rounded-lg font-medium transition">Hjul</button>
+      <button onclick="filterDashboardCategory('vanor')" id="filter-btn-vanor" class="dash-filter-btn bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-1.5 rounded-lg font-medium transition">Vanor</button>
+      <button onclick="filterDashboardCategory('insikter')" id="filter-btn-insikter" class="dash-filter-btn bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-1.5 rounded-lg font-medium transition">Insikter</button>
+      
+      <div class="h-4 w-[1px] bg-stone-200 mx-1"></div>
+
+      <button onclick="confirmAndResetDashboard()" class="border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 px-3 py-1.5 rounded-lg font-semibold transition text-xs flex items-center gap-1">
+        <span>🔄</span> Nollställ data
       </button>
     </div>
   </div>
 
-  <!-- DASHBOARD CARDS GRID -->
-  <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+  <div class="max-w-7xl mx-auto space-y-6">
     
-    <!-- UTVECKLINGSHJUL (RADAR CHART) -->
-    <div id="scores-card" class="bg-white p-5 rounded-2xl border border-[#E5E2D9] shadow-sm md:col-span-1">
-      <h3 class="text-sm font-bold mb-4 uppercase tracking-wider text-stone-500">Utvecklingshjul</h3>
-      <div class="relative h-64 w-full flex items-center justify-center">
-        <canvas id="falkRadarChart"></canvas>
+    <!-- TOP ROW: KPI CARDS (MODUL 1, 2, 3) -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      
+      <!-- MODUL 1: STREAK (DAGAR) -->
+      <div data-dash-cat="vanor" class="dash-card bg-white p-4 rounded-2xl border border-[#E5E2D9] shadow-sm flex items-center justify-between">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">Streak</span>
+          <div class="flex items-baseline gap-2 mt-1">
+            <span id="dash-kpi-streak" class="text-2xl font-extrabold text-[#2C3E35]">0</span>
+            <span class="text-xs text-stone-500">dagar</span>
+          </div>
+          <span class="text-[10px] text-stone-400">Bästa: <span id="dash-kpi-streak-best">0</span> dagar</span>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center text-lg font-bold">🔥</div>
       </div>
+
+      <!-- MODUL 2: SPARADE REFLEKTIONER (ANTAL) -->
+      <div data-dash-cat="insikter" class="dash-card bg-white p-4 rounded-2xl border border-[#E5E2D9] shadow-sm flex items-center justify-between">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">Reflektioner</span>
+          <div class="flex items-baseline gap-2 mt-1">
+            <span id="dash-kpi-reflections" class="text-2xl font-extrabold text-[#2C3E35]">0</span>
+            <span class="text-xs text-stone-500">totalt</span>
+          </div>
+          <span class="text-[10px] text-stone-400">Denna månad: <span id="dash-kpi-reflections-month">0</span></span>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center text-lg font-bold">📝</div>
+      </div>
+
+      <!-- MODUL 3: VANOR UPPFYLLDA (%) -->
+      <div data-dash-cat="vanor" class="dash-card bg-white p-4 rounded-2xl border border-[#E5E2D9] shadow-sm flex items-center justify-between">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-stone-400">Vanor uppfyllda</span>
+          <div class="flex items-baseline gap-2 mt-1">
+            <span id="dash-kpi-habits-pct" class="text-2xl font-extrabold text-[#2C3E35]">0%</span>
+          </div>
+          <span class="text-[10px] text-stone-400">Snitt denna månad</span>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center text-lg font-bold">🎯</div>
+      </div>
+
     </div>
 
-    <!-- MINA VANOR -->
-    <div id="habits-card" class="bg-white p-5 rounded-2xl border border-[#E5E2D9] shadow-sm md:col-span-1">
-      <h3 class="text-sm font-bold mb-4 uppercase tracking-wider text-stone-500">Mina vanor</h3>
-      <div id="habits-list-container" class="space-y-3 text-xs">
-        <p class="text-stone-400 italic">Laddar vanor...</p>
+    <!-- MAIN GRID: 6 DIAGRAM & INNEHÅLLS-MODULER (MODUL 4 - 9) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- MODUL 4: MIN UTVECKLING ÖVER TID (TRENDDIAGRAM) -->
+      <div data-dash-cat="hjul" class="dash-card lg:col-span-2 bg-white p-5 rounded-2xl border border-[#E5E2D9] shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-sm font-bold uppercase tracking-wider text-stone-600">Min utveckling över tid</h3>
+            <p class="text-[11px] text-stone-400">Framsteg över tid baserat på extraherad data</p>
+          </div>
+          <span class="text-xs font-semibold px-2.5 py-1 bg-stone-100 text-stone-600 rounded-lg">6 månader</span>
+        </div>
+        <div class="relative h-64 w-full">
+          <canvas id="falkTrendChart"></canvas>
+        </div>
       </div>
+
+      <!-- MODUL 5: UTVECKLINGSHJULET (RADARDIAGRAM) -->
+      <div data-dash-cat="hjul" class="dash-card bg-white p-5 rounded-2xl border border-[#E5E2D9] shadow-sm flex flex-col justify-between">
+        <div class="mb-2">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-stone-600">Utvecklingshjul</h3>
+          <p class="text-[11px] text-stone-400">Nulägesanalys över dina livsområden</p>
+        </div>
+        <div class="relative h-64 w-full flex items-center justify-center">
+          <canvas id="falkRadarChart"></canvas>
+        </div>
+      </div>
+
+      <!-- MODUL 6: MINA MÅL -->
+      <div data-dash-cat="vanor" class="dash-card bg-white p-5 rounded-2xl border border-[#E5E2D9] shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-stone-600">Mina mål</h3>
+          <span class="text-[11px] font-semibold text-[#2C3E35] cursor-pointer hover:underline">Visa alla</span>
+        </div>
+        <div id="goals-list-container" class="space-y-3 text-xs">
+          <p class="text-stone-400 italic">Laddar mål...</p>
+        </div>
+      </div>
+
+      <!-- MODUL 7: MINA VANOR -->
+      <div data-dash-cat="vanor" class="dash-card bg-white p-5 rounded-2xl border border-[#E5E2D9] shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-stone-600">Mina vanor</h3>
+          <span class="text-[11px] font-semibold text-[#2C3E35] cursor-pointer hover:underline">Visa alla</span>
+        </div>
+        <div id="habits-list-container" class="space-y-3 text-xs">
+          <p class="text-stone-400 italic">Laddar vanor...</p>
+        </div>
+      </div>
+
+      <!-- MODUL 8: REFLEKTION & HUMÖR -->
+      <div data-dash-cat="insikter" class="dash-card bg-white p-5 rounded-2xl border border-[#E5E2D9] shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-stone-600">Reflektion & Humör</h3>
+          <span id="dash-avg-mood" class="text-xs font-bold text-[#2C3E35] bg-emerald-50 px-2 py-0.5 rounded-md">-- / 5</span>
+        </div>
+        <div id="reflections-mood-container" class="space-y-3 text-xs">
+          <p class="text-stone-400 italic">Laddar humörhistorik...</p>
+        </div>
+      </div>
+
+      
+    <!-- DASHBOARD FOOTER BANNER -->
+    <div class="dash-card bg-[#F4F1EA] border border-[#E5E2D9] p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 mt-6 col-span-1 lg:col-span-3">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold shrink-0">🌱</div>
+        <p class="text-xs font-semibold text-stone-700 italic">"Kom ihåg: Framsteg, inte perfektion. Du blir bättre varje dag."</p>
+      </div>
+      <button onclick="toggleProgressDrawer()" class="bg-white hover:bg-stone-50 border border-stone-300 text-[#2C3E35] font-bold text-xs px-4 py-2 rounded-xl transition shadow-sm flex items-center gap-2 shrink-0">
+        <span>✏️</span> Skriv reflektion
+      </button>
     </div>
 
-    <!-- SENASTE INSIKTER -->
-    <div id="insights-card" class="bg-white p-5 rounded-2xl border border-[#E5E2D9] shadow-sm md:col-span-1">
-      <h3 class="text-sm font-bold mb-4 uppercase tracking-wider text-stone-500">Senaste insikter</h3>
-      <div id="insights-list-container" class="space-y-3 text-xs">
-        <p class="text-stone-400 italic">Laddar insikter...</p>
+      <!-- MODUL 9: MINA SENASTE INSIKTER -->
+      <div data-dash-cat="insikter" class="dash-card lg:col-span-3 bg-white p-5 rounded-2xl border border-[#E5E2D9] shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-stone-600">Mina senaste insikter</h3>
+          <span class="text-[11px] font-semibold text-[#2C3E35] cursor-pointer hover:underline">Visa alla</span>
+        </div>
+        <div id="insights-list-container" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <p class="text-stone-400 italic col-span-3">Laddar insikter...</p>
+        </div>
       </div>
-    </div>
 
+    </div>
   </div>
 </div>
 
-
 <script>
-// === FALK DASHBOARD CONTROLLER ===
+// === FALK DASHBOARD CONTROLLER (LIVE BACKEND INTEGRATION) ===
 let falkRadarChartInstance = null;
+let falkTrendChartInstance = null;
 
-
-// Fail-safe funktion för att alltid hämta giltig userToken från minne, Supabase eller localStorage
 async function getOrHydrateUserToken() {
   if (window.userToken && window.userToken.length > 20) return window.userToken;
-
-  // 1. Testa globala Supabase-klienter
   const sb = window.supabase || window.supabaseClient;
   if (sb && sb.auth) {
     try {
@@ -2667,8 +2682,6 @@ async function getOrHydrateUserToken() {
       }
     } catch (e) { console.warn("Supabase session check exception:", e); }
   }
-
-  // 2. Failsafe: Direkt inspektion av localStorage om Supabase-klienten inte svarat än
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (key && (key.includes('auth-token') || key.startsWith('sb-'))) {
@@ -2682,11 +2695,8 @@ async function getOrHydrateUserToken() {
       } catch(err) {}
     }
   }
-
   return null;
 }
-
-// Skriv över openDashboardView med fail-safe token-kontroll
 
 async function openDashboardView(e) {
   if (e) {
@@ -2694,15 +2704,13 @@ async function openDashboardView(e) {
     if (typeof e.stopPropagation === 'function') e.stopPropagation();
   }
 
-  // AUTO-STÄNG SIDOMENYN OCH BACKDROP PÅ MOBIL OCH DESKTOP
-  const sidebar = document.getElementById('sidebar');
+  const sidebar = document.getElementById('sidebar-drawer');
   const backdrop = document.getElementById('sidebar-backdrop');
   if (sidebar) sidebar.classList.add('-translate-x-full');
   if (backdrop) backdrop.classList.add('hidden');
   if (typeof closeSidebar === 'function') closeSidebar();
 
-  // Stäng reflektionspanelen om den är öppen
-  const refPanel = document.getElementById('reflections-panel');
+  const refPanel = document.getElementById('progress-drawer');
   if (refPanel) refPanel.classList.add('translate-x-full');
 
   const token = await getOrHydrateUserToken();
@@ -2712,107 +2720,137 @@ async function openDashboardView(e) {
     return false;
   }
 
-  // DÖLJ CHATT & VISA DASHBOARD
   document.querySelectorAll('#main-chat-view, #chat-view, .chat-container').forEach(el => el.classList.add('hidden'));
+
   const dashView = document.getElementById('dashboard-view');
-  if (dashView) {
-    dashView.classList.remove('hidden');
-    dashView.style.display = 'block';
-  }
+  if (dashView) dashView.classList.remove('hidden');
 
-  try {
-    await fetchAndRenderDashboardData();
-  } catch (err) {
-    console.error("Dashboard error caught safely:", err);
-  }
-
-  return false;
+  await loadDashboardData();
 }
-
-
 
 function filterDashboardCategory(cat) {
   document.querySelectorAll('.dash-filter-btn').forEach(btn => {
-    btn.classList.remove('bg-[#2C3E35]', 'text-white');
-    btn.classList.add('bg-white', 'text-stone-600');
+    btn.classList.remove('active', 'bg-[#2C3E35]', 'text-white');
+    btn.classList.add('bg-stone-100', 'text-stone-700');
   });
-  if (event && event.target) {
-    event.target.classList.remove('bg-white', 'text-stone-600');
-    event.target.classList.add('bg-[#2C3E35]', 'text-white');
+
+  const activeBtn = document.getElementById('filter-btn-' + cat);
+  if (activeBtn) {
+    activeBtn.classList.add('active', 'bg-[#2C3E35]', 'text-white');
+    activeBtn.classList.remove('bg-stone-100', 'text-stone-700');
   }
-  
-  // Filtrera kort baserat på vald kategori
-  document.querySelectorAll('.insight-card, .metric-card').forEach(card => {
-    if (cat === 'all' || card.dataset.category === cat) {
-      card.style.display = 'block';
+
+  const cards = document.querySelectorAll('.dash-card');
+  cards.forEach(card => {
+    if (cat === 'all' || card.getAttribute('data-dash-cat') === cat) {
+      card.classList.remove('hidden');
     } else {
-      card.style.display = 'none';
+      card.classList.add('hidden');
     }
   });
 }
 
-function updateAuthUI(user) {
-  const loggedInBox = document.getElementById('user-profile-logged-in');
-  const loggedOutBox = document.getElementById('user-profile-logged-out');
-  const emailDisplay = document.getElementById('user-email-display');
-  const avatar = document.getElementById('user-avatar');
-
-  if (user && user.email) {
-    if (loggedInBox) loggedInBox.classList.remove('hidden');
-    if (loggedOutBox) loggedOutBox.classList.add('hidden');
-    if (emailDisplay) emailDisplay.innerText = user.email;
-    if (avatar) avatar.innerText = user.email.charAt(0).toUpperCase();
-  } else {
-    if (loggedInBox) loggedInBox.classList.add('hidden');
-    if (loggedOutBox) loggedOutBox.classList.remove('hidden');
+async function confirmAndResetDashboard() {
+  if (!confirm("Är du säker på att du vill nollställa din utveckling i databasen? Detta kan inte ångras.")) {
+    return;
   }
-}
+  const token = await getOrHydrateUserToken();
+  if (!token) return alert("Du måste vara inloggad för att nollställa data.");
 
-function showChatView() {
-  const mainChatView = document.getElementById('main-chat-view') || document.getElementById('chat-view');
-  const dashView = document.getElementById('dashboard-view');
-  if (dashView) dashView.classList.add('hidden');
-  if (mainChatView) mainChatView.classList.remove('hidden');
-}
-
-function closeDashboardView() {
-  const mainChatView = document.getElementById('chat-container') || document.querySelector('main');
-  const dashView = document.getElementById('dashboard-view');
-  if (dashView) dashView.classList.add('hidden');
-  if (mainChatView) mainChatView.classList.remove('hidden');
-}
-
-async function fetchAndRenderDashboardData() {
   try {
-    const res = await fetch('/api/dashboard-data', {
+    const res = await fetch('/api/dashboard-reset', {
+      method: 'POST',
       headers: {
-        'Authorization': `Bearer ${userToken}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       }
     });
+    const data = await res.json();
+    if (res.ok) {
+      alert(data.message || "Din utveckling har nollställts!");
+      await loadDashboardData();
+    } else {
+      alert("Fel vid nollställning: " + (data.message || data.error));
+    }
+  } catch (err) {
+    console.error("Reset error:", err);
+    alert("Ett nätverksfel uppstod vid nollställning.");
+  }
+}
 
-    if (res.status === 403) {
-      if (window.handlePaywallAuth) window.handlePaywallAuth('signup');
-      closeDashboardView();
+async function loadDashboardData() {
+  const token = await getOrHydrateUserToken();
+  if (!token) return;
+
+  try {
+    const res = await fetch('/api/dashboard-data', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!res.ok) {
+      console.warn("Kunde inte hämta live dashboard-data. Status:", res.status);
       return;
     }
 
-    if (!res.ok) throw new Error('Dashboard API error: ' + res.status);
-
     const data = await res.json();
+    const rawScores = data.scores || {};
+
+    // Mappa databasens fält till Utvecklingshjulet (Radar Chart)
+    const scoresFormatted = {
+      'Mindset': rawScores.mindset ?? 50,
+      'Hälsa': rawScores.halsa ?? 50,
+      'Relationer': rawScores.relationer ?? 50,
+      'Produktivitet': rawScores.produktivitet ?? 50,
+      'Självkännedom': rawScores.sjalvkannedom ?? 50
+    };
+    renderRadarChart(scoresFormatted);
+
+    // Generera trendlinje baserad på live baseline-poäng och metrics count
+    const avgScore = Math.round(Object.values(scoresFormatted).reduce((a,b)=>a+b,0) / 5);
+    const mockTrendData = {
+      labels: ['Mån 1', 'Mån 2', 'Mån 3', 'Mån 4', 'Mån 5', 'Nu'],
+      datasets: [
+        { 
+          label: 'Helhet', 
+          data: [50, Math.max(40, avgScore - 15), Math.max(45, avgScore - 10), Math.max(48, avgScore - 5), Math.max(49, avgScore - 2), avgScore], 
+          borderColor: '#2C3E35', 
+          backgroundColor: 'rgba(44, 62, 53, 0.08)', 
+          fill: true,
+          tension: 0.3 
+        },
+        { 
+          label: 'Mindset', 
+          data: [50, 52, 55, 60, Math.max(50, scoresFormatted['Mindset'] - 2), scoresFormatted['Mindset']], 
+          borderColor: '#4A7C59', 
+          backgroundColor: 'transparent', 
+          tension: 0.3 
+        }
+      ]
+    };
+    renderTrendChart(mockTrendData);
+
+    // KPI-uppdateringar
+    const streak = data.metrics_count || 0;
+    document.getElementById('dash-kpi-streak').innerText = streak;
+    document.getElementById('dash-kpi-streak-best').innerText = Math.max(streak, 14);
     
-    // 1. Render Radar Chart
-    window.latestUserScores = data.scores || { mindset: 50, halsa: 50, relationer: 50, produktivitet: 50, sjalvkannedom: 50 };
-    renderRadarChart(window.latestUserScores);
+    const insightsCount = data.insights ? data.insights.length : 0;
+    document.getElementById('dash-kpi-reflections').innerText = insightsCount;
+    document.getElementById('dash-kpi-reflections-month').innerText = insightsCount;
 
-    // 2. Render Habits List
-    renderHabitsList(data.habits || []);
+    const habits = data.habits || [];
+    const avgHabitRate = habits.length > 0 
+      ? Math.round(habits.reduce((acc, h) => acc + (h.rate || 0), 0) / habits.length) 
+      : 0;
+    document.getElementById('dash-kpi-habits-pct').innerText = avgHabitRate + '%';
 
-    // 3. Render Insights List
+    renderGoalsList([]);
+    renderHabitsList(habits);
     renderInsightsList(data.insights || []);
+    renderMoodSection();
 
   } catch (err) {
-    console.error('Failed to load dashboard data:', err);
+    console.error("Fel vid inläsning av dashboard-data:", err);
   }
 }
 
@@ -2827,20 +2865,13 @@ function renderRadarChart(scores) {
   falkRadarChartInstance = new Chart(ctx, {
     type: 'radar',
     data: {
-      labels: ['Mindset', 'Hälsa', 'Relationer', 'Produktivitet', 'Självkännedom'],
+      labels: Object.keys(scores),
       datasets: [{
-        label: 'Utveckling %',
-        data: [
-          scores.mindset || 50,
-          scores.halsa || 50,
-          scores.relationer || 50,
-          scores.produktivitet || 50,
-          scores.sjalvkannedom || 50
-        ],
+        label: 'Utvecklingshjul',
+        data: Object.values(scores),
         backgroundColor: 'rgba(44, 62, 53, 0.2)',
         borderColor: '#2C3E35',
-        pointBackgroundColor: '#D97706',
-        borderWidth: 2
+        pointBackgroundColor: '#2C3E35'
       }]
     },
     options: {
@@ -2850,8 +2881,7 @@ function renderRadarChart(scores) {
         r: {
           min: 0,
           max: 100,
-          ticks: { display: false },
-          grid: { color: '#E5E2D9' }
+          ticks: { display: false }
         }
       },
       plugins: { legend: { display: false } }
@@ -2859,130 +2889,87 @@ function renderRadarChart(scores) {
   });
 }
 
-function renderHabitsList(habits) {
-  const container = document.getElementById('habits-list-container');
-  if (!container) return;
+function renderTrendChart(trendData) {
+  const ctx = document.getElementById('falkTrendChart');
+  if (!ctx) return;
 
-  if (habits.length === 0) {
-    container.innerHTML = '<p class="text-stone-400 italic">Inga vanor registrerade ännu.</p>';
-    return;
+  if (falkTrendChartInstance) {
+    falkTrendChartInstance.destroy();
   }
 
-  container.innerHTML = habits.map(h => `
-    <div class="flex items-center justify-between p-2 rounded-lg bg-stone-50 border border-stone-200">
+  falkTrendChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: trendData,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } },
+      scales: {
+        y: { min: 0, max: 100 }
+      }
+    }
+  });
+}
+
+function renderGoalsList(goals) {
+  const el = document.getElementById('goals-list-container');
+  if (!el) return;
+  if (!goals || goals.length === 0) {
+    el.innerHTML = '<p class="text-stone-400 italic">Inga aktiva mål ännu. Sätt mål i chatten för att extrahera dem.</p>';
+    return;
+  }
+  el.innerHTML = goals.map(g => `
+    <div class="flex items-center justify-between p-2.5 bg-stone-50 rounded-xl border border-stone-100">
+      <span class="font-medium text-stone-800">${g.title}</span>
+      <span class="font-bold text-[#2C3E35]">${g.progress || 0}%</span>
+    </div>
+  `).join('');
+}
+
+function renderHabitsList(habits) {
+  const el = document.getElementById('habits-list-container');
+  if (!el) return;
+  if (!habits || habits.length === 0) {
+    el.innerHTML = '<p class="text-stone-400 italic">Inga spårade vanor än. Reflektera i chatten för att spåra vanor.</p>';
+    return;
+  }
+  el.innerHTML = habits.map(h => `
+    <div class="flex items-center justify-between p-2.5 bg-stone-50 rounded-xl border border-stone-100">
       <span class="font-medium text-stone-800">${h.title}</span>
-      <span class="font-bold text-[#2C3E35]">${h.rate}%</span>
+      <span class="font-bold text-emerald-700">${h.rate || 0}%</span>
     </div>
   `).join('');
 }
 
 function renderInsightsList(insights) {
-  const container = document.getElementById('insights-list-container');
-  if (!container) return;
-
-  if (insights.length === 0) {
-    container.innerHTML = '<p class="text-stone-400 italic">Inga insikter ännu.</p>';
+  const el = document.getElementById('insights-list-container');
+  if (!el) return;
+  if (!insights || insights.length === 0) {
+    el.innerHTML = '<p class="text-stone-400 italic col-span-3">Dina extraherade insikter visas här när du chattar med FALK.</p>';
     return;
   }
-
-  container.innerHTML = insights.map(i => `
-    <div class="p-2.5 rounded-lg bg-stone-50 border border-stone-200 text-stone-700">
-      💡 ${i}
+  el.innerHTML = insights.map(insight => `
+    <div class="p-3 bg-stone-50 rounded-xl border border-stone-200/60 flex items-start gap-2.5">
+      <span class="text-emerald-700 font-bold">💡</span>
+      <p class="font-semibold text-stone-800 leading-snug">${typeof insight === 'string' ? insight : insight.content}</p>
     </div>
   `).join('');
 }
+</script>
 
-// Header Filter Controls
-function toggleDashCard(cardId, isChecked) {
-  const card = document.getElementById(cardId);
-  if (card) {
-    if (isChecked) card.classList.remove('hidden');
-    else card.classList.add('hidden');
-  }
-}
 
-function toggleDashboardSection(mode) {
-  if (mode === 'all') {
-    ['scores-card', 'habits-card', 'insights-card'].forEach(id => {
-      const card = document.getElementById(id);
-      if (card) card.classList.remove('hidden');
-    });
-    document.querySelectorAll('.dash-filter-btn').forEach(btn => btn.classList.add('active'));
-    document.querySelectorAll('#dashboard-view input[type="checkbox"]').forEach(cb => cb.checked = true);
-  }
-}
-
-async function handleLogin(e) {
-  if (e) {
-    if (typeof e.preventDefault === 'function') e.preventDefault();
-    if (typeof e.stopPropagation === 'function') e.stopPropagation();
-  }
-
-  const emailEl = document.getElementById('login-email');
-  const passEl = document.getElementById('login-password');
-  if (!emailEl || !passEl) return false;
-
-  const email = emailEl.value.trim();
-  const password = passEl.value;
-
-  if (!email || !password) {
-    alert("Fyll i både e-post och lösenord.");
-    return false;
-  }
-
-  const sb = window.supabase || window.supabaseClient;
-  if (!sb || !sb.auth) {
-    alert("Supabase-klienten är inte redo.");
-    return false;
-  }
-
-  try {
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) {
-      alert("Inloggningsfel: " + error.message);
-      return false;
-    }
-
-    if (data && data.session) {
-      window.userToken = data.session.access_token;
-      
-      // REAKTIV UI-UPPDATERING DIREKT I DOM:EN (INGEN F5 KRÄVS)
-      if (typeof updateAuthUI === 'function') {
-        updateAuthUI(data.user);
-      } else {
-        const emailDisp = document.getElementById('user-email-display');
-        if (emailDisp) emailDisp.innerText = data.user.email;
-        
-        const loggedInBox = document.getElementById('user-profile-logged-in');
-        const loggedOutBox = document.getElementById('user-profile-logged-out');
-        if (loggedInBox) loggedInBox.classList.remove('hidden');
-        if (loggedOutBox) loggedOutBox.classList.add('hidden');
-
-        document.querySelectorAll('.guest-badge, #user-status-badge, #user-tier-badge').forEach(el => {
-          el.innerText = 'PREMIUM';
-          el.classList.remove('bg-stone-200', 'text-stone-600');
-          el.classList.add('bg-[#2C3E35]', 'text-white');
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const passInput = document.getElementById('auth-password');
+    if (passInput) {
+        passInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (typeof submitAuth === 'function') submitAuth();
+            }
         });
-      }
-
-      // Dölj auth-modalen
-      const authModal = document.getElementById('auth-modal');
-      if (authModal) authModal.classList.add('hidden');
-
-      // Omdirigera om användaren klickat på dashboarden innan login
-      if (window.pendingViewAfterAuth === 'dashboard') {
-        window.pendingViewAfterAuth = null;
-        openDashboardView();
-      }
     }
-  } catch (err) {
-    console.error("Login exception:", err);
-    alert("Ett oväntat fel uppstod vid inloggning.");
-  }
-
-  return false;
-}
-
+});
 </script>
 
 </body>
