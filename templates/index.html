@@ -2002,37 +2002,69 @@ window.openPaywallModal = function(reason) {
 // === FALK DASHBOARD CONTROLLER ===
 let falkRadarChartInstance = null;
 
+
+// Fail-safe funktion för att alltid hämta giltig userToken från minne, Supabase eller localStorage
+async function getOrHydrateUserToken() {
+  if (window.userToken && window.userToken.length > 20) return window.userToken;
+
+  // 1. Testa globala Supabase-klienter
+  const sb = window.supabase || window.supabaseClient;
+  if (sb && sb.auth) {
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session && session.access_token) {
+        window.userToken = session.access_token;
+        if (typeof updateAuthUI === 'function') updateAuthUI(session.user);
+        return window.userToken;
+      }
+    } catch (e) { console.warn("Supabase session check exception:", e); }
+  }
+
+  // 2. Failsafe: Direkt inspektion av localStorage om Supabase-klienten inte svarat än
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && (key.includes('auth-token') || key.startsWith('sb-'))) {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(key));
+        if (parsed && parsed.access_token) {
+          window.userToken = parsed.access_token;
+          if (parsed.user && typeof updateAuthUI === 'function') updateAuthUI(parsed.user);
+          return window.userToken;
+        }
+      } catch(err) {}
+    }
+  }
+
+  return null;
+}
+
+// Skriv över openDashboardView med fail-safe token-kontroll
 async function openDashboardView(e) {
   if (e && e.preventDefault) e.preventDefault();
 
-  // Stäng reflektionspanelen om öppen
+  // Stäng reflektionspanelen om den är öppen
   const refPanel = document.getElementById('reflections-panel');
   if (refPanel) refPanel.classList.add('translate-x-full');
 
-  // Hämta session om userToken saknas
-  if (!window.userToken && window.supabaseClient && window.supabaseClient.auth) {
-    try {
-      const { data: { session } } = await window.supabaseClient.auth.getSession();
-      if (session) window.userToken = session.access_token;
-    } catch (err) { console.warn('Auth check issue:', err); }
-  }
+  // Hämta token via fail-safe metoden
+  const token = await getOrHydrateUserToken();
 
-  // Om oautentiserad, öppna login-modal utan att krascha vyn
-  if (!window.userToken) {
-    if (typeof openAuthModal === 'function') openAuthModal('signup');
+  if (!token) {
+    // Spara att användaren vill till dashboarden efter inloggning
+    window.pendingViewAfterAuth = 'dashboard';
+    if (typeof openAuthModal === 'function') openAuthModal('login');
     return false;
   }
 
-  // LÅS VYN: Dölj alla chattvyer och visa enbart dashboarden
+  // LÅS VYN: Dölj alla chatt-containrar och visa enbart dashboarden
   document.querySelectorAll('#main-chat-view, #chat-view, .chat-container').forEach(el => el.classList.add('hidden'));
   const dashView = document.getElementById('dashboard-view');
   if (dashView) dashView.classList.remove('hidden');
 
-  // Hämta data utan att tillåta att fel kastar vyn tillbaka till chatten
   try {
     await fetchAndRenderDashboardData();
   } catch (err) {
-    console.error('Kunde inte läsa in mätvärden:', err);
+    console.error('Kunde inte ladda mätvärden:', err);
   }
 
   if (window.falkRadarChartInstance) {
@@ -2040,6 +2072,7 @@ async function openDashboardView(e) {
   }
   return false;
 }
+
 
 function filterDashboardCategory(cat) {
   document.querySelectorAll('.dash-filter-btn').forEach(btn => {
