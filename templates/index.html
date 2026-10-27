@@ -276,6 +276,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 </style>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-warm-beige text-slate-800 h-screen max-h-screen flex flex-col font-sans overflow-hidden">
 
@@ -1874,6 +1875,226 @@ window.openPaywallModal = function(reason) {
         modal.classList.remove('hidden');
     }
 };
+</script>
+
+
+<!-- === FALK MIN UTVECKLING DASHBOARD (PREMIUM ONLY) === -->
+<div id="dashboard-view" class="hidden min-h-screen bg-[#F4F1EA] p-4 md:p-8 text-[#2C3E35]">
+  
+  <!-- DASHBOARD HEADER & FILTER BAR -->
+  <div class="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-[#E5E2D9] pb-4">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight">Min utveckling</h1>
+      <p class="text-xs text-stone-600">Översikt över din resa mot ditt bästa jag.</p>
+    </div>
+
+    <!-- HEADER FILTER TOGGLES -->
+    <div class="flex flex-wrap items-center gap-2 text-xs bg-white p-2 rounded-xl border border-[#E5E2D9] shadow-sm">
+      <span class="font-semibold px-2 text-stone-500">Visa:</span>
+      <button onclick="toggleDashboardSection('all')" class="dash-filter-btn active bg-[#2C3E35] text-white px-2.5 py-1 rounded-lg">Visa alla</button>
+      <label class="flex items-center gap-1.5 px-2 cursor-pointer">
+        <input type="checkbox" checked onchange="toggleDashCard('scores-card', this.checked)" class="accent-[#2C3E35]"> Hjul
+      </label>
+      <label class="flex items-center gap-1.5 px-2 cursor-pointer">
+        <input type="checkbox" checked onchange="toggleDashCard('habits-card', this.checked)" class="accent-[#2C3E35]"> Vanor
+      </label>
+      <label class="flex items-center gap-1.5 px-2 cursor-pointer">
+        <input type="checkbox" checked onchange="toggleDashCard('insights-card', this.checked)" class="accent-[#2C3E35]"> Insikter
+      </label>
+    </div>
+  </div>
+
+  <!-- DASHBOARD CARDS GRID -->
+  <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+    
+    <!-- UTVECKLINGSHJUL (RADAR CHART) -->
+    <div id="scores-card" class="bg-white p-5 rounded-2xl border border-[#E5E2D9] shadow-sm md:col-span-1">
+      <h3 class="text-sm font-bold mb-4 uppercase tracking-wider text-stone-500">Utvecklingshjul</h3>
+      <div class="relative h-64 w-full flex items-center justify-center">
+        <canvas id="falkRadarChart"></canvas>
+      </div>
+    </div>
+
+    <!-- MINA VANOR -->
+    <div id="habits-card" class="bg-white p-5 rounded-2xl border border-[#E5E2D9] shadow-sm md:col-span-1">
+      <h3 class="text-sm font-bold mb-4 uppercase tracking-wider text-stone-500">Mina vanor</h3>
+      <div id="habits-list-container" class="space-y-3 text-xs">
+        <p class="text-stone-400 italic">Laddar vanor...</p>
+      </div>
+    </div>
+
+    <!-- SENASTE INSIKTER -->
+    <div id="insights-card" class="bg-white p-5 rounded-2xl border border-[#E5E2D9] shadow-sm md:col-span-1">
+      <h3 class="text-sm font-bold mb-4 uppercase tracking-wider text-stone-500">Senaste insikter</h3>
+      <div id="insights-list-container" class="space-y-3 text-xs">
+        <p class="text-stone-400 italic">Laddar insikter...</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<script>
+// === FALK DASHBOARD CONTROLLER ===
+let falkRadarChartInstance = null;
+
+async function openDashboardView() {
+  const mainChatView = document.getElementById('chat-container') || document.querySelector('main');
+  const dashView = document.getElementById('dashboard-view');
+  
+  if (!dashView) return;
+
+  // Check user token / guest status
+  if (typeof userToken === 'undefined' || !userToken) {
+    if (typeof openAuthModal === 'function') openAuthModal('signup');
+    else if (window.handlePaywallAuth) window.handlePaywallAuth('signup');
+    return;
+  }
+
+  // Switch views
+  if (mainChatView) mainChatView.classList.add('hidden');
+  dashView.classList.remove('hidden');
+
+  // Load backend analytics
+  await fetchAndRenderDashboardData();
+}
+
+function closeDashboardView() {
+  const mainChatView = document.getElementById('chat-container') || document.querySelector('main');
+  const dashView = document.getElementById('dashboard-view');
+  if (dashView) dashView.classList.add('hidden');
+  if (mainChatView) mainChatView.classList.remove('hidden');
+}
+
+async function fetchAndRenderDashboardData() {
+  try {
+    const res = await fetch('/api/dashboard-data', {
+      headers: {
+        'Authorization': `Bearer ${userToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (res.status === 403) {
+      if (window.handlePaywallAuth) window.handlePaywallAuth('signup');
+      closeDashboardView();
+      return;
+    }
+
+    if (!res.ok) throw new Error('Dashboard API error: ' + res.status);
+
+    const data = await res.json();
+    
+    // 1. Render Radar Chart
+    renderRadarChart(data.scores || {});
+
+    // 2. Render Habits List
+    renderHabitsList(data.habits || []);
+
+    // 3. Render Insights List
+    renderInsightsList(data.insights || []);
+
+  } catch (err) {
+    console.error('Failed to load dashboard data:', err);
+  }
+}
+
+function renderRadarChart(scores) {
+  const ctx = document.getElementById('falkRadarChart');
+  if (!ctx) return;
+
+  if (falkRadarChartInstance) {
+    falkRadarChartInstance.destroy();
+  }
+
+  falkRadarChartInstance = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: ['Mindset', 'Hälsa', 'Relationer', 'Produktivitet', 'Självkännedom'],
+      datasets: [{
+        label: 'Utveckling %',
+        data: [
+          scores.mindset || 50,
+          scores.halsa || 50,
+          scores.relationer || 50,
+          scores.produktivitet || 50,
+          scores.sjalvkannedom || 50
+        ],
+        backgroundColor: 'rgba(44, 62, 53, 0.2)',
+        borderColor: '#2C3E35',
+        pointBackgroundColor: '#D97706',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        r: {
+          min: 0,
+          max: 100,
+          ticks: { display: false },
+          grid: { color: '#E5E2D9' }
+        }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+function renderHabitsList(habits) {
+  const container = document.getElementById('habits-list-container');
+  if (!container) return;
+
+  if (habits.length === 0) {
+    container.innerHTML = '<p class="text-stone-400 italic">Inga vanor registrerade ännu.</p>';
+    return;
+  }
+
+  container.innerHTML = habits.map(h => `
+    <div class="flex items-center justify-between p-2 rounded-lg bg-stone-50 border border-stone-200">
+      <span class="font-medium text-stone-800">${h.title}</span>
+      <span class="font-bold text-[#2C3E35]">${h.rate}%</span>
+    </div>
+  `).join('');
+}
+
+function renderInsightsList(insights) {
+  const container = document.getElementById('insights-list-container');
+  if (!container) return;
+
+  if (insights.length === 0) {
+    container.innerHTML = '<p class="text-stone-400 italic">Inga insikter ännu.</p>';
+    return;
+  }
+
+  container.innerHTML = insights.map(i => `
+    <div class="p-2.5 rounded-lg bg-stone-50 border border-stone-200 text-stone-700">
+      💡 ${i}
+    </div>
+  `).join('');
+}
+
+// Header Filter Controls
+function toggleDashCard(cardId, isChecked) {
+  const card = document.getElementById(cardId);
+  if (card) {
+    if (isChecked) card.classList.remove('hidden');
+    else card.classList.add('hidden');
+  }
+}
+
+function toggleDashboardSection(mode) {
+  if (mode === 'all') {
+    ['scores-card', 'habits-card', 'insights-card'].forEach(id => {
+      const card = document.getElementById(id);
+      if (card) card.classList.remove('hidden');
+    });
+    document.querySelectorAll('.dash-filter-btn').forEach(btn => btn.classList.add('active'));
+    document.querySelectorAll('#dashboard-view input[type="checkbox"]').forEach(cb => cb.checked = true);
+  }
+}
 </script>
 
 </body>
