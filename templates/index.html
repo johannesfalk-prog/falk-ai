@@ -5,8 +5,152 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FALK - En kompass med perspektiv.</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22 font-weight=%22bold%22 fill=%22%234E5C4B%22>F</text></svg>">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com">
+async function handleLogin(e) {
+  if (e) {
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+  }
+
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  if (!emailEl || !passEl) return false;
+
+  const email = emailEl.value.trim();
+  const password = passEl.value;
+
+  if (!email || !password) {
+    alert("Fyll i både e-post och lösenord.");
+    return false;
+  }
+
+  const sb = window.supabase || window.supabaseClient;
+  if (!sb || !sb.auth) {
+    alert("Supabase-klienten är inte redo.");
+    return false;
+  }
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      alert("Inloggningsfel: " + error.message);
+      return false;
+    }
+
+    if (data && data.session) {
+      window.userToken = data.session.access_token;
+      
+      // REAKTIV UI-UPPDATERING DIREKT I DOM:EN (INGEN F5 KRÄVS)
+      if (typeof updateAuthUI === 'function') {
+        updateAuthUI(data.user);
+      } else {
+        const emailDisp = document.getElementById('user-email-display');
+        if (emailDisp) emailDisp.innerText = data.user.email;
+        
+        const loggedInBox = document.getElementById('user-profile-logged-in');
+        const loggedOutBox = document.getElementById('user-profile-logged-out');
+        if (loggedInBox) loggedInBox.classList.remove('hidden');
+        if (loggedOutBox) loggedOutBox.classList.add('hidden');
+
+        document.querySelectorAll('.guest-badge, #user-status-badge, #user-tier-badge').forEach(el => {
+          el.innerText = 'PREMIUM';
+          el.classList.remove('bg-stone-200', 'text-stone-600');
+          el.classList.add('bg-[#2C3E35]', 'text-white');
+        });
+      }
+
+      // Dölj auth-modalen
+      const authModal = document.getElementById('auth-modal');
+      if (authModal) authModal.classList.add('hidden');
+
+      // Omdirigera om användaren klickat på dashboarden innan login
+      if (window.pendingViewAfterAuth === 'dashboard') {
+        window.pendingViewAfterAuth = null;
+        openDashboardView();
+      }
+    }
+  } catch (err) {
+    console.error("Login exception:", err);
+    alert("Ett oväntat fel uppstod vid inloggning.");
+  }
+
+  return false;
+}
+
+</script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+async function handleLogin(e) {
+  if (e) {
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+  }
+
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  if (!emailEl || !passEl) return false;
+
+  const email = emailEl.value.trim();
+  const password = passEl.value;
+
+  if (!email || !password) {
+    alert("Fyll i både e-post och lösenord.");
+    return false;
+  }
+
+  const sb = window.supabase || window.supabaseClient;
+  if (!sb || !sb.auth) {
+    alert("Supabase-klienten är inte redo.");
+    return false;
+  }
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      alert("Inloggningsfel: " + error.message);
+      return false;
+    }
+
+    if (data && data.session) {
+      window.userToken = data.session.access_token;
+      
+      // REAKTIV UI-UPPDATERING DIREKT I DOM:EN (INGEN F5 KRÄVS)
+      if (typeof updateAuthUI === 'function') {
+        updateAuthUI(data.user);
+      } else {
+        const emailDisp = document.getElementById('user-email-display');
+        if (emailDisp) emailDisp.innerText = data.user.email;
+        
+        const loggedInBox = document.getElementById('user-profile-logged-in');
+        const loggedOutBox = document.getElementById('user-profile-logged-out');
+        if (loggedInBox) loggedInBox.classList.remove('hidden');
+        if (loggedOutBox) loggedOutBox.classList.add('hidden');
+
+        document.querySelectorAll('.guest-badge, #user-status-badge, #user-tier-badge').forEach(el => {
+          el.innerText = 'PREMIUM';
+          el.classList.remove('bg-stone-200', 'text-stone-600');
+          el.classList.add('bg-[#2C3E35]', 'text-white');
+        });
+      }
+
+      // Dölj auth-modalen
+      const authModal = document.getElementById('auth-modal');
+      if (authModal) authModal.classList.add('hidden');
+
+      // Omdirigera om användaren klickat på dashboarden innan login
+      if (window.pendingViewAfterAuth === 'dashboard') {
+        window.pendingViewAfterAuth = null;
+        openDashboardView();
+      }
+    }
+  } catch (err) {
+    console.error("Login exception:", err);
+    alert("Ett oväntat fel uppstod vid inloggning.");
+  }
+
+  return false;
+}
+
+</script>
     <script>
 
 window.ensureProgressRendered = function() {
@@ -155,7 +299,79 @@ function handleLockedFeature(feature) { return window.handleLockedFeature(featur
                 }
             }
         }
-    </script>
+    
+async function handleLogin(e) {
+  if (e) {
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+  }
+
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  if (!emailEl || !passEl) return false;
+
+  const email = emailEl.value.trim();
+  const password = passEl.value;
+
+  if (!email || !password) {
+    alert("Fyll i både e-post och lösenord.");
+    return false;
+  }
+
+  const sb = window.supabase || window.supabaseClient;
+  if (!sb || !sb.auth) {
+    alert("Supabase-klienten är inte redo.");
+    return false;
+  }
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      alert("Inloggningsfel: " + error.message);
+      return false;
+    }
+
+    if (data && data.session) {
+      window.userToken = data.session.access_token;
+      
+      // REAKTIV UI-UPPDATERING DIREKT I DOM:EN (INGEN F5 KRÄVS)
+      if (typeof updateAuthUI === 'function') {
+        updateAuthUI(data.user);
+      } else {
+        const emailDisp = document.getElementById('user-email-display');
+        if (emailDisp) emailDisp.innerText = data.user.email;
+        
+        const loggedInBox = document.getElementById('user-profile-logged-in');
+        const loggedOutBox = document.getElementById('user-profile-logged-out');
+        if (loggedInBox) loggedInBox.classList.remove('hidden');
+        if (loggedOutBox) loggedOutBox.classList.add('hidden');
+
+        document.querySelectorAll('.guest-badge, #user-status-badge, #user-tier-badge').forEach(el => {
+          el.innerText = 'PREMIUM';
+          el.classList.remove('bg-stone-200', 'text-stone-600');
+          el.classList.add('bg-[#2C3E35]', 'text-white');
+        });
+      }
+
+      // Dölj auth-modalen
+      const authModal = document.getElementById('auth-modal');
+      if (authModal) authModal.classList.add('hidden');
+
+      // Omdirigera om användaren klickat på dashboarden innan login
+      if (window.pendingViewAfterAuth === 'dashboard') {
+        window.pendingViewAfterAuth = null;
+        openDashboardView();
+      }
+    }
+  } catch (err) {
+    console.error("Login exception:", err);
+    alert("Ett oväntat fel uppstod vid inloggning.");
+  }
+
+  return false;
+}
+
+</script>
     <style>
         body { background-color: #E8DCC4; color: #2C352B; }
         .focus-slider::-webkit-slider-thumb {
@@ -195,6 +411,78 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 });
+
+async function handleLogin(e) {
+  if (e) {
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+  }
+
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  if (!emailEl || !passEl) return false;
+
+  const email = emailEl.value.trim();
+  const password = passEl.value;
+
+  if (!email || !password) {
+    alert("Fyll i både e-post och lösenord.");
+    return false;
+  }
+
+  const sb = window.supabase || window.supabaseClient;
+  if (!sb || !sb.auth) {
+    alert("Supabase-klienten är inte redo.");
+    return false;
+  }
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      alert("Inloggningsfel: " + error.message);
+      return false;
+    }
+
+    if (data && data.session) {
+      window.userToken = data.session.access_token;
+      
+      // REAKTIV UI-UPPDATERING DIREKT I DOM:EN (INGEN F5 KRÄVS)
+      if (typeof updateAuthUI === 'function') {
+        updateAuthUI(data.user);
+      } else {
+        const emailDisp = document.getElementById('user-email-display');
+        if (emailDisp) emailDisp.innerText = data.user.email;
+        
+        const loggedInBox = document.getElementById('user-profile-logged-in');
+        const loggedOutBox = document.getElementById('user-profile-logged-out');
+        if (loggedInBox) loggedInBox.classList.remove('hidden');
+        if (loggedOutBox) loggedOutBox.classList.add('hidden');
+
+        document.querySelectorAll('.guest-badge, #user-status-badge, #user-tier-badge').forEach(el => {
+          el.innerText = 'PREMIUM';
+          el.classList.remove('bg-stone-200', 'text-stone-600');
+          el.classList.add('bg-[#2C3E35]', 'text-white');
+        });
+      }
+
+      // Dölj auth-modalen
+      const authModal = document.getElementById('auth-modal');
+      if (authModal) authModal.classList.add('hidden');
+
+      // Omdirigera om användaren klickat på dashboarden innan login
+      if (window.pendingViewAfterAuth === 'dashboard') {
+        window.pendingViewAfterAuth = null;
+        openDashboardView();
+      }
+    }
+  } catch (err) {
+    console.error("Login exception:", err);
+    alert("Ett oväntat fel uppstod vid inloggning.");
+  }
+
+  return false;
+}
+
 </script>
 
 <style id="falk-custom-paywall-css">
@@ -276,7 +564,79 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js">
+async function handleLogin(e) {
+  if (e) {
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+  }
+
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  if (!emailEl || !passEl) return false;
+
+  const email = emailEl.value.trim();
+  const password = passEl.value;
+
+  if (!email || !password) {
+    alert("Fyll i både e-post och lösenord.");
+    return false;
+  }
+
+  const sb = window.supabase || window.supabaseClient;
+  if (!sb || !sb.auth) {
+    alert("Supabase-klienten är inte redo.");
+    return false;
+  }
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      alert("Inloggningsfel: " + error.message);
+      return false;
+    }
+
+    if (data && data.session) {
+      window.userToken = data.session.access_token;
+      
+      // REAKTIV UI-UPPDATERING DIREKT I DOM:EN (INGEN F5 KRÄVS)
+      if (typeof updateAuthUI === 'function') {
+        updateAuthUI(data.user);
+      } else {
+        const emailDisp = document.getElementById('user-email-display');
+        if (emailDisp) emailDisp.innerText = data.user.email;
+        
+        const loggedInBox = document.getElementById('user-profile-logged-in');
+        const loggedOutBox = document.getElementById('user-profile-logged-out');
+        if (loggedInBox) loggedInBox.classList.remove('hidden');
+        if (loggedOutBox) loggedOutBox.classList.add('hidden');
+
+        document.querySelectorAll('.guest-badge, #user-status-badge, #user-tier-badge').forEach(el => {
+          el.innerText = 'PREMIUM';
+          el.classList.remove('bg-stone-200', 'text-stone-600');
+          el.classList.add('bg-[#2C3E35]', 'text-white');
+        });
+      }
+
+      // Dölj auth-modalen
+      const authModal = document.getElementById('auth-modal');
+      if (authModal) authModal.classList.add('hidden');
+
+      // Omdirigera om användaren klickat på dashboarden innan login
+      if (window.pendingViewAfterAuth === 'dashboard') {
+        window.pendingViewAfterAuth = null;
+        openDashboardView();
+      }
+    }
+  } catch (err) {
+    console.error("Login exception:", err);
+    alert("Ett oväntat fel uppstod vid inloggning.");
+  }
+
+  return false;
+}
+
+</script>
 </head>
 <body class="bg-warm-beige text-slate-800 h-screen max-h-screen flex flex-col font-sans overflow-hidden">
 
@@ -334,7 +694,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <a href="#" onclick="openDashboardView(); return false;" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-stone-700 hover:bg-stone-200/60 font-medium text-sm transition">
           <svg class="w-5 h-5 text-[#2C3E35]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z"/></svg>
           <span>Min utveckling</span>
-          <span class="ml-auto bg-[#2C3E35] text-white text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">PRO</span>
+          
         </a>
       </nav>
 
@@ -1604,7 +1964,79 @@ function switchTab(tab) {
         } catch (err) {
             console.error("[BOOT ERROR] initAuth failed:", err);
         }
-    </script>
+    
+async function handleLogin(e) {
+  if (e) {
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+  }
+
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  if (!emailEl || !passEl) return false;
+
+  const email = emailEl.value.trim();
+  const password = passEl.value;
+
+  if (!email || !password) {
+    alert("Fyll i både e-post och lösenord.");
+    return false;
+  }
+
+  const sb = window.supabase || window.supabaseClient;
+  if (!sb || !sb.auth) {
+    alert("Supabase-klienten är inte redo.");
+    return false;
+  }
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      alert("Inloggningsfel: " + error.message);
+      return false;
+    }
+
+    if (data && data.session) {
+      window.userToken = data.session.access_token;
+      
+      // REAKTIV UI-UPPDATERING DIREKT I DOM:EN (INGEN F5 KRÄVS)
+      if (typeof updateAuthUI === 'function') {
+        updateAuthUI(data.user);
+      } else {
+        const emailDisp = document.getElementById('user-email-display');
+        if (emailDisp) emailDisp.innerText = data.user.email;
+        
+        const loggedInBox = document.getElementById('user-profile-logged-in');
+        const loggedOutBox = document.getElementById('user-profile-logged-out');
+        if (loggedInBox) loggedInBox.classList.remove('hidden');
+        if (loggedOutBox) loggedOutBox.classList.add('hidden');
+
+        document.querySelectorAll('.guest-badge, #user-status-badge, #user-tier-badge').forEach(el => {
+          el.innerText = 'PREMIUM';
+          el.classList.remove('bg-stone-200', 'text-stone-600');
+          el.classList.add('bg-[#2C3E35]', 'text-white');
+        });
+      }
+
+      // Dölj auth-modalen
+      const authModal = document.getElementById('auth-modal');
+      if (authModal) authModal.classList.add('hidden');
+
+      // Omdirigera om användaren klickat på dashboarden innan login
+      if (window.pendingViewAfterAuth === 'dashboard') {
+        window.pendingViewAfterAuth = null;
+        openDashboardView();
+      }
+    }
+  } catch (err) {
+    console.error("Login exception:", err);
+    alert("Ett oväntat fel uppstod vid inloggning.");
+  }
+
+  return false;
+}
+
+</script>
 <script>
 // ==========================================
 // UNIFIERAD OCH SKOTTSÄKER AKTIONS-MOTOR
@@ -1722,6 +2154,78 @@ window.rateResponse = function(msgId, direction, btnElement) {
         body: JSON.stringify({ message_id: msgId, direction: direction })
     }).catch(err => console.log('Feedback API error:', err));
 };
+
+async function handleLogin(e) {
+  if (e) {
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+  }
+
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  if (!emailEl || !passEl) return false;
+
+  const email = emailEl.value.trim();
+  const password = passEl.value;
+
+  if (!email || !password) {
+    alert("Fyll i både e-post och lösenord.");
+    return false;
+  }
+
+  const sb = window.supabase || window.supabaseClient;
+  if (!sb || !sb.auth) {
+    alert("Supabase-klienten är inte redo.");
+    return false;
+  }
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      alert("Inloggningsfel: " + error.message);
+      return false;
+    }
+
+    if (data && data.session) {
+      window.userToken = data.session.access_token;
+      
+      // REAKTIV UI-UPPDATERING DIREKT I DOM:EN (INGEN F5 KRÄVS)
+      if (typeof updateAuthUI === 'function') {
+        updateAuthUI(data.user);
+      } else {
+        const emailDisp = document.getElementById('user-email-display');
+        if (emailDisp) emailDisp.innerText = data.user.email;
+        
+        const loggedInBox = document.getElementById('user-profile-logged-in');
+        const loggedOutBox = document.getElementById('user-profile-logged-out');
+        if (loggedInBox) loggedInBox.classList.remove('hidden');
+        if (loggedOutBox) loggedOutBox.classList.add('hidden');
+
+        document.querySelectorAll('.guest-badge, #user-status-badge, #user-tier-badge').forEach(el => {
+          el.innerText = 'PREMIUM';
+          el.classList.remove('bg-stone-200', 'text-stone-600');
+          el.classList.add('bg-[#2C3E35]', 'text-white');
+        });
+      }
+
+      // Dölj auth-modalen
+      const authModal = document.getElementById('auth-modal');
+      if (authModal) authModal.classList.add('hidden');
+
+      // Omdirigera om användaren klickat på dashboarden innan login
+      if (window.pendingViewAfterAuth === 'dashboard') {
+        window.pendingViewAfterAuth = null;
+        openDashboardView();
+      }
+    }
+  } catch (err) {
+    console.error("Login exception:", err);
+    alert("Ett oväntat fel uppstod vid inloggning.");
+  }
+
+  return false;
+}
+
 </script>
 
 <script>
@@ -1842,6 +2346,78 @@ window.navigateVersion = function(msgId, direction) {
         window.renderMessageVersion(msgId);
     }
 };
+
+async function handleLogin(e) {
+  if (e) {
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+  }
+
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  if (!emailEl || !passEl) return false;
+
+  const email = emailEl.value.trim();
+  const password = passEl.value;
+
+  if (!email || !password) {
+    alert("Fyll i både e-post och lösenord.");
+    return false;
+  }
+
+  const sb = window.supabase || window.supabaseClient;
+  if (!sb || !sb.auth) {
+    alert("Supabase-klienten är inte redo.");
+    return false;
+  }
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      alert("Inloggningsfel: " + error.message);
+      return false;
+    }
+
+    if (data && data.session) {
+      window.userToken = data.session.access_token;
+      
+      // REAKTIV UI-UPPDATERING DIREKT I DOM:EN (INGEN F5 KRÄVS)
+      if (typeof updateAuthUI === 'function') {
+        updateAuthUI(data.user);
+      } else {
+        const emailDisp = document.getElementById('user-email-display');
+        if (emailDisp) emailDisp.innerText = data.user.email;
+        
+        const loggedInBox = document.getElementById('user-profile-logged-in');
+        const loggedOutBox = document.getElementById('user-profile-logged-out');
+        if (loggedInBox) loggedInBox.classList.remove('hidden');
+        if (loggedOutBox) loggedOutBox.classList.add('hidden');
+
+        document.querySelectorAll('.guest-badge, #user-status-badge, #user-tier-badge').forEach(el => {
+          el.innerText = 'PREMIUM';
+          el.classList.remove('bg-stone-200', 'text-stone-600');
+          el.classList.add('bg-[#2C3E35]', 'text-white');
+        });
+      }
+
+      // Dölj auth-modalen
+      const authModal = document.getElementById('auth-modal');
+      if (authModal) authModal.classList.add('hidden');
+
+      // Omdirigera om användaren klickat på dashboarden innan login
+      if (window.pendingViewAfterAuth === 'dashboard') {
+        window.pendingViewAfterAuth = null;
+        openDashboardView();
+      }
+    }
+  } catch (err) {
+    console.error("Login exception:", err);
+    alert("Ett oväntat fel uppstod vid inloggning.");
+  }
+
+  return false;
+}
+
 </script>
 
 
@@ -1934,6 +2510,78 @@ window.openPaywallModal = function(reason) {
         modal.classList.remove('hidden');
     }
 };
+
+async function handleLogin(e) {
+  if (e) {
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+  }
+
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  if (!emailEl || !passEl) return false;
+
+  const email = emailEl.value.trim();
+  const password = passEl.value;
+
+  if (!email || !password) {
+    alert("Fyll i både e-post och lösenord.");
+    return false;
+  }
+
+  const sb = window.supabase || window.supabaseClient;
+  if (!sb || !sb.auth) {
+    alert("Supabase-klienten är inte redo.");
+    return false;
+  }
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      alert("Inloggningsfel: " + error.message);
+      return false;
+    }
+
+    if (data && data.session) {
+      window.userToken = data.session.access_token;
+      
+      // REAKTIV UI-UPPDATERING DIREKT I DOM:EN (INGEN F5 KRÄVS)
+      if (typeof updateAuthUI === 'function') {
+        updateAuthUI(data.user);
+      } else {
+        const emailDisp = document.getElementById('user-email-display');
+        if (emailDisp) emailDisp.innerText = data.user.email;
+        
+        const loggedInBox = document.getElementById('user-profile-logged-in');
+        const loggedOutBox = document.getElementById('user-profile-logged-out');
+        if (loggedInBox) loggedInBox.classList.remove('hidden');
+        if (loggedOutBox) loggedOutBox.classList.add('hidden');
+
+        document.querySelectorAll('.guest-badge, #user-status-badge, #user-tier-badge').forEach(el => {
+          el.innerText = 'PREMIUM';
+          el.classList.remove('bg-stone-200', 'text-stone-600');
+          el.classList.add('bg-[#2C3E35]', 'text-white');
+        });
+      }
+
+      // Dölj auth-modalen
+      const authModal = document.getElementById('auth-modal');
+      if (authModal) authModal.classList.add('hidden');
+
+      // Omdirigera om användaren klickat på dashboarden innan login
+      if (window.pendingViewAfterAuth === 'dashboard') {
+        window.pendingViewAfterAuth = null;
+        openDashboardView();
+      }
+    }
+  } catch (err) {
+    console.error("Login exception:", err);
+    alert("Ett oväntat fel uppstod vid inloggning.");
+  }
+
+  return false;
+}
+
 </script>
 
 
@@ -2039,39 +2687,49 @@ async function getOrHydrateUserToken() {
 }
 
 // Skriv över openDashboardView med fail-safe token-kontroll
-async function openDashboardView(e) {
-  if (e && e.preventDefault) e.preventDefault();
 
-  // Stäng reflektionspanelen om den är öppen
+async function openDashboardView(e) {
+  if (e) {
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+  }
+
+  // Stäng reflektionspanelen om öppen
   const refPanel = document.getElementById('reflections-panel');
   if (refPanel) refPanel.classList.add('translate-x-full');
 
-  // Hämta token via fail-safe metoden
+  // Hydrera token
   const token = await getOrHydrateUserToken();
 
   if (!token) {
-    // Spara att användaren vill till dashboarden efter inloggning
     window.pendingViewAfterAuth = 'dashboard';
     if (typeof openAuthModal === 'function') openAuthModal('login');
     return false;
   }
 
-  // LÅS VYN: Dölj alla chatt-containrar och visa enbart dashboarden
-  document.querySelectorAll('#main-chat-view, #chat-view, .chat-container').forEach(el => el.classList.add('hidden'));
+  // DÖLJ CHATT OCH VISA DASHBOARD PERMANENT
+  const mainChat = document.getElementById('main-chat-view') || document.getElementById('chat-view');
   const dashView = document.getElementById('dashboard-view');
-  if (dashView) dashView.classList.remove('hidden');
+
+  if (mainChat) mainChat.classList.add('hidden');
+  if (dashView) {
+    dashView.classList.remove('hidden');
+    dashView.style.display = 'block';
+  }
 
   try {
     await fetchAndRenderDashboardData();
   } catch (err) {
-    console.error('Kunde inte ladda mätvärden:', err);
+    console.error("Dashboard fetch error caught safely:", err);
   }
 
   if (window.falkRadarChartInstance) {
     window.falkRadarChartInstance.resize();
   }
+
   return false;
 }
+
 
 
 function filterDashboardCategory(cat) {
@@ -2254,6 +2912,78 @@ function toggleDashboardSection(mode) {
     document.querySelectorAll('#dashboard-view input[type="checkbox"]').forEach(cb => cb.checked = true);
   }
 }
+
+async function handleLogin(e) {
+  if (e) {
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+  }
+
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  if (!emailEl || !passEl) return false;
+
+  const email = emailEl.value.trim();
+  const password = passEl.value;
+
+  if (!email || !password) {
+    alert("Fyll i både e-post och lösenord.");
+    return false;
+  }
+
+  const sb = window.supabase || window.supabaseClient;
+  if (!sb || !sb.auth) {
+    alert("Supabase-klienten är inte redo.");
+    return false;
+  }
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      alert("Inloggningsfel: " + error.message);
+      return false;
+    }
+
+    if (data && data.session) {
+      window.userToken = data.session.access_token;
+      
+      // REAKTIV UI-UPPDATERING DIREKT I DOM:EN (INGEN F5 KRÄVS)
+      if (typeof updateAuthUI === 'function') {
+        updateAuthUI(data.user);
+      } else {
+        const emailDisp = document.getElementById('user-email-display');
+        if (emailDisp) emailDisp.innerText = data.user.email;
+        
+        const loggedInBox = document.getElementById('user-profile-logged-in');
+        const loggedOutBox = document.getElementById('user-profile-logged-out');
+        if (loggedInBox) loggedInBox.classList.remove('hidden');
+        if (loggedOutBox) loggedOutBox.classList.add('hidden');
+
+        document.querySelectorAll('.guest-badge, #user-status-badge, #user-tier-badge').forEach(el => {
+          el.innerText = 'PREMIUM';
+          el.classList.remove('bg-stone-200', 'text-stone-600');
+          el.classList.add('bg-[#2C3E35]', 'text-white');
+        });
+      }
+
+      // Dölj auth-modalen
+      const authModal = document.getElementById('auth-modal');
+      if (authModal) authModal.classList.add('hidden');
+
+      // Omdirigera om användaren klickat på dashboarden innan login
+      if (window.pendingViewAfterAuth === 'dashboard') {
+        window.pendingViewAfterAuth = null;
+        openDashboardView();
+      }
+    }
+  } catch (err) {
+    console.error("Login exception:", err);
+    alert("Ett oväntat fel uppstod vid inloggning.");
+  }
+
+  return false;
+}
+
 </script>
 
 </body>
