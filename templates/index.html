@@ -1944,6 +1944,8 @@ window.openPaywallModal = function(reason) {
 let falkRadarChartInstance = null;
 
 async function openDashboardView() {
+  // Always trigger fresh background fetch when switching to dashboard view
+  setTimeout(() => { fetchAndRenderDashboardData(); }, 100);
   const mainChatView = document.getElementById('chat-container') || document.querySelector('main');
   const dashView = document.getElementById('dashboard-view');
   
