@@ -2005,7 +2005,8 @@ async function fetchAndRenderDashboardData() {
     const data = await res.json();
     
     // 1. Render Radar Chart
-    renderRadarChart(data.scores || {});
+    window.latestUserScores = data.scores || { mindset: 50, halsa: 50, relationer: 50, produktivitet: 50, sjalvkannedom: 50 };
+    renderRadarChart(window.latestUserScores);
 
     // 2. Render Habits List
     renderHabitsList(data.habits || []);
