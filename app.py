@@ -117,52 +117,65 @@ def get_current_user_context():
     if 'user_context' in g:
         return g.user_context
 
-    token = None
     auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.split(" ")[1]
-    elif request.args.get("token"):
-        token = request.args.get("token")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        g.user_context = ("00000000-0000-0000-0000-000000000000", "FREE")
+        return g.user_context
 
-    if not token or not supabase_client:
+    token = auth_header.split(" ")[1]
+    if not token or token in ['null', 'undefined', 'mock_test_token_123'] or not supabase_client:
         g.user_context = ("00000000-0000-0000-0000-000000000000", "FREE")
         return g.user_context
 
     try:
         user_response = supabase_client.auth.get_user(token)
-        if user_response and user_response.user:
-            # Strikt binär modell: Overifierad e-post = Gäst-session
-            email_confirmed = getattr(user_response.user, 'email_confirmed_at', None) or getattr(user_response.user, 'confirmed_at', None)
-            if not email_confirmed:
-                g.user_context = ("00000000-0000-0000-0000-000000000000", "FREE")
-                return g.user_context
-                
-            user_id = user_response.user.id
-            try:
-                prof = supabase_client.table("profiles").select("tier, trial_ends_at").eq("id", user_id).single().execute()
-                if prof.data:
-                    tier = prof.data.get("tier")
-                    trial_ends = prof.data.get("trial_ends_at")
-                    
-                    is_trial_active = False
-                    if trial_ends:
-                        trial_date = datetime.fromisoformat(trial_ends.replace('Z', '+00:00'))
-                        if trial_date > datetime.now(timezone.utc):
-                            is_trial_active = True
-
-                    if tier == "PRO" or is_trial_active:
-                        g.user_context = (user_id, "PRO")
-                        return g.user_context
-            except Exception as e:
-                print(f"[PROFILE LOOKUP FAIL]: {e}", flush=True)
-
-            g.user_context = (user_id, "FREE")
+        if not user_response or not user_response.user:
+            g.user_context = ("00000000-0000-0000-0000-000000000000", "FREE")
             return g.user_context
-    except Exception as e:
-        print(f"[AUTH ERROR]: {e}", flush=True)
 
-    g.user_context = ("00000000-0000-0000-0000-000000000000", "FREE")
-    return g.user_context
+        user = user_response.user
+        email_confirmed = getattr(user, 'email_confirmed_at', None) or getattr(user, 'confirmed_at', None)
+        if not email_confirmed:
+            g.user_context = ("00000000-0000-0000-0000-000000000000", "FREE")
+            return g.user_context
+
+        user_id = user.id
+        meta = getattr(user, 'user_metadata', {}) or {}
+        meta_tier = meta.get('tier', '').upper()
+
+        # Fast path: If metadata explicitly defines PRO/PREMIUM, skip secondary DB query
+        if meta_tier in ['PRO', 'PREMIUM']:
+            g.user_context = (user_id, "PRO")
+            return g.user_context
+
+        # Secondary path: Check profiles table safely
+        try:
+            prof = supabase_client.table("profiles").select("tier, trial_ends_at").eq("id", user_id).execute()
+            if prof.data and len(prof.data) > 0:
+                pdata = prof.data[0]
+                tier = (pdata.get("tier") or "").upper()
+                trial_ends = pdata.get("trial_ends_at")
+
+                is_trial_active = False
+                if trial_ends:
+                    trial_date = datetime.fromisoformat(trial_ends.replace('Z', '+00:00'))
+                    if trial_date > datetime.now(timezone.utc):
+                        is_trial_active = True
+
+                if tier in ["PRO", "PREMIUM"] or is_trial_active:
+                    g.user_context = (user_id, "PRO")
+                    return g.user_context
+        except Exception as db_err:
+            print(f"[PROFILE DB LOOKUP WARN]: {db_err}", flush=True)
+
+        g.user_context = (user_id, "FREE")
+        return g.user_context
+
+    except Exception as e:
+        print(f"[AUTH RESOLUTION FAIL]: {e}", flush=True)
+        g.user_context = ("00000000-0000-0000-0000-000000000000", "FREE")
+        return g.user_context
+
 
 def get_rate_limit_key():
     user_id, _ = get_current_user_context()
