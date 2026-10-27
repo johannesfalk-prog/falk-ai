@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2>
                     <p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p>
                 </div>
-                <button type="button" onclick="toggleSidebar()" class="text-stone-400 hover:text-stone-700 p-1">
+                <button type="button" onclick="toggleSidebar()" class="text-stone-600 hover:text-stone-700 p-1">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
@@ -252,11 +252,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             <div class="flex-1 flex flex-col min-h-0">
                 <div class="flex justify-between items-center mb-2 px-1">
-                    <span class="text-[11px] font-bold text-stone-400 uppercase tracking-wider">SAMTAL</span>
+                    <span class="text-[11px] font-bold text-stone-600 uppercase tracking-wider">SAMTAL</span>
                     <button type="button" onclick="createNewSession()" class="text-base text-deep-olive hover:opacity-80 font-bold px-1" title="Nytt samtal">+</button>
                 </div>
                 <div id="session-list" class="flex-1 overflow-y-auto space-y-1 pr-1 text-xs text-stone-600">
-                    <p class="p-2 text-stone-400 italic">Logga in för samtalshistorik</p>
+                    <p class="p-2 text-stone-600 italic">Logga in för samtalshistorik</p>
                 </div>
             </div>
 
@@ -281,7 +281,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <h2 class="text-lg font-bold text-deep-olive tracking-wider">Min Utveckling</h2>
                     <p class="text-[11px] text-stone-500">Visuell analys & kognitiva framsteg</p>
                 </div>
-                <button type="button" onclick="toggleProgressDrawer()" class="text-stone-400 hover:text-stone-700 p-1">
+                <button type="button" onclick="toggleProgressDrawer()" class="text-stone-600 hover:text-stone-700 p-1">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
@@ -336,8 +336,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
 
             <div class="grid grid-cols-2 gap-3">
-                <div class="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 text-center"><p class="text-[10px] font-bold text-stone-400 uppercase">Reflektioner</p><p id="stat-entries-count" class="text-xl font-bold text-deep-olive mt-1">0</p></div>
-                <div class="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 text-center"><p class="text-[10px] font-bold text-stone-400 uppercase">Aktiva Påminnelser</p><p id="stat-reminders-count" class="text-xl font-bold text-terracotta mt-1">0</p></div>
+                <div class="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 text-center"><p class="text-[10px] font-bold text-stone-600 uppercase">Reflektioner</p><p id="stat-entries-count" class="text-xl font-bold text-deep-olive mt-1">0</p></div>
+                <div class="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 text-center"><p class="text-[10px] font-bold text-stone-600 uppercase">Aktiva Påminnelser</p><p id="stat-reminders-count" class="text-xl font-bold text-terracotta mt-1">0</p></div>
             </div>
         </div>
     </aside>
@@ -405,7 +405,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="flex-1 relative flex items-center">
                         <input type="text" id="message-input" placeholder="Skriv till mig eller välj ett alternativ..."
                                class="w-full bg-white border border-stone-300 rounded-full pl-5 pr-11 py-3 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:border-deep-olive shadow-sm">
-                        <button type="button" onclick="toggleSpeechRecognition()" id="mic-btn" class="absolute right-3 text-stone-400 hover:text-deep-olive transition p-1" title="Tala in meddelande">
+                        <button type="button" onclick="toggleSpeechRecognition()" id="mic-btn" class="absolute right-3 text-stone-600 hover:text-deep-olive transition p-1" title="Tala in meddelande">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg>
                         </button>
                     </div>
@@ -495,7 +495,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     <div id="focus-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-5 shadow-2xl">
-            <div class="text-center pb-2 border-b border-stone-100 relative"><h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2><p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p><div class="absolute right-0 top-0 flex items-center space-x-2"><button type="button" onclick="resetFocusSliders()" class="text-[11px] font-semibold text-deep-olive hover:underline">Återställ</button><button type="button" onclick="closeFocusModal()" class="text-stone-400 hover:text-stone-700 text-base font-bold">✕</button></div></div>
+            <div class="text-center pb-2 border-b border-stone-100 relative"><h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2><p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p><div class="absolute right-0 top-0 flex items-center space-x-2"><button type="button" onclick="resetFocusSliders()" class="text-[11px] font-semibold text-deep-olive hover:underline">Återställ</button><button type="button" onclick="closeFocusModal()" class="text-stone-600 hover:text-stone-700 text-base font-bold">✕</button></div></div>
             <p class="text-xs font-medium text-stone-500">FALK är inställd på att höja:</p>
             <div class="space-y-4 text-xs">
                 <div><div class="flex justify-between font-bold text-stone-800 mb-1"><span>Självförtroende</span><span id="val-confidence">50%</span></div><input type="range" id="slider-confidence" min="0" max="100" value="50" oninput="updateFocusVal('confidence')" class="w-full h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer focus-slider"></div>
@@ -511,7 +511,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     <div id="auth-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white border border-stone-200 p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-2xl">
             <div class="text-center pb-2 border-b border-stone-100"><h2 class="text-lg font-bold text-deep-olive tracking-wider">FALK</h2><p class="text-[11px] text-stone-500 font-medium">En kompass med perspektiv.</p></div>
-            <div class="flex border-b border-stone-200 pb-2"><button type="button" id="tab-btn-login" onclick="setAuthTab('login')" class="flex-1 text-center font-bold text-sm text-deep-olive border-b-2 border-deep-olive pb-1">Logga in</button><button type="button" id="tab-btn-signup" onclick="setAuthTab('signup')" class="flex-1 text-center font-bold text-sm text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600">Skapa konto</button></div>
+            <div class="flex border-b border-stone-200 pb-2"><button type="button" id="tab-btn-login" onclick="setAuthTab('login')" class="flex-1 text-center font-bold text-sm text-deep-olive border-b-2 border-deep-olive pb-1">Logga in</button><button type="button" id="tab-btn-signup" onclick="setAuthTab('signup')" class="flex-1 text-center font-bold text-sm text-stone-600 border-b-2 border-transparent pb-1 hover:text-stone-600">Skapa konto</button></div>
             <div class="space-y-3">
                 <div id="wrap-username" class="hidden"><input type="text" id="auth-username" placeholder="Välj Användarnamn" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive"></div>
                 <div id="wrap-identifier"><input type="text" id="auth-identifier" placeholder="E-post eller Användarnamn" class="w-full bg-stone-50 border border-stone-300 rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-deep-olive"></div>
@@ -526,7 +526,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
                             <div id="auth-error-msg" class="hidden text-rose-600 text-xs font-semibold bg-rose-50 border border-rose-200 p-2.5 rounded-xl text-center"></div>
                 <div class="pt-2"><button type="button" id="auth-submit-btn" onclick="submitAuth()" class="w-full bg-deep-olive text-amber-50 font-bold py-2.5 rounded-xl text-xs transition shadow">Logga in</button></div>
-            <button type="button" onclick="closeAuthModal()" class="w-full text-center text-stone-400 text-xs mt-1 hover:text-stone-600">Avbryt</button>
+            <button type="button" onclick="closeAuthModal()" class="w-full text-center text-stone-600 text-xs mt-1 hover:text-stone-600">Avbryt</button>
         </div>
     </div>
 
@@ -542,7 +542,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <button type="button" id="legal-tab-privacy" onclick="setLegalTab('privacy')" class="flex-1 text-center font-bold text-xs text-deep-olive border-b-2 border-deep-olive pb-1">
                     Integritetspolicy (GDPR)
                 </button>
-                <button type="button" id="legal-tab-terms" onclick="setLegalTab('terms')" class="flex-1 text-center font-bold text-xs text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600">
+                <button type="button" id="legal-tab-terms" onclick="setLegalTab('terms')" class="flex-1 text-center font-bold text-xs text-stone-600 border-b-2 border-transparent pb-1 hover:text-stone-600">
                     Användarvillkor (ToS)
                 </button>
             </div>
@@ -597,12 +597,12 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
 
             if (tab === 'privacy') {
                 btnPrivacy.className = "flex-1 text-center font-bold text-xs text-deep-olive border-b-2 border-deep-olive pb-1";
-                btnTerms.className = "flex-1 text-center font-bold text-xs text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600";
+                btnTerms.className = "flex-1 text-center font-bold text-xs text-stone-600 border-b-2 border-transparent pb-1 hover:text-stone-600";
                 contentPrivacy.classList.remove('hidden');
                 contentTerms.classList.add('hidden');
             } else {
                 btnTerms.className = "flex-1 text-center font-bold text-xs text-deep-olive border-b-2 border-deep-olive pb-1";
-                btnPrivacy.className = "flex-1 text-center font-bold text-xs text-stone-400 border-b-2 border-transparent pb-1 hover:text-stone-600";
+                btnPrivacy.className = "flex-1 text-center font-bold text-xs text-stone-600 border-b-2 border-transparent pb-1 hover:text-stone-600";
                 contentTerms.classList.remove('hidden');
                 contentPrivacy.classList.add('hidden');
             }
@@ -709,7 +709,7 @@ let focusState = { confidence: 50, stress: 50, action: 50, boundaries: 50, motiv
                 if (loginBtnBottom) loginBtnBottom.classList.remove('hidden');
                 if (tierBadge) tierBadge.textContent = "GÄST";
                 if (settingsTier) settingsTier.textContent = "GÄST";
-                document.getElementById('session-list').innerHTML = `<p class="p-2 text-stone-400 italic">Logga in för samtalshistorik</p>`;
+                document.getElementById('session-list').innerHTML = `<p class="p-2 text-stone-600 italic">Logga in för samtalshistorik</p>`;
                 loadJournal();
             }
         }
@@ -878,13 +878,13 @@ function switchTab(tab) {
                 actionsDiv.className = "flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition";
 
                 const pinBtn = document.createElement('button');
-                pinBtn.className = "p-1 hover:text-terracotta text-stone-400 transition";
+                pinBtn.className = "p-1 hover:text-terracotta text-stone-600 transition";
                 pinBtn.title = isPinned ? "Lossa samtal" : "Nåla samtal";
                 pinBtn.innerHTML = `<svg class="w-3.5 h-3.5" fill="${isPinned ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 5h14l-4 4v6l2 2v1H7v-1l2-2V9L5 5z"/></svg>`;
                 pinBtn.onclick = (e) => { e.stopPropagation(); togglePinSession(s.id); };
 
                 const delBtn = document.createElement('button');
-                delBtn.className = "p-1 hover:text-rose-600 text-stone-400 transition";
+                delBtn.className = "p-1 hover:text-rose-600 text-stone-600 transition";
                 delBtn.title = "Radera samtal";
                 delBtn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`;
                 delBtn.onclick = (e) => { e.stopPropagation(); deleteSession(s.id); };
@@ -966,14 +966,14 @@ function switchTab(tab) {
                 if (recognition) recognition.stop();
                 isRecording = false;
                 micBtn.classList.remove('text-rose-600', 'animate-pulse');
-                micBtn.classList.add('text-stone-400');
+                micBtn.classList.add('text-stone-600');
             } else {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 recognition = new SpeechRecognition();
                 recognition.lang = 'sv-SE';
                 recognition.onstart = function() {
                     isRecording = true;
-                    micBtn.classList.remove('text-stone-400');
+                    micBtn.classList.remove('text-stone-600');
                     micBtn.classList.add('text-rose-600', 'animate-pulse');
                 };
                 recognition.onresult = function(event) {
@@ -982,7 +982,7 @@ function switchTab(tab) {
                 recognition.onend = function() {
                     isRecording = false;
                     micBtn.classList.remove('text-rose-600', 'animate-pulse');
-                    micBtn.classList.add('text-stone-400');
+                    micBtn.classList.add('text-stone-600');
                 };
                 recognition.start();
             }
@@ -1109,33 +1109,33 @@ function switchTab(tab) {
                 const msgId = 'msg-' + Math.random().toString(36).substr(2, 9);
                 container.innerHTML = `
                     <div class="bg-white/90 border border-stone-200/80 text-stone-800 px-4 py-3 rounded-2xl max-w-[90%] text-xs shadow-sm leading-relaxed" id="${msgId}">${text}</div>
-                    <div class="icon-bar ${ (userToken || document.body.classList.contains('is-logged-in')) ? 'flex' : 'hidden'} items-center space-x-1 mt-1.5 px-1 py-0.5 text-stone-400">
+                    <div class="icon-bar ${ (userToken || document.body.classList.contains('is-logged-in')) ? 'flex' : 'hidden'} items-center space-x-1 mt-1.5 px-1 py-0.5 text-stone-600">
                 <!-- 1. Högtalare -->
-                <button type="button" onclick="speakText('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Läs upp meddelande">
+                <button type="button" onclick="speakText('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-600" title="Läs upp meddelande">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5 5 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.414 0-.75-.336-.75-.75V9c0-.414.336-.75.75-.75h2.24z"/></svg>
                 </button>
                 <!-- 2. Generera nytt -->
-                <button type="button" onclick="regenerateLastMessage()" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Generera nytt svar">
+                <button type="button" onclick="regenerateLastMessage()" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-600" title="Generera nytt svar">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
                 </button>
                 <!-- 3. Tumme upp -->
-                <button type="button" onclick="rateResponse('${msgId}', 'up', this)" class="btn-thumb-up p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Bra svar">
+                <button type="button" onclick="rateResponse('${msgId}', 'up', this)" class="btn-thumb-up p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-600" title="Bra svar">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.633 10.5c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75A2.25 2.25 0 0116.5 4.5c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.128 1.2-.083 2.408-.52 3.518l-1.572 3.93a2.25 2.25 0 01-2.09 1.414H9.728c-.538 0-1.054-.195-1.458-.55L5.25 16.5M6.633 10.55V18a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18v-5.25c0-1.243 1.007-2.25 2.25-2.25h2.883z"/></svg>
                 </button>
                 <!-- 4. Tumme ner -->
-                <button type="button" onclick="rateResponse('${msgId}', 'down', this)" class="btn-thumb-down p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Mindre bra svar">
+                <button type="button" onclick="rateResponse('${msgId}', 'down', this)" class="btn-thumb-down p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-600" title="Mindre bra svar">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.367 13.5c-.806 0-1.533.446-2.031 1.08a9.041 9.041 0 01-2.861 2.4c-.723.384-1.35.956-1.653 1.715a4.498 4.498 0 00-.322 1.672V21a.75.75 0 01-.75.75A2.25 2.25 0 017.5 19.5c0-1.152.26-2.243.723-3.218.266-.558-.107-1.282-.725-1.282H4.372c-1.026 0-1.945-.694-2.054-1.715a12.137 12.137 0 01.52-3.518l1.572-3.93a2.25 2.25 0 012.09-1.414h7.901c.538 0 1.054.195 1.458.55l3.02 2.55M17.367 13.45V6a2.25 2.25 0 012.25-2.25h.375A2.25 2.25 0 0122.5 6v5.25c0 1.243-1.007 2.25-2.25 2.25h-2.883z"/></svg>
                 </button>
                 <!-- 5. Minus -->
-                <button type="button" onclick="adjustLastResponse('minus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Gör svaret mer kortfattat">
+                <button type="button" onclick="adjustLastResponse('minus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-600" title="Gör svaret mer kortfattat">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15"/></svg>
                 </button>
                 <!-- 6. Plus -->
-                <button type="button" onclick="adjustLastResponse('plus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Fördjupa svaret">
+                <button type="button" onclick="adjustLastResponse('plus')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-600" title="Fördjupa svaret">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
                 </button>
                 <!-- 7. Påminnelse -->
-                <button type="button" onclick="openReminderModal('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-400" title="Skapa påminnelse">
+                <button type="button" onclick="openReminderModal('${msgId}')" class="p-1 hover:text-stone-700 transition flex items-center justify-center text-stone-600" title="Skapa påminnelse">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </button>
             </div>`;
@@ -1234,7 +1234,7 @@ function switchTab(tab) {
             if (statCount) statCount.textContent = entries.length;
             
             if (entries.length === 0) { 
-                list.innerHTML = `<p class="text-stone-400 text-xs italic">Inga reflektioner sparade ännu.</p>`; 
+                list.innerHTML = `<p class="text-stone-600 text-xs italic">Inga reflektioner sparade ännu.</p>`; 
                 return; 
             }
 
@@ -1253,10 +1253,10 @@ function switchTab(tab) {
                         <p class="entry-text-container text-stone-800 leading-relaxed whitespace-pre-wrap"></p>
                     </div>
                     <div class="flex items-center space-x-1">
-                        <button type="button" class="reminder-btn p-1 hover:text-deep-olive text-stone-400 transition" title="Sätt påminnelse">
+                        <button type="button" class="reminder-btn p-1 hover:text-deep-olive text-stone-600 transition" title="Sätt påminnelse">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         </button>
-                        <button type="button" class="delete-btn p-1 hover:text-rose-600 text-stone-400 transition" title="Radera reflektion">
+                        <button type="button" class="delete-btn p-1 hover:text-rose-600 text-stone-600 transition" title="Radera reflektion">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                         </button>
                     </div>
@@ -1463,7 +1463,7 @@ window.speakText = function(msgId) {
         window.speechSynthesis.cancel();
         if (activeTTSBtn) {
             activeTTSBtn.classList.remove('text-amber-600', 'animate-pulse');
-            activeTTSBtn.classList.add('text-stone-400');
+            activeTTSBtn.classList.add('text-stone-600');
         }
         // Klick på samma knapp igen = tystnad
         if (activeTTSBtn === btn) {
@@ -1496,14 +1496,14 @@ window.speakText = function(msgId) {
 
     activeTTSBtn = btn;
     if (btn) {
-        btn.classList.remove('text-stone-400');
+        btn.classList.remove('text-stone-600');
         btn.classList.add('text-amber-600', 'animate-pulse');
     }
 
     utterance.onend = utterance.onerror = function() {
         if (btn) {
             btn.classList.remove('text-amber-600', 'animate-pulse');
-            btn.classList.add('text-stone-400');
+            btn.classList.add('text-stone-600');
         }
         activeTTSBtn = null;
     };
@@ -1593,7 +1593,7 @@ window.adjustLastResponse = async function(action) {
     }
 
     const originalText = contentDiv.innerHTML;
-    contentDiv.innerHTML = `<span class="animate-pulse text-stone-400">FALK tänker...</span>`;
+    contentDiv.innerHTML = `<span class="animate-pulse text-stone-600">FALK tänker...</span>`;
 
     try {
         const response = await fetch('/chat', {
@@ -1733,16 +1733,16 @@ window.openPaywallModal = function(reason) {
         modal.id = 'paywall-modal';
         modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4';
         modal.innerHTML = `
-            <div class="bg-stone-900 border border-stone-800 text-stone-100 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl relative">
-                <button type="button" onclick="document.getElementById('paywall-modal').classList.add('hidden')" class="absolute top-4 right-4 text-stone-400 hover:text-white text-lg">&times;</button>
+            <div class="bg-[#f5f2eb] text-stone-800 border border-stone-800 text-stone-100 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl relative">
+                <button type="button" onclick="document.getElementById('paywall-modal').classList.add('hidden')" class="absolute top-4 right-4 text-stone-600 hover:text-white text-lg">&times;</button>
                 <div class="text-center space-y-2">
-                    <span class="inline-block px-3 py-1 bg-amber-500/10 text-amber-400 text-xs font-semibold rounded-full border border-amber-500/20">FALK PRO</span>
-                    <h3 class="text-xl font-bold text-white">Lås upp hela FALK AI</h3>
-                    <p class="text-xs text-stone-400 leading-relaxed">För att få tillgång till djupgående analyser (600+ tokens), obegränsade samtal, minnesfunktioner och utvecklingsmenyn behöver du ett konto.</p>
+                    <span class="inline-block px-3 py-1 bg-amber-500/10 text-amber-400 text-xs font-semibold rounded-full border border-amber-500/20">FALK Premium</span>
+                    <h3 class="text-xl font-bold text-white">Lås upp FALK Premium</h3>
+                    <p class="text-xs text-stone-600 leading-relaxed">För att få tillgång till djupgående analyser, obegränsade samtal, minnesfunktioner och utvecklingsmenyn behöver du ett konto.</p>
                 </div>
                 <div class="space-y-3 pt-2">
-                    <a href="#" onclick="return window.handlePaywallAuth('signup');" class="block w-full py-3 bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs text-center rounded-xl shadow-lg transition">Skapa Konto & Bli PRO</a>
-                    <a href="#" onclick="return window.handlePaywallAuth('login');" class="block w-full py-3 bg-stone-800 hover:bg-stone-700 text-stone-300 font-medium text-xs text-center rounded-xl transition">Redan medlem? Logga in</a>
+                    <a href="#" onclick="return window.handlePaywallAuth('signup');" class="block w-full py-3 bg-[#3f4738] hover:bg-[#2f352a] text-white shadow-md font-medium text-xs text-center rounded-xl shadow-lg transition">Skapa Konto & Bli Premium</a>
+                    <a href="#" onclick="return window.handlePaywallAuth('login');" class="block w-full py-3 bg-stone-200 text-stone-800 hover:bg-stone-700 text-stone-300 font-medium text-xs text-center rounded-xl transition">Redan medlem? Logga in</a>
                 </div>
             </div>
         `;
