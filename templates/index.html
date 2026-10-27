@@ -1637,7 +1637,16 @@ window.rateResponse = function(msgId, direction, btnElement) {
     }
     fetch('/api/feedback', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: (function() {
+        const h = { 'Content-Type': 'application/json' };
+        if (window.supabaseClient) {
+          const session = window.supabaseClient.auth.session ? window.supabaseClient.auth.session() : null;
+          if (session && session.access_token) {
+            h['Authorization'] = 'Bearer ' + session.access_token;
+          }
+        }
+        return h;
+      })(),
         body: JSON.stringify({ message_id: msgId, direction: direction })
     }).catch(err => console.log('Feedback API error:', err));
 };
@@ -1690,7 +1699,16 @@ window.adjustLastResponse = async function(action) {
     try {
         const response = await fetch('/chat', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: (function() {
+        const h = { 'Content-Type': 'application/json' };
+        if (window.supabaseClient) {
+          const session = window.supabaseClient.auth.session ? window.supabaseClient.auth.session() : null;
+          if (session && session.access_token) {
+            h['Authorization'] = 'Bearer ' + session.access_token;
+          }
+        }
+        return h;
+      })(),
             body: JSON.stringify({ message: instruction })
         });
 
@@ -1799,7 +1817,8 @@ window.setUserTier = function(tier) {
 
 // Lock menu / dev links for guests
 
-window.handlePaywallAuth = function(mode) {
+window.handlePaywallAuth = function(mode, event) {
+    if (event) event.preventDefault(); {
     const modal = document.getElementById('paywall-modal');
     if (modal) modal.remove();
     if (typeof openAuthModal === 'function') {
@@ -1833,8 +1852,8 @@ window.openPaywallModal = function(reason) {
                     <p class="text-xs text-stone-200 leading-relaxed px-2">För att få tillgång till djupgående analyser, obegränsade samtal, minnesfunktioner och utvecklingsmenyn behöver du ett konto.</p>
                 </div>
                 <div class="space-y-3 pt-2">
-                    <a href="#" onclick="return window.handlePaywallAuth('signup');" class="falk-paywall-btn">Skaffa Premium</a>
-                    <a href="#" onclick="return window.handlePaywallAuth('login');" class="falk-paywall-btn">Logga in</a>
+                    <a href="#" onclick="window.handlePaywallAuth('signup', event); return false;" class="falk-paywall-btn">Skaffa Premium</a>
+                    <a href="#" onclick="window.handlePaywallAuth('login', event); return false;" class="falk-paywall-btn">Logga in</a>
                 </div>
             </div>
         `;
