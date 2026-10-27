@@ -489,10 +489,10 @@ def get_dashboard_data():
 
         return jsonify({
             "user_id": user_id,
-            "scores": scores,
-            "habits": habits,
-            "insights": insights,
-            "metrics_count": len(metrics)
+            "scores": scores or [],
+            "habits": habits or [],
+            "insights": insights or [],
+            "metrics_count": len(metrics or [])
         }), 200
 
     except Exception as e:
