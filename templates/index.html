@@ -1946,6 +1946,20 @@ async function openDashboardView() {
   if (!dashView) return;
 
   // Check user token / guest status
+  // Asynkron säkerställande av Supabase token vid snabba klick
+  if (typeof userToken === 'undefined' || !userToken) {
+    if (window.supabaseClient && window.supabaseClient.auth) {
+      try {
+        const { data: { session } } = await window.supabaseClient.auth.getSession();
+        if (session && session.access_token) {
+          window.userToken = session.access_token;
+        }
+      } catch (e) {
+        console.warn('Session check delay:', e);
+      }
+    }
+  }
+
   if (typeof userToken === 'undefined' || !userToken) {
     if (typeof openAuthModal === 'function') openAuthModal('signup');
     else if (window.handlePaywallAuth) window.handlePaywallAuth('signup');

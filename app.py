@@ -499,3 +499,35 @@ def get_dashboard_data():
         print(f"Error fetching dashboard data: {str(e)}")
         return jsonify({"error": "Database query failed", "details": str(e)}), 500
 
+
+# --- UPDATE DASHBOARD DATA ENDPOINT (PREMIUM ONLY) ---
+@app.route('/api/dashboard-update', methods=['POST'])
+def update_dashboard_data():
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    user_id, tier = get_current_user_context()
+    if tier not in ['PRO', 'PREMIUM']:
+        return jsonify({"error": "Premium required"}), 403
+
+    data = request.get_json() or {}
+    scores = data.get('scores', {})
+    
+    try:
+        if scores:
+            supabase_client.table('user_scores').upsert({
+                "user_id": user_id,
+                "mindset": int(scores.get('mindset', 50)),
+                "halsa": int(scores.get('halsa', 50)),
+                "relationer": int(scores.get('relationer', 50)),
+                "produktivitet": int(scores.get('produktivitet', 50)),
+                "sjalvkannedom": int(scores.get('sjalvkannedom', 50)),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }).execute()
+
+        return jsonify({"status": "success", "message": "Mätvärden uppdaterade!"}), 200
+
+    except Exception as e:
+        print(f"[DASHBOARD UPDATE ERROR]: {e}", flush=True)
+        return jsonify({"error": "Update failed", "details": str(e)}), 500
