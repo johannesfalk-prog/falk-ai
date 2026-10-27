@@ -196,6 +196,49 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 </script>
+
+<style id="falk-custom-paywall-css">
+    /* Paywall Modal Card */
+    .paywall-card-override {
+        background-color: #3f4738 !important;
+        color: #f5f2eb !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    .paywall-card-override h2, .paywall-card-override h3 {
+        color: #ffffff !important;
+    }
+    .paywall-card-override p {
+        color: #e7e5e4 !important;
+    }
+    /* Gold Badge */
+    .paywall-gold-badge {
+        color: #eab308 !important;
+        border: 1px solid #eab308 !important;
+        background-color: rgba(234, 179, 8, 0.12) !important;
+        font-weight: 600 !important;
+    }
+    /* Dynamic Buttons: Gray default -> Green hover with Gold text */
+    .paywall-action-btn {
+        background-color: #d6d3d1 !important;
+        color: #000000 !important;
+        font-weight: 600 !important;
+        border: 1px solid transparent !important;
+        transition: all 0.2s ease-in-out !important;
+        width: 100% !important;
+        padding: 0.75rem 1rem !important;
+        border-radius: 0.75rem !important;
+        text-align: center !important;
+        display: block !important;
+        margin-top: 0.75rem !important;
+    }
+    .paywall-action-btn:hover {
+        background-color: #2a3026 !important;
+        color: #eab308 !important;
+        border-color: #eab308 !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    }
+</style>
+
 </head>
 <body class="bg-warm-beige text-slate-800 h-screen max-h-screen flex flex-col font-sans overflow-hidden">
 
@@ -1736,7 +1779,7 @@ window.openPaywallModal = function(reason) {
             <div class="bg-[#f5f2eb] text-stone-800 border border-stone-800 text-stone-100 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl relative">
                 <button type="button" onclick="document.getElementById('paywall-modal').classList.add('hidden')" class="absolute top-4 right-4 text-stone-600 hover:text-white text-lg">&times;</button>
                 <div class="text-center space-y-2">
-                    <span class="inline-block px-3 py-1 bg-amber-500/10 text-amber-400 text-xs font-semibold rounded-full border border-amber-500/20">FALK Premium</span>
+                    <span class="paywall-gold-badge px-4 py-1.5 rounded-full text-sm inline-block mb-3">FALK Premium</span>
                     <h3 class="text-xl font-bold text-stone-900">Lås upp FALK Premium</h3>
                     <p class="text-xs text-stone-600 leading-relaxed">För att få tillgång till djupgående analyser, obegränsade samtal, minnesfunktioner och utvecklingsmenyn behöver du ett konto.</p>
                 </div>
