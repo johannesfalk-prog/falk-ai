@@ -7,7 +7,12 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22 font-weight=%22bold%22 fill=%22%234E5C4B%22>F</text></svg>">
     <script src="https://cdn.tailwindcss.com">
 
-  
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  if (!emailEl || !passEl) return false;
+
+  const email = emailEl.value.trim();
+  const password = passEl.value;
 
   if (!email || !password) {
     alert("Fyll i både e-post och lösenord.");
@@ -64,13 +69,18 @@
     alert("Ett oväntat fel uppstod vid inloggning.");
   }
 
-  // return false;
+  return false;
 }
 
 </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
 
-  
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  if (!emailEl || !passEl) return false;
+
+  const email = emailEl.value.trim();
+  const password = passEl.value;
 
   if (!email || !password) {
     alert("Fyll i både e-post och lösenord.");
@@ -127,7 +137,7 @@
     alert("Ett oväntat fel uppstod vid inloggning.");
   }
 
-  // return false;
+  return false;
 }
 
 </script>
@@ -264,7 +274,7 @@ window.handleLockedFeature = function(feature) {
     if (typeof openPaywallModal === 'function') openPaywallModal(feature || 'limit');
     return true;
 };
-function handleLockedFeature(feature) { // return window.handleLockedFeature(feature); }
+function handleLockedFeature(feature) { return window.handleLockedFeature(feature); }
 
         tailwind.config = {
             theme: {
@@ -281,7 +291,12 @@ function handleLockedFeature(feature) { // return window.handleLockedFeature(fea
         }
     
 
-  
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  if (!emailEl || !passEl) return false;
+
+  const email = emailEl.value.trim();
+  const password = passEl.value;
 
   if (!email || !password) {
     alert("Fyll i både e-post och lösenord.");
@@ -338,7 +353,7 @@ function handleLockedFeature(feature) { // return window.handleLockedFeature(fea
     alert("Ett oväntat fel uppstod vid inloggning.");
   }
 
-  // return false;
+  return false;
 
 </script>
     <style>
@@ -382,7 +397,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 
-  
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  if (!emailEl || !passEl) return false;
+
+  const email = emailEl.value.trim();
+  const password = passEl.value;
 
   if (!email || !password) {
     alert("Fyll i både e-post och lösenord.");
@@ -439,7 +459,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     alert("Ett oväntat fel uppstod vid inloggning.");
   }
 
-  // return false;
+  return false;
 
 </script>
 
@@ -524,7 +544,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js">
 
-  
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  if (!emailEl || !passEl) return false;
+
+  const email = emailEl.value.trim();
+  const password = passEl.value;
 
   if (!email || !password) {
     alert("Fyll i både e-post och lösenord.");
@@ -581,10 +606,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     alert("Ett oväntat fel uppstod vid inloggning.");
   }
 
-  // return false;
+  return false;
 }
 
 </script>
+
+
+function toggleReflectionsPanel() { if (typeof toggleProgressDrawer === 'function') toggleProgressDrawer(); }
 </head>
 <body class="bg-warm-beige text-slate-800 h-screen max-h-screen flex flex-col font-sans overflow-hidden">
 
@@ -1881,7 +1909,12 @@ function switchTab(tab) {
         }
     
 
-  
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  if (!emailEl || !passEl) return false;
+
+  const email = emailEl.value.trim();
+  const password = passEl.value;
 
   if (!email || !password) {
     alert("Fyll i både e-post och lösenord.");
@@ -1938,7 +1971,7 @@ function switchTab(tab) {
     alert("Ett oväntat fel uppstod vid inloggning.");
   }
 
-  // return false;
+  return false;
 
 </script>
 <script>
@@ -2060,7 +2093,12 @@ window.rateResponse = function(msgId, direction, btnElement) {
 };
 
 
-  
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  if (!emailEl || !passEl) return false;
+
+  const email = emailEl.value.trim();
+  const password = passEl.value;
 
   if (!email || !password) {
     alert("Fyll i både e-post och lösenord.");
@@ -2117,7 +2155,7 @@ window.rateResponse = function(msgId, direction, btnElement) {
     alert("Ett oväntat fel uppstod vid inloggning.");
   }
 
-  // return false;
+  return false;
 
 </script>
 
@@ -2241,7 +2279,12 @@ window.navigateVersion = function(msgId, direction) {
 };
 
 
-  
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  if (!emailEl || !passEl) return false;
+
+  const email = emailEl.value.trim();
+  const password = passEl.value;
 
   if (!email || !password) {
     alert("Fyll i både e-post och lösenord.");
@@ -2298,7 +2341,7 @@ window.navigateVersion = function(msgId, direction) {
     alert("Ett oväntat fel uppstod vid inloggning.");
   }
 
-  // return false;
+  return false;
 
 </script>
 
@@ -2394,7 +2437,12 @@ window.openPaywallModal = function(reason) {
 };
 
 
-  
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  if (!emailEl || !passEl) return false;
+
+  const email = emailEl.value.trim();
+  const password = passEl.value;
 
   if (!email || !password) {
     alert("Fyll i både e-post och lösenord.");
@@ -2451,7 +2499,7 @@ window.openPaywallModal = function(reason) {
     alert("Ett oväntat fel uppstod vid inloggning.");
   }
 
-  // return false;
+  return false;
 
 </script>
 
@@ -2923,11 +2971,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-
-<script>
-async function handleLogin(e) { if (e && e.preventDefault) e.preventDefault(); // return await submitAuth(); }
-function toggleReflectionPanel() { if (typeof toggleProgressDrawer === 'function') toggleProgressDrawer(); }
-</script>
 </body>
-
 </html>
