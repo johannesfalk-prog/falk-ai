@@ -610,10 +610,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 }
 
 </script>
-
-async function handleLogin(e) { if (e && e.preventDefault) e.preventDefault(); return await submitAuth(); }
-
-function toggleReflectionsPanel() { if (typeof toggleProgressDrawer === 'function') toggleProgressDrawer(); }
 </head>
 <body class="bg-warm-beige text-slate-800 h-screen max-h-screen flex flex-col font-sans overflow-hidden">
 
@@ -2972,5 +2968,11 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+
+<script>
+async function handleLogin(e) { if (e && e.preventDefault) e.preventDefault(); return await submitAuth(); }
+function toggleReflectionPanel() { if (typeof toggleProgressDrawer === 'function') toggleProgressDrawer(); }
+</script>
 </body>
+
 </html>
