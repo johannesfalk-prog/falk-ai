@@ -74,8 +74,6 @@
   }
 
   return false;
-}
-
 </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
   if (e) {
@@ -146,8 +144,6 @@
   }
 
   return false;
-}
-
 </script>
     <script>
 
@@ -366,8 +362,6 @@ function handleLockedFeature(feature) { return window.handleLockedFeature(featur
   }
 
   return false;
-}
-
 </script>
     <style>
         body { background-color: #E8DCC4; color: #2C352B; }
@@ -477,8 +471,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   return false;
-}
-
 </script>
 
 <style id="falk-custom-paywall-css">
@@ -629,8 +621,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   return false;
-}
-
 </script>
 </head>
 <body class="bg-warm-beige text-slate-800 h-screen max-h-screen flex flex-col font-sans overflow-hidden">
@@ -2028,8 +2018,6 @@ function switchTab(tab) {
   }
 
   return false;
-}
-
 </script>
 <script>
 // ==========================================
@@ -2217,8 +2205,6 @@ window.rateResponse = function(msgId, direction, btnElement) {
   }
 
   return false;
-}
-
 </script>
 
 <script>
@@ -2408,8 +2394,6 @@ window.navigateVersion = function(msgId, direction) {
   }
 
   return false;
-}
-
 </script>
 
 
@@ -2424,7 +2408,6 @@ window.removeThinkingIndicator = function() {
     document.querySelectorAll('div, p, span').forEach(el => {
         if (el.children.length === 0 && el.textContent.includes('FALK tänker...')) {
             el.closest('.flex') ? el.closest('.flex').remove() : el.remove();
-        }
     });
 };
 
@@ -2443,6 +2426,9 @@ window.setUserTier = function(tier) {
     // Uppdatera alla befintliga ikonrader i chatt-historiken
     document.querySelectorAll('.icon-bar').forEach(el => {
         if (tier === 'PRO') {
+            el.classList.add('pro-mode');
+        }
+    });
             el.classList.remove('hidden');
         } else {
             el.classList.add('hidden');
@@ -2452,7 +2438,6 @@ window.setUserTier = function(tier) {
     if (tier === 'PRO') {
         document.getElementById('paywall-modal')?.remove();
     }
-};
 
 
 // Lock menu / dev links for guests
@@ -2571,8 +2556,6 @@ window.openPaywallModal = function(reason) {
   }
 
   return false;
-}
-
 </script>
 
 
@@ -2971,8 +2954,6 @@ function toggleDashboardSection(mode) {
   }
 
   return false;
-}
-
 </script>
 
 </body>
