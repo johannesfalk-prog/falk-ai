@@ -7,3 +7,4 @@ supabase==2.33.0
 openai==2.48.0
 groq==1.0.0
 stripe==16.0.0
+h2>=4.1.0
