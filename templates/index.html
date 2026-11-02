@@ -24,6 +24,26 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.06);
             font-weight: 700 !important;
         }
+        /* ANVÄNDARBUBBLA: FÄRG #4E5C4B & SAMSVARANDE TYPSNITT */
+        .user-bubble {
+            background-color: #4E5C4B !important;
+            color: #FAF8F0;
+            border-radius: 1.25rem 1.25rem 0.25rem 1.25rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: inherit;
+        }
+        /* AI BUBBLA: SAME FONT AS USER (SAMMA SANS-SERIF) */
+        .ai-bubble {
+            background-color: #FAF8F0;
+            color: #2D2721;
+            border: 1px solid #DDD0B8;
+            border-radius: 1.25rem 1.25rem 1.25rem 0.25rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.6;
+            font-family: inherit !important;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between antialiased selection:bg-stone-300 relative overflow-x-hidden">
@@ -47,7 +67,6 @@
             </div>
         </div>
 
-        <!-- NAVIGERINGSLÄNKAR -->
         <nav class="flex-1 p-5 space-y-2 overflow-y-auto" id="left-menu-nav">
             <a href="/" data-route="/" class="menu-nav-item flex items-center gap-3.5 px-4 py-3 text-sm font-semibold text-[#2D2721] rounded-2xl transition-all hover:bg-[#E8DCC4]/40">
                 <svg class="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
@@ -76,7 +95,6 @@
             </a>
         </nav>
 
-        <!-- BOTTEN-BAR -->
         <div class="p-5 border-t border-[#E6E0D4]/80">
             <div class="bg-[#E6DEC9]/70 backdrop-blur-sm rounded-full p-1.5 px-4 flex items-center justify-between border border-[#DDD0B8]/60 shadow-xs">
                 <span class="px-3 py-1 bg-white/90 text-[11px] font-bold text-stone-700 tracking-wider rounded-full shadow-xs uppercase">
@@ -92,11 +110,10 @@
     <!-- HÖGER BACKDROP -->
     <div id="falk-right-backdrop" onclick="closeRightMenu()" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300 z-40"></div>
 
-    <!-- HÖGER PANEL - INSIKTER & PÅMINNELSER (UPPDATERAD MED TÄND GLÖDLAMPA-IKON) -->
+    <!-- HÖGER PANEL - INSIKTER & PÅMINNELSER -->
     <aside id="falk-right-drawer" class="fixed top-0 right-0 h-full w-80 bg-[#FAF8F0] shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out z-50 flex flex-col border-l border-[#DDD0B8]">
         <div class="p-5 flex items-center justify-between border-b border-[#E6E0D4]">
             <div class="flex items-center gap-2.5">
-                <!-- TÄND GLÖDLAMPA (HOVER-SVG MED PERMANENTA STRÅLAR) -->
                 <svg class="w-5 h-5 text-black stroke-current fill-none shrink-0" stroke-width="1.8" viewBox="0 0 24 24">
                     <g class="opacity-100">
                         <line x1="12" y1="1.5" x2="12" y2="3.5" stroke-linecap="round" stroke-width="2" />
@@ -129,7 +146,7 @@
             </div>
             <div class="insight-item reminder-type p-3.5 bg-white rounded-xl border border-[#E6E0D4] shadow-sm">
                 <span class="text-[10px] font-bold tracking-wider text-[#4E5C4B] uppercase">PÅMINNELSE</span>
-                <p class="text-xs text-[#38322B] mt-1 font-medium">Ta 3 djupaandetag innan nästa möte.</p>
+                <p class="text-xs text-[#38322B] mt-1 font-medium">Ta 3 djupa andetag innan nästa möte.</p>
             </div>
         </div>
     </aside>
@@ -173,125 +190,279 @@
         </div>
     </header>
 
-    <!-- MAIN DASHBOARD (9 KORT) -->
-    <main class="flex-1 max-w-2xl w-full mx-auto px-4 py-6 space-y-3.5">
-        <button onclick="selectPrompt('Mening & livsriktning')" class="w-full text-left p-4 rounded-2xl falk-card shadow-sm hover:shadow-md transition-all group">
-            <div class="flex items-start gap-3">
-                <span class="text-lg leading-none mt-0.5">🌱</span>
-                <div>
-                    <h2 class="text-sm font-bold text-[#332D26] group-hover:text-amber-900 transition-colors">Mening & livsriktning</h2>
-                    <p class="text-[13px] italic text-[#4A4238] mt-1 font-serif font-medium">"Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det."</p>
-                </div>
-            </div>
-        </button>
+    <!-- MAIN CONTAINER -->
+    <main class="flex-1 max-w-2xl w-full mx-auto px-4 py-6">
 
-        <button onclick="selectPrompt('När tankarna tar över')" class="w-full text-left p-4 rounded-2xl falk-card shadow-sm hover:shadow-md transition-all group">
-            <div class="flex items-start gap-3">
-                <span class="text-lg leading-none mt-0.5">☁️</span>
-                <div>
-                    <h2 class="text-sm font-bold text-[#332D26] group-hover:text-amber-900 transition-colors">När tankarna tar över</h2>
-                    <p class="text-[13px] italic text-[#4A4238] mt-1 font-serif font-medium">"Hjälp mig sortera tankarna och hitta klarhet."</p>
+        <!-- 1. DASHBOARD GRID (9 KORT) -->
+        <div id="dashboard-grid" class="space-y-3.5 transition-opacity duration-300">
+            <button onclick="selectPrompt('Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det.')" class="w-full text-left p-4 rounded-2xl falk-card shadow-sm hover:shadow-md transition-all group">
+                <div class="flex items-start gap-3">
+                    <span class="text-lg leading-none mt-0.5">🌱</span>
+                    <div>
+                        <h2 class="text-sm font-bold text-[#332D26] group-hover:text-amber-900 transition-colors">Mening & livsriktning</h2>
+                        <p class="text-[13px] italic text-[#4A4238] mt-1 font-serif font-medium">"Jag vill förstå vad som verkligen betyder något för mig och leva mer i linje med det."</p>
+                    </div>
                 </div>
-            </div>
-        </button>
+            </button>
 
-        <button onclick="selectPrompt('Jobb, ansvar & ledarskap')" class="w-full text-left p-4 rounded-2xl falk-card shadow-sm hover:shadow-md transition-all group">
-            <div class="flex items-start gap-3">
-                <span class="text-lg leading-none mt-0.5">💼</span>
-                <div>
-                    <h2 class="text-sm font-bold text-[#332D26] group-hover:text-amber-900 transition-colors">Jobb, ansvar & ledarskap</h2>
-                    <p class="text-[13px] italic text-[#4A4238] mt-1 font-serif font-medium">"Hjälp mig hantera utmaningar och hitta nästa steg."</p>
+            <button onclick="selectPrompt('Hjälp mig sortera tankarna och hitta klarhet.')" class="w-full text-left p-4 rounded-2xl falk-card shadow-sm hover:shadow-md transition-all group">
+                <div class="flex items-start gap-3">
+                    <span class="text-lg leading-none mt-0.5">☁️</span>
+                    <div>
+                        <h2 class="text-sm font-bold text-[#332D26] group-hover:text-amber-900 transition-colors">När tankarna tar över</h2>
+                        <p class="text-[13px] italic text-[#4A4238] mt-1 font-serif font-medium">"Hjälp mig sortera tankarna och hitta klarhet."</p>
+                    </div>
                 </div>
-            </div>
-        </button>
+            </button>
 
-        <button onclick="selectPrompt('Hitta lugnet igen')" class="w-full text-left p-4 rounded-2xl falk-card shadow-sm hover:shadow-md transition-all group">
-            <div class="flex items-start gap-3">
-                <span class="text-lg leading-none mt-0.5">🍃</span>
-                <div>
-                    <h2 class="text-sm font-bold text-[#332D26] group-hover:text-amber-900 transition-colors">Hitta lugnet igen</h2>
-                    <p class="text-[13px] italic text-[#4A4238] mt-1 font-serif font-medium">"Jag känner mig stressad eller orolig och behöver landa."</p>
+            <button onclick="selectPrompt('Hjälp mig hantera utmaningar och hitta nästa steg.')" class="w-full text-left p-4 rounded-2xl falk-card shadow-sm hover:shadow-md transition-all group">
+                <div class="flex items-start gap-3">
+                    <span class="text-lg leading-none mt-0.5">💼</span>
+                    <div>
+                        <h2 class="text-sm font-bold text-[#332D26] group-hover:text-amber-900 transition-colors">Jobb, ansvar & ledarskap</h2>
+                        <p class="text-[13px] italic text-[#4A4238] mt-1 font-serif font-medium">"Hjälp mig hantera utmaningar och hitta nästa steg."</p>
+                    </div>
                 </div>
-            </div>
-        </button>
+            </button>
 
-        <button onclick="selectPrompt('Från mål till handling')" class="w-full text-left p-4 rounded-2xl falk-card shadow-sm hover:shadow-md transition-all group">
-            <div class="flex items-start gap-3">
-                <span class="text-lg leading-none mt-0.5">🎯</span>
-                <div>
-                    <h2 class="text-sm font-bold text-[#332D26] group-hover:text-amber-900 transition-colors">Från mål till handling</h2>
-                    <p class="text-[13px] italic text-[#4A4238] mt-1 font-serif font-medium">"Hjälp mig komma vidare och få saker att hända."</p>
+            <button onclick="selectPrompt('Jag känner mig stressad eller orolig och behöver landa.')" class="w-full text-left p-4 rounded-2xl falk-card shadow-sm hover:shadow-md transition-all group">
+                <div class="flex items-start gap-3">
+                    <span class="text-lg leading-none mt-0.5">🍃</span>
+                    <div>
+                        <h2 class="text-sm font-bold text-[#332D26] group-hover:text-amber-900 transition-colors">Hitta lugnet igen</h2>
+                        <p class="text-[13px] italic text-[#4A4238] mt-1 font-serif font-medium">"Jag känner mig stressad eller orolig och behöver landa."</p>
+                    </div>
                 </div>
-            </div>
-        </button>
+            </button>
 
-        <button onclick="selectPrompt('Relationer & svåra samtal')" class="w-full text-left p-4 rounded-2xl falk-card shadow-sm hover:shadow-md transition-all group">
-            <div class="flex items-start gap-3">
-                <span class="text-lg leading-none mt-0.5">💬</span>
-                <div>
-                    <h2 class="text-sm font-bold text-[#332D26] group-hover:text-amber-900 transition-colors">Relationer & svåra samtal</h2>
-                    <p class="text-[13px] italic text-[#4A4238] mt-1 font-serif font-medium">"Hjälp mig förstå en situation och kommunicera bättre."</p>
+            <button onclick="selectPrompt('Hjälp mig komma vidare och få saker att hända.')" class="w-full text-left p-4 rounded-2xl falk-card shadow-sm hover:shadow-md transition-all group">
+                <div class="flex items-start gap-3">
+                    <span class="text-lg leading-none mt-0.5">🎯</span>
+                    <div>
+                        <h2 class="text-sm font-bold text-[#332D26] group-hover:text-amber-900 transition-colors">Från mål till handling</h2>
+                        <p class="text-[13px] italic text-[#4A4238] mt-1 font-serif font-medium">"Hjälp mig komma vidare och få saker att hända."</p>
+                    </div>
                 </div>
-            </div>
-        </button>
+            </button>
 
-        <button onclick="selectPrompt('Mer energi & balans')" class="w-full text-left p-4 rounded-2xl falk-card shadow-sm hover:shadow-md transition-all group">
-            <div class="flex items-start gap-3">
-                <span class="text-lg leading-none mt-0.5">⚡</span>
-                <div>
-                    <h2 class="text-sm font-bold text-[#332D26] group-hover:text-amber-900 transition-colors">Mer energi & balans</h2>
-                    <p class="text-[13px] italic text-[#4A4238] mt-1 font-serif font-medium">"Hjälp mig hitta hållbara vanor för sömn, energi och fokus."</p>
+            <button onclick="selectPrompt('Hjälp mig förstå en situation och kommunicera bättre.')" class="w-full text-left p-4 rounded-2xl falk-card shadow-sm hover:shadow-md transition-all group">
+                <div class="flex items-start gap-3">
+                    <span class="text-lg leading-none mt-0.5">💬</span>
+                    <div>
+                        <h2 class="text-sm font-bold text-[#332D26] group-hover:text-amber-900 transition-colors">Relationer & svåra samtal</h2>
+                        <p class="text-[13px] italic text-[#4A4238] mt-1 font-serif font-medium">"Hjälp mig förstå en situation och kommunicera bättre."</p>
+                    </div>
                 </div>
-            </div>
-        </button>
+            </button>
 
-        <button onclick="selectPrompt('Förstå mig själv bättre')" class="w-full text-left p-4 rounded-2xl falk-card shadow-sm hover:shadow-md transition-all group">
-            <div class="flex items-start gap-3">
-                <span class="text-lg leading-none mt-0.5">🔍</span>
-                <div>
-                    <h2 class="text-sm font-bold text-[#332D26] group-hover:text-amber-900 transition-colors">Förstå mig själv bättre</h2>
-                    <p class="text-[13px] italic text-[#4A4238] mt-1 font-serif font-medium">"Hjälp mig upptäcka mina behov, drivkrafter och mönster."</p>
+            <button onclick="selectPrompt('Hjälp mig hitta hållbara vanor för sömn, energi och fokus.')" class="w-full text-left p-4 rounded-2xl falk-card shadow-sm hover:shadow-md transition-all group">
+                <div class="flex items-start gap-3">
+                    <span class="text-lg leading-none mt-0.5">⚡</span>
+                    <div>
+                        <h2 class="text-sm font-bold text-[#332D26] group-hover:text-amber-900 transition-colors">Mer energi & balans</h2>
+                        <p class="text-[13px] italic text-[#4A4238] mt-1 font-serif font-medium">"Hjälp mig hitta hållbara vanor för sömn, energi och fokus."</p>
+                    </div>
                 </div>
-            </div>
-        </button>
+            </button>
 
-        <button onclick="selectPrompt('Utmana mina tankar')" class="w-full text-left p-4 rounded-2xl falk-card shadow-sm hover:shadow-md transition-all group">
-            <div class="flex items-start gap-3">
-                <span class="text-lg leading-none mt-0.5">💡</span>
-                <div>
-                    <h2 class="text-sm font-bold text-[#332D26] group-hover:text-amber-900 transition-colors">Utmana mina tankar</h2>
-                    <p class="text-[13px] italic text-[#4A4238] mt-1 font-serif font-medium">"Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet."</p>
+            <button onclick="selectPrompt('Hjälp mig upptäcka mina behov, drivkrafter och mönster.')" class="w-full text-left p-4 rounded-2xl falk-card shadow-sm hover:shadow-md transition-all group">
+                <div class="flex items-start gap-3">
+                    <span class="text-lg leading-none mt-0.5">🔍</span>
+                    <div>
+                        <h2 class="text-sm font-bold text-[#332D26] group-hover:text-amber-900 transition-colors">Förstå mig själv bättre</h2>
+                        <p class="text-[13px] italic text-[#4A4238] mt-1 font-serif font-medium">"Hjälp mig upptäcka mina behov, drivkrafter och mönster."</p>
+                    </div>
                 </div>
+            </button>
+
+            <button onclick="selectPrompt('Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet.')" class="w-full text-left p-4 rounded-2xl falk-card shadow-sm hover:shadow-md transition-all group">
+                <div class="flex items-start gap-3">
+                    <span class="text-lg leading-none mt-0.5">💡</span>
+                    <div>
+                        <h2 class="text-sm font-bold text-[#332D26] group-hover:text-amber-900 transition-colors">Utmana mina tankar</h2>
+                        <p class="text-[13px] italic text-[#4A4238] mt-1 font-serif font-medium">"Hjälp mig se nya perspektiv och ifrågasätta det jag tar för givet."</p>
+                    </div>
+                </div>
+            </button>
+        </div>
+
+        <!-- 2. CHATT TRÅD -->
+        <div id="chat-thread" class="hidden space-y-4 pb-12">
+            <div id="chat-messages" class="space-y-4">
             </div>
-        </button>
+        </div>
+
     </main>
 
     <!-- FOOTER & CHATTBAR -->
     <footer class="sticky bottom-0 bg-[#E8DCC4]/90 backdrop-blur-md pt-2 pb-4 px-4 z-20">
         <div class="max-w-2xl mx-auto">
-            <div class="bg-white rounded-full p-1.5 pl-4 flex items-center justify-between shadow-sm border border-[#D8CAB0]">
+            <form id="chat-form" onsubmit="handleChatSubmit(event)" class="bg-white rounded-full p-1.5 pl-4 flex items-center justify-between shadow-sm border border-[#D8CAB0]">
                 <div class="flex items-center gap-3 flex-1">
                     <svg class="w-5 h-5 text-stone-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
                     </svg>
-                    <input type="text" placeholder="Skriv till mig eller välj ett alternativ..." class="w-full text-sm bg-transparent border-none focus:outline-none text-stone-800 placeholder-stone-400">
+                    <input id="chat-input" type="text" autocomplete="off" placeholder="Skriv till mig eller välj ett alternativ..." class="w-full text-sm bg-transparent border-none focus:outline-none text-stone-800 placeholder-stone-400">
                 </div>
                 <div class="flex items-center gap-2">
-                    <button class="p-1.5 text-stone-500 hover:text-black transition-all transform rotate-90" title="Inställningar">
+                    <button type="button" class="p-1.5 text-stone-500 hover:text-black transition-all transform rotate-90" title="Inställningar">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
                         </svg>
                     </button>
-                    <button class="bg-[#4E5C4B] hover:bg-[#3D493B] text-white text-xs font-semibold px-4 py-2 rounded-full transition-all">
+                    <button type="submit" class="bg-[#4E5C4B] hover:bg-[#3D493B] text-white text-xs font-semibold px-4 py-2 rounded-full transition-all cursor-pointer">
                         Skicka
                     </button>
                 </div>
-            </div>
+            </form>
             <p class="text-[10px] text-center font-semibold tracking-widest text-[#9C8F7A] mt-3 uppercase">POWERED BY WAYJS</p>
         </div>
     </footer>
 
+    <!-- INTERAKTIV CHATT-LOGIK -->
     <script>
+        let isChatActive = false;
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+
+        function selectPrompt(promptText) {
+            const input = document.getElementById("chat-input");
+            input.value = promptText;
+            executeSendMessage(promptText);
+        }
+
+        function handleChatSubmit(event) {
+            event.preventDefault();
+            const input = document.getElementById("chat-input");
+            const promptText = input.value.trim();
+            if (!promptText) return;
+            executeSendMessage(promptText);
+        }
+
+        function executeSendMessage(text) {
+            const input = document.getElementById("chat-input");
+            input.value = "";
+
+            if (!isChatActive) {
+                const grid = document.getElementById("dashboard-grid");
+                const thread = document.getElementById("chat-thread");
+                
+                grid.classList.add("opacity-0");
+                setTimeout(() => {
+                    grid.classList.add("hidden");
+                    thread.classList.remove("hidden");
+                    isChatActive = true;
+                }, 200);
+            }
+
+            appendUserMessage(text);
+            const aiBubbleDiv = appendAiSkeleton();
+            fetchAIResponseDirectly(text, aiBubbleDiv);
+        }
+
+        function appendUserMessage(text) {
+            const messagesDiv = document.getElementById("chat-messages");
+            const userContainer = document.createElement("div");
+            userContainer.className = "flex justify-end";
+            
+            // ANVÄNDARBUBBLA (#4E5C4B)
+            userContainer.innerHTML = '<div class="user-bubble max-w-[85%] px-4 py-3 text-sm shadow-xs">' + escapeHtml(text) + '</div>';
+            messagesDiv.appendChild(userContainer);
+            scrollToBottom();
+        }
+
+        // LADDNINGSBADGE ("FALK tänker...")
+        function appendAiSkeleton() {
+            const messagesDiv = document.getElementById("chat-messages");
+            const aiContainer = document.createElement("div");
+            aiContainer.className = "flex justify-start";
+            
+            const aiBubble = document.createElement("div");
+            aiBubble.className = "ai-bubble max-w-[90%] px-4 py-3 text-sm shadow-xs leading-relaxed";
+            aiBubble.innerHTML = '<span class="animate-pulse text-stone-500 font-medium">FALK tänker...</span>';
+            
+            aiContainer.appendChild(aiBubble);
+            messagesDiv.appendChild(aiContainer);
+            scrollToBottom();
+
+            return aiBubble;
+        }
+
+        // DIREKT LEVERANS UTAN TYPEWRITER-ANIMATION
+        async function fetchAIResponseDirectly(promptText, aiBubbleElement) {
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: promptText })
+                });
+
+                if (!response.ok) {
+                    throw new Error("HTTP " + response.status);
+                }
+
+                const dataText = await response.text();
+                // LEVERERA HELA TEXTEN DIREKT NÄR DEN ÄR KLAR
+                aiBubbleElement.innerText = dataText;
+                scrollToBottom();
+
+                checkForAutoInsight(dataText);
+
+            } catch (error) {
+                console.log("-> Använder lokal direkt-fallback:", error);
+                runDemoDirectFallback(promptText, aiBubbleElement);
+            }
+        }
+
+        // DEMO VÄNTETID MED DIREKTLEVERANS
+        function runDemoDirectFallback(promptText, aiBubbleElement) {
+            const demoResponse = 'Jag hör vad du säger gällande: "' + promptText + '".\n\nNär vi stannar upp och sorterar våra tankar framträder ofta en ny klarhet. Vad är det viktigaste steget för dig i denna stund?';
+            
+            // Simulera betänketid (1.2 sekunder) och visa sedan HELA svaret på en gång
+            setTimeout(() => {
+                aiBubbleElement.innerText = demoResponse;
+                scrollToBottom();
+                saveInsightToDrawer("Klarhet kring: " + promptText.substring(0, 35) + "...", "insight");
+            }, 1200);
+        }
+
+        async function saveInsightToDrawer(text, type) {
+            const container = document.getElementById("insights-container");
+            const item = document.createElement("div");
+            item.className = "insight-item " + type + "-type p-3.5 bg-white rounded-xl border border-[#E6E0D4] shadow-sm transition-all";
+            
+            const badgeLabel = type === 'insight' ? 'INSIKT' : 'PÅMINNELSE';
+            const badgeColor = type === 'insight' ? 'text-[#8C5D37]' : 'text-[#4E5C4B]';
+            const textStyle = type === 'insight' ? 'italic font-serif' : 'font-medium';
+
+            item.innerHTML = '<span class="text-[10px] font-bold tracking-wider ' + badgeColor + ' uppercase">' + badgeLabel + '</span>' +
+                             '<p class="text-xs text-[#38322B] mt-1 ' + textStyle + '">\"' + escapeHtml(text) + '\"</p>';
+            
+            container.insertBefore(item, container.firstChild);
+
+            try {
+                await fetch('/api/insights', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: text, type: type })
+                });
+            } catch (e) {}
+        }
+
+        function checkForAutoInsight(fullText) {
+            const match = fullText.match(/\[INSIKT:\s*(.*?)\]/i);
+            if (match && match[1]) {
+                saveInsightToDrawer(match[1], 'insight');
+            }
+        }
+
+        function scrollToBottom() {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
         function updateActiveMenuState() {
             const currentPath = window.location.pathname;
             const navItems = document.querySelectorAll('.menu-nav-item');

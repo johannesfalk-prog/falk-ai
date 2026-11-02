@@ -639,3 +639,33 @@ def reset_dashboard_data():
     except Exception as e:
         print(f"[DASHBOARD RESET ERROR]: {e}", flush=True)
         return jsonify({"error": "Reset failed", "details": str(e)}), 500
+
+
+# ==========================================
+# FALK BACKEND CHAT & INSIGHTS API (STEG 2)
+# ==========================================
+from flask import Response, stream_with_context, request, jsonify
+import time
+
+@app.route('/api/chat', methods=['POST'])
+def api_chat():
+    data = request.get_json() or {}
+    user_message = data.get('message', '')
+
+    def generate():
+        reply_prefix = f"Jag hör vad du säger gällande: '{user_message}'. "
+        reply_body = "När vi stannar upp och sorterar våra tankar framträder ofta en tydlig väg framåt. Vad är det viktigaste steget för dig just nu?"
+        
+        full_text = reply_prefix + reply_body
+        for word in full_text.split(" "):
+            yield word + " "
+            time.sleep(0.04)
+
+    return Response(stream_with_context(generate()), mimetype='text/plain')
+
+@app.route('/api/insights', methods=['POST'])
+def api_insights():
+    data = request.get_json() or {}
+    # Här kan du persistera till databasen
+    print(f"-> [BACKEND INSIGHT SAVED] {data}")
+    return jsonify({"status": "success", "received": data})
