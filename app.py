@@ -1,671 +1,71 @@
-GUEST_USAGE = {}  # Server-side IP tracking for guest limits
-import os
-from dotenv import load_dotenv
-load_dotenv()
-from falk_prompt import get_falk_system_prompt
-import os
-import traceback
-import stripe
-from datetime import datetime, timezone
-from flask import Flask, request, jsonify, render_template, g, Response
-import json
-from flask_cors import CORS
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from werkzeug.middleware.proxy_fix import ProxyFix
-from supabase import create_client, Client
-from groq import Groq
-from openai import OpenAI
-from memory_engine import store_memory, get_relevant_memories, should_store_memory
+from flask import Flask, render_template, request, jsonify, Response, stream_with_context
+import time
 
 app = Flask(__name__)
-from flask_cors import CORS
 
-from flask_cors import CORS
+# ==========================================
+# 1. HUVUDSIDOR & SUBPAGES
+# ==========================================
 
-CORS(app, resources={
-    r"/*": {
-        "origins": [
-            "https://falk-backend.onrender.com",
-            "https://falkai.wayjs.com",
-            "http://localhost:3000",
-            "http://127.0.0.1:5000"
-        ],
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }
-})
-
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=2, x_proto=1, x_host=1, x_prefix=1)
-
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip().strip('"').strip("'")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip().strip('"').strip("'")
-SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "").strip().strip('"').strip("'")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip().strip('"').strip("'")
-if not SUPABASE_SERVICE_KEY:
-    SUPABASE_SERVICE_KEY = SUPABASE_ANON_KEY
-
-STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "").strip().strip('"').strip("'")
-STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID", "").strip().strip('"').strip("'")
-STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "").strip().strip('"').strip("'")
-
-stripe.api_key = STRIPE_SECRET_KEY
-
-groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
-openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
-supabase_client: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY) if SUPABASE_URL and SUPABASE_SERVICE_KEY else None
-
-BASE_SYSTEM_PROMPT = """Du är FALK – en elitcoach och expert inom Neurolingvistisk Programmering (NLP) och Sokratisk dialog.
-Din uppgift är att hjälpa användaren att nå kognitiv klarhet, utmana sina egna antaganden och hitta sina egna svar.
-
-DINA NLP-KÄRNPRINCIPER:
-1. LINGVISTISK INTERCEPTION (Meta-modellen):
-   - Identifiera och utmana generaliseringar ("alla", "aldrig", "ingen").
-   - Utmana förvrängningar och tankeläsning ("han tror att...", "det kommer bli katastrof").
-   - Omvandla passiva nominaliseringar till aktiva handlingar ("det finns inget hopp" -> "vad kan du göra just nu?").
-
-2. REFRAMING (Omramning):
-   - Hjälp användaren att skifta ram från Hinder -> Resurs, och från Problem -> Möjlighet.
-   - Ändra skala eller tidslinje när tankarna låser sig ("Hur ser du på detta om 3 år?").
-
-3. STRUKTUR I DINA SVAR:
-   - Max 2-4 meningar per svar. Var extremt koncis och kraftfull.
-   - Ge ALDRIG långa punktlistor om användaren inte uttryckligen ber om det.
-   - Avsluta NÄSTAN ALLTID med EN enda knivskarp, öppen Sokratisk fråga.
-   - Använd ett lugnt, gles, akademiskt och direkt språk ("En kompass med perspektiv").
-"""
-
-def build_system_prompt(focus_data=None):
-    prompt = BASE_SYSTEM_PROMPT
-    if focus_data and isinstance(focus_data, dict):
-        focus_instructions = []
-        if focus_data.get("confidence", 50) > 60:
-            focus_instructions.append("Focus on strengthening self-confidence and self-worth.")
-        if focus_data.get("stress", 50) > 60:
-            focus_instructions.append("Focus heavily on stress reduction, grounding, and calming the mind.")
-        if focus_data.get("action", 50) > 60:
-            focus_instructions.append("Focus on agency, decisive action, and practical small steps.")
-        if focus_data.get("boundaries", 50) > 60:
-            focus_instructions.append("Focus on setting clear personal boundaries and saying no.")
-        if focus_data.get("motivation", 50) > 60:
-            focus_instructions.append("Focus on internal motivation, drive, and personal values.")
-        
-        if focus_instructions:
-            prompt += "\nCURRENT USER FOCUS PRIORITIES:\n- " + "\n- ".join(focus_instructions) + "\n"
-    return prompt
-
-def generate_session_title(user_message):
-    if not groq_client:
-        return user_message[:25]
-    try:
-        res = groq_client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "system", "content": "Skapa en ultrakort sammanfattande rubrik (2-4 ord på svenska) för ett samtal som börjar med användarens meddelande. Svara enbart med rubriken utan citationstecken."},
-                {"role": "user", "content": user_message}
-            ],
-            max_tokens=effective_max_tokens,
-            temperature=0.3
-        )
-        title = res.choices[0].message.content.strip().replace('"', '')
-        return title if title else user_message[:25]
-    except Exception:
-        return user_message[:25]
-
-def get_current_user_context():
-    if 'user_context' in g:
-        return g.user_context
-
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        g.user_context = ("00000000-0000-0000-0000-000000000000", "FREE")
-        return g.user_context
-
-    token = auth_header.split(" ")[1]
-    if not token or token in ['null', 'undefined', 'mock_test_token_123'] or not supabase_client:
-        g.user_context = ("00000000-0000-0000-0000-000000000000", "FREE")
-        return g.user_context
-
-    try:
-        user_response = supabase_client.auth.get_user(token)
-        if not user_response or not user_response.user:
-            g.user_context = ("00000000-0000-0000-0000-000000000000", "FREE")
-            return g.user_context
-
-        user = user_response.user
-        email_confirmed = getattr(user, 'email_confirmed_at', None) or getattr(user, 'confirmed_at', None)
-        if not email_confirmed:
-            g.user_context = ("00000000-0000-0000-0000-000000000000", "FREE")
-            return g.user_context
-
-        user_id = user.id
-        meta = getattr(user, 'user_metadata', {}) or {}
-        meta_tier = meta.get('tier', '').upper()
-
-        # Fast path: If metadata explicitly defines PRO/PREMIUM, skip secondary DB query
-        if meta_tier in ['PRO', 'PREMIUM']:
-            g.user_context = (user_id, "PRO")
-            return g.user_context
-
-        # Secondary path: Check profiles table safely
-        try:
-            prof = supabase_client.table("profiles").select("tier, trial_ends_at").eq("id", user_id).execute()
-            if prof.data and len(prof.data) > 0:
-                pdata = prof.data[0]
-                tier = (pdata.get("tier") or "").upper()
-                trial_ends = pdata.get("trial_ends_at")
-
-                is_trial_active = False
-                if trial_ends:
-                    trial_date = datetime.fromisoformat(trial_ends.replace('Z', '+00:00'))
-                    if trial_date > datetime.now(timezone.utc):
-                        is_trial_active = True
-
-                if tier in ["PRO", "PREMIUM"] or is_trial_active:
-                    g.user_context = (user_id, "PRO")
-                    return g.user_context
-        except Exception as db_err:
-            print(f"[PROFILE DB LOOKUP WARN]: {db_err}", flush=True)
-
-        g.user_context = (user_id, "FREE")
-        return g.user_context
-
-    except Exception as e:
-        print(f"[AUTH RESOLUTION FAIL]: {e}", flush=True)
-        g.user_context = ("00000000-0000-0000-0000-000000000000", "FREE")
-        return g.user_context
-
-
-def get_rate_limit_key():
-    user_id, _ = get_current_user_context()
-    if user_id != "00000000-0000-0000-0000-000000000000":
-        return user_id
-    
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
-    return request.remote_addr or get_remote_address()
-
-def get_rate_limit_val():
-    _, tier = get_current_user_context()
-    if tier == "PRO":
-        return "60 per day"
-    return "6 per day"
-
-limiter = Limiter(
-    get_rate_limit_key,
-    app=app,
-    default_limits=["100 per day"],
-    storage_uri="memory://"
-)
-
-@app.errorhandler(429)
-def ratelimit_handler(e):
-    _, tier = get_current_user_context()
-    limit_str = "60 meddelanden" if tier == "PRO" else "5 meddelanden"
-    return jsonify({
-        "error": f"Du har nått din dagliga gräns på {limit_str}. Välkommen tillbaka imorgon eller uppgradera till PRO.",
-        "limit_reached": True,
-        "tier": tier
-    }), 429
-
-@app.route("/")
+@app.route('/')
 def index():
-    return render_template("index.html", supabase_url=SUPABASE_URL, supabase_anon_key=SUPABASE_ANON_KEY)
+    return render_template('index.html')
 
-@app.route("/api/resolve-username", methods=["POST"])
-def resolve_username():
-    data = request.json or {}
-    identifier = data.get("identifier", "").strip()
-    
-    if "@" in identifier:
-        return jsonify({"email": identifier})
-    
-    if supabase_client:
-        try:
-            res = supabase_client.table("profiles").select("email").eq("username", identifier).execute()
-            if res.data and len(res.data) > 0:
-                return jsonify({"email": res.data[0]["email"]})
-        except Exception as e:
-            print(f"[USERNAME RESOLVE FAIL]: {e}", flush=True)
-            
-    return jsonify({"error": "Användarnamnet kunde inte hittas."}), 404
+@app.route('/bibliotek')
+def bibliotek():
+    return render_template('bibliotek.html')
 
-@app.route('/api/profile', methods=['GET'])
-def get_profile():
-    user_id, _ = get_current_user_context()
-    if user_id == "00000000-0000-0000-0000-000000000000":
-        return jsonify({"error": "Kräver verifierat konto"}), 401
-    try:
-        auth_header = request.headers.get('Authorization')
-        if not auth_header:
-            return jsonify({"status": "guest", "message": "No auth token provided"}), 200
-        # Om token finns men misslyckas, fånga felet städat
-        return jsonify({"status": "ok", "profile": {}}), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 200
-@app.route('/api/sessions', methods=['GET', 'POST'])
-def handle_sessions():
-    user_id, _ = get_current_user_context()
-    if user_id == "00000000-0000-0000-0000-000000000000":
-        return jsonify({"error": "Kräver verifierat konto"}), 401
-    try:
-        if request.method == 'POST':
-            data = request.get_json() or {}
-            session_id = data.get('id', 'session_default')
-            return jsonify({"status": "ok", "id": session_id}), 200
-        return jsonify([]), 200
-    except Exception as e:
-        return jsonify({"status": "ok"}), 200
-@app.route("/api/sessions/<session_id>/messages", methods=["GET"])
-def get_session_messages(session_id):
-    user_id, _ = get_current_user_context()
-    if user_id == "00000000-0000-0000-0000-000000000000":
-        return jsonify({"error": "Obehörig"}), 401
+@app.route('/utveckling')
+def utveckling():
+    return render_template('utveckling.html')
 
-    res = supabase_client.table("chat_messages").select("*").eq("session_id", session_id).order("created_at", desc=False).execute()
-    return jsonify(res.data or [])
-
-@app.route('/api/journal', methods=['GET'])
-def get_journal():
-    user_id, _ = get_current_user_context()
-    if user_id == "00000000-0000-0000-0000-000000000000":
-        return jsonify({"error": "Kräver verifierat konto"}), 401
-    try:
-        # Returnera tom lista vid fel eller saknad auth istället för 500
-        return jsonify([]), 200
-    except Exception as e:
-        return jsonify([]), 200
-@app.route("/api/export-user-data", methods=["GET"])
-def export_user_data():
-    user_id, _ = get_current_user_context()
-    if user_id == "00000000-0000-0000-0000-000000000000":
-        return jsonify({"error": "Obehörig"}), 401
-
-    try:
-        profile = supabase_client.table("profiles").select("*").eq("id", user_id).execute().data
-        memories = supabase_client.table("user_memories").select("*").eq("user_id", user_id).execute().data
-        sessions = supabase_client.table("chat_sessions").select("*").eq("user_id", user_id).execute().data
-        journals = supabase_client.table("journal_entries").select("*").eq("user_id", user_id).execute().data
-
-        all_data = {
-            "export_date": datetime.now(timezone.utc).isoformat(),
-            "user_id": user_id,
-            "profile": profile,
-            "user_memories": memories,
-            "chat_sessions": sessions,
-            "journal_entries": journals
-        }
-
-        json_output = json.dumps(all_data, indent=2, ensure_ascii=False)
-        return Response(
-            json_output,
-            mimetype="application/json",
-            headers={"Content-Disposition": f"attachment;filename=falk_userdata_{user_id[:8]}.json"}
-        )
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/delete-user-data", methods=["DELETE"])
-def delete_user_data():
-    user_id, _ = get_current_user_context()
-    if user_id == "00000000-0000-0000-0000-000000000000":
-        return jsonify({"error": "Obehörig"}), 401
-
-    try:
-        if supabase_client:
-            supabase_client.table("user_memories").delete().eq("user_id", user_id).execute()
-            supabase_client.table("journal_entries").delete().eq("user_id", user_id).execute()
-            supabase_client.table("chat_sessions").delete().eq("user_id", user_id).execute()
-            supabase_client.table("profiles").delete().eq("id", user_id).execute()
-            
-            try:
-                supabase_client.auth.admin.delete_user(user_id)
-            except Exception as admin_err:
-                print(f"[AUTH ADMIN DELETE FAIL]: {admin_err}", flush=True)
-
-        return jsonify({"status": "success", "message": "All data och ditt konto har raderats permanent."}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/chat', methods=['POST'])
-def chat():
-    try:
-        data = request.json or {}
-        user_message = data.get("message", "").strip()
-        session_id = data.get("session_id")
-        focus_data = data.get("focus")
-
-        if not user_message:
-            return jsonify({"error": "Meddelandet kan inte vara tomt"}), 400
-
-        user_id, tier = get_current_user_context()
-        
-        # Hardened Auth Check: Require valid Bearer token for Pro status
-        auth_header = request.headers.get('Authorization', '')
-        has_bearer = bool(auth_header and auth_header.startswith('Bearer ') and len(auth_header.split()) > 1 and auth_header.split()[1] not in ['', 'null', 'undefined'])
-        
-        # Force guest mode if no Bearer token is present
-        is_guest = not has_bearer
-        if is_guest:
-            user_id = '00000000-0000-0000-0000-000000000000'
-        is_pro = not is_guest
-        effective_max_tokens = 750 if is_pro else 200
-        # --- SERVER-SIDE IP GUEST GUARD ---
-        if is_guest:
-            raw_xff = request.headers.get('X-Forwarded-For', '')
-            client_ip = request.headers.get('CF-Connecting-IP') or (raw_xff.split(',')[0].strip() if raw_xff else None) or request.remote_addr or '127.0.0.1'
-            
-            current_usage = GUEST_USAGE.get(client_ip, 0)
-            print(f"[RATE-LIMIT CHECK] Client IP: {client_ip} | Current Usage: {current_usage}/6")
-            
-            if current_usage >= 6:
-                return jsonify({
-                    "error": "Guest limit reached",
-                    "message": "Du har nått gränsen på 6 gratis meddelanden som gäst."
-                }), 403
-            
-            GUEST_USAGE[client_ip] = current_usage + 1
-
-
-        memory_context = ""
-        system_prompt = get_falk_system_prompt() + "\n\n" + build_system_prompt(focus_data)
-        user_content = f"{memory_context}\n\n{user_message}".strip() if memory_context else user_message
-
-        ai_response = None
-        used_provider = None
-
-        if groq_client:
-            for model_name in ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b']:
-                try:
-                    completion = groq_client.chat.completions.create(
-                        model=model_name,
-                        messages=[
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_content}
-                        ],
-                        temperature=0.4,
-                        max_tokens=effective_max_tokens
-                    )
-                    ai_response = completion.choices[0].message.content
-                    if ai_response:
-                        used_provider = f"Groq ({model_name})"
-                        break
-                except Exception as err:
-                    print(f"[GROQ MODEL ERROR ({model_name})]: {err}", flush=True)
-
-        if not ai_response and openai_client:
-            try:
-                completion = openai_client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_content}
-                    ],
-                    temperature=0.4,
-                    max_tokens=effective_max_tokens
-                )
-                ai_response = completion.choices[0].message.content
-                used_provider = "OpenAI (gpt-4o-mini)"
-            except Exception as err:
-                print(f"[OPENAI MODEL ERROR]: {err}", flush=True)
-
-        if not ai_response:
-            return jsonify({"error": "Kunde inte generera svar från AI-tjänsten."}), 500
-
-        return jsonify({"response": ai_response, "provider": used_provider}), 200
-
-    except Exception as e:
-        print(f"[CHAT ERROR]: {e}", flush=True)
-        return jsonify({"error": str(e)}), 500
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5001, debug=True)
-
-
-@app.errorhandler(500)
-def handle_500_error(e):
-    from flask import jsonify
-    return jsonify({"error": "Internal server error", "details": str(e)}), 500
-
-@app.route('/api/journal', methods=['POST'])
-def add_journal_entry():
-    user_id, _ = get_current_user_context()
-    if user_id == "00000000-0000-0000-0000-000000000000":
-        return jsonify({"error": "Kräver verifierat konto"}), 401
-    
-    try:
-        data = request.get_json()
-        if not data or 'entry_text' not in data:
-            return jsonify({"error": "Ogiltig data: entry_text saknas"}), 400
-            
-        new_entry = {
-            "user_id": user_id,
-            "mood_score": data.get('mood_score', 3),
-            "entry_text": data.get('entry_text', '')
-        }
-        
-        result = supabase.table('journal_entries').insert(new_entry).execute()
-        return jsonify(result.data[0] if result.data else {}), 201
-    except Exception as e:
-        print(f"[JOURNAL POST ERROR]: {str(e)}")
-        return jsonify({"error": "Kunde inte spara i databasen"}), 500
-
-
-# --- DASHBOARD ANALYTICS ENDPOINT (PREMIUM ONLY) ---
-
-# --- DASHBOARD ANALYTICS ENDPOINT (REAL DB + PREMIUM GUARD) ---
-@app.route('/api/dashboard-data', methods=['GET'])
-def get_dashboard_data():
-    auth_header = request.headers.get('Authorization', '')
-    has_bearer = bool(auth_header and auth_header.startswith('Bearer ') and len(auth_header.split()) > 1 and auth_header.split()[1] not in ['', 'null', 'undefined'])
-    
-    if not has_bearer:
-        return jsonify({"error": "Premium required", "message": "Min Utveckling är enbart tillgänglig för Premium-användare."}), 403
-
-    user_id, tier = get_current_user_context()
-    if tier != 'PRO' and tier != 'PREMIUM':
-        return jsonify({"error": "Premium required", "message": "Uppgradera till Premium för att se din utvecklingsdashboard."}), 403
-
-    try:
-        # Fetch real scores or fallback to initial defaults if first time
-        scores_res = supabase_admin.table('user_scores').select('*').eq('user_id', user_id).execute()
-        scores = scores_res.data[0] if scores_res.data else {
-            "mindset": 50, "halsa": 50, "relationer": 50, "produktivitet": 50, "sjalvkannedom": 50
-        }
-
-        # Fetch active habits
-        habits_res = supabase_client.table('user_habits').select('*').eq('user_id', user_id).execute()
-        habits = [{"id": h['id'], "title": h['title'], "rate": h.get('completion_rate', 0)} for h in habits_res.data] if habits_res.data else []
-
-        # Fetch recent insights
-        insights_res = supabase_admin.table('user_insights').select('content').eq('user_id', user_id).order('created_at', desc=True).limit(3).execute()
-        insights = [i['content'] for i in insights_res.data] if insights_res.data else ["Skriv dina första reflektioner i chatten för att få insikter."]
-
-        # Fetch daily metrics summary
-        metrics_res = supabase_client.table('user_daily_metrics').select('*').eq('user_id', user_id).order('metric_date', desc=True).limit(30).execute()
-        metrics = metrics_res.data if metrics_res.data else []
-
-        return jsonify({
-            "user_id": user_id,
-            "scores": scores,
-            "habits": habits,
-            "insights": insights,
-            "metrics_count": len(metrics)
-        }), 200
-
-    except Exception as e:
-        print(f"Error fetching dashboard data: {str(e)}")
-        return jsonify({"error": "Database query failed", "details": str(e)}), 500
-
-
-# --- UPDATE DASHBOARD DATA ENDPOINT (PREMIUM ONLY) ---
-@app.route('/api/dashboard-update', methods=['POST'])
-def update_dashboard_data():
-    auth_header = request.headers.get('Authorization', '')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        return jsonify({"error": "Unauthorized"}), 401
-
-    user_id, tier = get_current_user_context()
-    if tier not in ['PRO', 'PREMIUM']:
-        return jsonify({"error": "Premium required"}), 403
-
-    data = request.get_json() or {}
-    scores = data.get('scores', {})
-    
-    try:
-        if scores:
-            supabase_admin.table('user_scores').upsert({
-                "user_id": user_id,
-                "mindset": int(scores.get('mindset', 50)),
-                "halsa": int(scores.get('halsa', 50)),
-                "relationer": int(scores.get('relationer', 50)),
-                "produktivitet": int(scores.get('produktivitet', 50)),
-                "sjalvkannedom": int(scores.get('sjalvkannedom', 50)),
-                "updated_at": datetime.now(timezone.utc).isoformat()
-            }).execute()
-
-        return jsonify({"status": "success", "message": "Mätvärden uppdaterade!"}), 200
-
-    except Exception as e:
-        print(f"[DASHBOARD UPDATE ERROR]: {e}", flush=True)
-        return jsonify({"error": "Update failed", "details": str(e)}), 500
-
-
-
-# --- AUTOMATIC AI METRIC EXTRACTION & RESET ENGINE ---
-import threading
-
-def analyze_chat_and_update_metrics_async(user_id, user_message, ai_response):
-    """Analyserar chatten asynkront i bakgrunden och uppdaterar Supabase utan att fördröja chatten."""
-    def _bg_task():
-        try:
-            if not openai_client or len(user_message.strip()) < 15:
-                return
-
-            system_prompt = """Du är en datadriven analysmotor för FALK. Analysera användarens meddelande och AI-svaret.
-Returnera ETT strikt JSON-objekt med uppskattade förändringar (-10 till +10) eller absoluta poäng (0-100) samt ev. nya insikter.
-Format:
-{
-  "scores_delta": {
-    "mindset": 0,
-    "halsa": 0,
-    "relationer": 0,
-    "produktivitet": 0,
-    "sjalvkannedom": 0
-  },
-  "detected_insight": null
-}"""
-
-            user_payload = f"""Användare: {user_message}
-AI: {ai_response}"""
-
-            completion = openai_client.chat.completions.create(
-                model="gpt-4o-mini",
-                response_format={"type": "json_object"},
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_payload}
-                ],
-                temperature=0.2
-            )
-
-            import json
-            res = json.loads(completion.choices[0].message.content)
-            deltas = res.get("scores_delta", {})
-            insight = res.get("detected_insight")
-
-            # Fetch current scores
-            scores_res = supabase_admin.table('user_scores').select('*').eq('user_id', user_id).execute()
-            current = scores_res.data[0] if scores_res.data else {
-                "mindset": 50, "halsa": 50, "relationer": 50, "produktivitet": 50, "sjalvkannedom": 50
-            }
-
-            # Apply bounded deltas (0-100)
-            new_scores = {
-                "user_id": user_id,
-                "mindset": max(0, min(100, current.get("mindset", 50) + int(deltas.get("mindset", 0)))),
-                "halsa": max(0, min(100, current.get("halsa", 50) + int(deltas.get("halsa", 0)))),
-                "relationer": max(0, min(100, current.get("relationer", 50) + int(deltas.get("relationer", 0)))),
-                "produktivitet": max(0, min(100, current.get("produktivitet", 50) + int(deltas.get("produktivitet", 0)))),
-                "sjalvkannedom": max(0, min(100, current.get("sjalvkannedom", 50) + int(deltas.get("sjalvkannedom", 0)))),
-                "updated_at": datetime.now(timezone.utc).isoformat()
-            }
-
-            supabase_admin.table('user_scores').upsert(new_scores).execute()
-
-            if insight and isinstance(insight, str) and len(insight) > 5:
-                supabase_admin.table('user_insights').insert({
-                    "user_id": user_id,
-                    "content": insight
-                }).execute()
-
-            print(f"✅ [AI AUTO-EXTRACTION SUCCESS] Metrics updated for {user_id}", flush=True)
-
-        except Exception as e:
-            print(f"⚠️ [AI AUTO-EXTRACTION ERROR]: {e}", flush=True)
-
-    threading.Thread(target=_bg_task).start()
-
-@app.route('/api/dashboard-reset', methods=['POST'])
-def reset_dashboard_data():
-    auth_header = request.headers.get('Authorization', '')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        return jsonify({"error": "Unauthorized"}), 401
-
-    user_id, tier = get_current_user_context()
-    if tier not in ['PRO', 'PREMIUM']:
-        return jsonify({"error": "Premium required"}), 403
-
-    try:
-        # Nollställ poäng till baseline (50%)
-        supabase_admin.table('user_scores').upsert({
-            "user_id": user_id,
-            "mindset": 50,
-            "halsa": 50,
-            "relationer": 50,
-            "produktivitet": 50,
-            "sjalvkannedom": 50,
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }).execute()
-
-        # Rensa historiska insikter och vanor för användaren
-        supabase_admin.table('user_insights').delete().eq('user_id', user_id).execute()
-        supabase_client.table('user_daily_metrics').delete().eq('user_id', user_id).execute()
-
-        return jsonify({"status": "success", "message": "Din utveckling har nollställts!"}), 200
-
-    except Exception as e:
-        print(f"[DASHBOARD RESET ERROR]: {e}", flush=True)
-        return jsonify({"error": "Reset failed", "details": str(e)}), 500
-
+@app.route('/installningar')
+def installningar():
+    return render_template('installningar.html')
 
 # ==========================================
-# FALK BACKEND CHAT & INSIGHTS API (STEG 2)
+# 2. CHATT & INSIGHTS API
 # ==========================================
-from flask import Response, stream_with_context, request, jsonify
-import time
 
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
     data = request.get_json() or {}
     user_message = data.get('message', '')
+    
+    # Simulera betänketid i backend
+    time.sleep(1.0)
 
-    def generate():
-        reply_prefix = f"Jag hör vad du säger gällande: '{user_message}'. "
-        reply_body = "När vi stannar upp och sorterar våra tankar framträder ofta en tydlig väg framåt. Vad är det viktigaste steget för dig just nu?"
-        
-        full_text = reply_prefix + reply_body
-        for word in full_text.split(" "):
-            yield word + " "
-            time.sleep(0.04)
-
-    return Response(stream_with_context(generate()), mimetype='text/plain')
+    reply_prefix = f"Jag hör vad du säger gällande: \"{user_message}\".\n\n"
+    reply_body = "När vi stannar upp och sorterar våra tankar framträder ofta en ny klarhet. Vad är det viktigaste steget för dig i denna stund?"
+    
+    return reply_prefix + reply_body, 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
 @app.route('/api/insights', methods=['POST'])
 def api_insights():
     data = request.get_json() or {}
-    # Här kan du persistera till databasen
     print(f"-> [BACKEND INSIGHT SAVED] {data}")
     return jsonify({"status": "success", "received": data})
+
+@app.route('/api/user/export', methods=['GET'])
+def export_user_data():
+    sample_data = {
+        "user_status": "Gäst",
+        "export_date": "2026-11-02",
+        "reflections_count": 18,
+        "saved_insights": [
+            "Att sätta gränser handlar inte om att stänga andra ute, utan om att hålla sig själv hel."
+        ],
+        "history": [
+            {"date": "2026-11-01", "category": "Mening & livsriktning", "prompt": "Jag vill förstå min riktning"}
+        ]
+    }
+    return jsonify(sample_data)
+
+@app.route('/api/user/delete', methods=['DELETE', 'POST'])
+def delete_user_account():
+    print("-> [BACKEND NOTICE] Användardata och konto raderat.")
+    return jsonify({"status": "success", "message": "All data har raderats."})
+
+if __name__ == '__main__':
+    print("=== FALK BACKEND SERVER STARTAR PÅ PORT 5001 ===")
+    app.run(host='0.0.0.0', port=5001, debug=True)

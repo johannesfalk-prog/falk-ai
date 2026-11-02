@@ -44,6 +44,15 @@
             line-height: 1.6;
             font-family: inherit !important;
         }
+    
+        body.theme-dark header {
+            background-color: #1C1A17 !important;
+            border-color: #3D3730 !important;
+        }
+        body.theme-dark header a, body.theme-dark header button {
+            color: #E8DCC4 !important;
+        }
+
     </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between antialiased selection:bg-stone-300 relative overflow-x-hidden">
@@ -152,8 +161,9 @@
     </aside>
 
     <!-- HEADER -->
-    <header class="flex items-center justify-between px-5 py-4 border-b border-[#D8CAB0]/80 bg-[#E8DCC4] sticky top-0 z-30">
-        <div class="flex items-center gap-3">
+        <!-- HEADER (SOLID BAKGRUND, ABSOLUT CENTRERING, GLÖDLAMPA) -->
+    <header class="relative flex items-center justify-between px-5 py-4 border-b border-[#D8CAB0]/80 bg-[#E8DCC4] sticky top-0 z-30 transition-colors duration-200">
+        <div class="flex items-center gap-3 z-10">
             <button id="open-menu-btn" onclick="openLeftMenu()" class="p-1 text-black hover:opacity-75 transition-all focus:outline-none" title="Öppna meny">
                 <svg class="w-6 h-6 text-black stroke-current" fill="none" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -164,11 +174,11 @@
             </span>
         </div>
 
-        <div class="flex items-center">
+        <div class="absolute left-1/2 -translate-x-1/2 flex items-center">
             <a href="/" class="text-2xl font-black tracking-wider text-black hover:opacity-75 transition-all cursor-pointer">FALK</a>
         </div>
 
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-4 z-10">
             <a href="/" class="text-black hover:opacity-75 transition-all" title="Startsida / Ny chat">
                 <svg class="w-5 h-5 text-black stroke-current" fill="none" stroke-width="2.2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path>
@@ -182,7 +192,7 @@
                         <line x1="4.5" y1="4.5" x2="5.9" y2="5.9" stroke-linecap="round" stroke-width="2" />
                         <line x1="1.5" y1="12" x2="3.5" y2="12" stroke-linecap="round" stroke-width="2" />
                         <line x1="19.5" y1="4.5" x2="18.1" y2="5.9" stroke-linecap="round" stroke-width="2" />
-                        <line x1="22.5" y1="12" x2="20.5" y2="12" stroke-linecap="round" stroke-width="2" />
+                        <line x1="22.5" y1="12" x2="20.5" y2="20.5" stroke-linecap="round" stroke-width="2" />
                     </g>
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 18h6m-4 2.5h2M12 5.5a5.5 5.5 0 00-5.5 5.5c0 2 1.1 3.7 2.7 4.6V17a1 1 0 001 1h3.6a1 1 0 001-1v-1.4c1.6-.9 2.7-2.6 2.7-4.6A5.5 5.5 0 0012 5.5z"></path>
                 </svg>
@@ -297,7 +307,7 @@
     <!-- FOOTER & CHATTBAR -->
     <footer class="sticky bottom-0 bg-[#E8DCC4]/90 backdrop-blur-md pt-2 pb-4 px-4 z-20">
         <div class="max-w-2xl mx-auto">
-            <form id="chat-form" onsubmit="handleChatSubmit(event)" class="bg-white rounded-full p-1.5 pl-4 flex items-center justify-between shadow-sm border border-[#D8CAB0]">
+                        <form id="chat-form" onsubmit="handleChatSubmit(event)" class="bg-white rounded-full p-1.5 pl-4 flex items-center justify-between shadow-sm border border-[#D8CAB0]">
                 <div class="flex items-center gap-3 flex-1">
                     <svg class="w-5 h-5 text-stone-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
@@ -307,7 +317,7 @@
                 <div class="flex items-center gap-2">
                     <button type="button" class="p-1.5 text-stone-500 hover:text-black transition-all transform rotate-90" title="Inställningar">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
                         </svg>
                     </button>
                     <button type="submit" class="bg-[#4E5C4B] hover:bg-[#3D493B] text-white text-xs font-semibold px-4 py-2 rounded-full transition-all cursor-pointer">
