@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FALK - Övningar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body.theme-standard { background-color: #E8DCC4 !important; color: #38322B; }
+        body.theme-dark { background-color: #1C1A17 !important; color: #E8DCC4; }
+        body.theme-dark header { background-color: #1C1A17 !important; border-color: #3D3730 !important; }
+        body.theme-dark header a, body.theme-dark header button { color: #E8DCC4 !important; }
+        
+        .falk-card { background-color: #FAF8F0; border: 1px solid #DDD0B8; }
+        body.theme-dark .falk-card { background-color: #26231F !important; border-color: #3D3730 !important; color: #E8DCC4 !important; }
+        
+        .filter-chip {
+            background-color: #FAF8F0;
+            border: 1px solid #DDD0B8;
+            color: #4A4238;
+            transition: all 0.2s ease;
+        }
+        .filter-chip.active {
+            background-color: #2D2721 !important;
+            color: #FFFFFF !important;
+            border-color: #2D2721 !important;
+        }
+        body.theme-dark .filter-chip {
+            background-color: #26231F;
+            border-color: #3D3730;
+            color: #C5BBAA;
+        }
+        body.theme-dark .filter-chip.active {
+            background-color: #E8DCC4 !important;
+            color: #1C1A17 !important;
+        }
+
+        .exercise-card.hidden-card {
+            display: none !important;
+        }
+
+        .user-bubble { background-color: #4E5C4B !important; color: #FAF8F0; border-radius: 1.25rem 1.25rem 0.25rem 1.25rem; white-space: pre-wrap; word-break: break-word; }
+        .ai-bubble { background-color: #FAF8F0; color: #2D2721; border: 1px solid #DDD0B8; border-radius: 1.25rem 1.25rem 1.25rem 0.25rem; white-space: pre-wrap; word-break: break-word; line-height: 1.6; }
+        body.theme-dark .ai-bubble { background-color: #26231F !important; color: #E8DCC4 !important; border-color: #3D3730 !important; }
+    </style>
+</head>
+<body class="theme-standard min-h-screen flex flex-col justify-between antialiased relative overflow-x-hidden">
+
+    <!-- VÄNSTER BACKDROP & MENY -->
+    <div id="falk-left-backdrop" onclick="closeLeftMenu()" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300 z-40"></div>
+    <aside id="falk-left-drawer" class="fixed top-0 left-0 h-full w-80 bg-[#FAF8F0]/95 backdrop-blur-md shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out z-50 flex flex-col border-r border-[#DDD0B8]">
+        <div class="p-6 border-b border-[#E6E0D4]/80">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-[11px] font-bold tracking-wide text-[#8C5D37] uppercase">FALK - En kompass med perspektiv</p>
+                    <h2 class="text-xl font-extrabold text-[#2D2721] mt-0.5">Meny</h2>
+                </div>
+                <button onclick="closeLeftMenu()" class="p-1 text-stone-600 hover:text-black rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+        </div>
+        <nav class="flex-1 p-5 space-y-2 overflow-y-auto">
+            <a href="/" class="flex items-center gap-3.5 px-4 py-3 text-sm font-semibold rounded-2xl hover:bg-[#E8DCC4]/40"><span>Chatt</span></a>
+            <a href="/bibliotek" class="flex items-center gap-3.5 px-4 py-3 text-sm font-semibold rounded-2xl hover:bg-[#E8DCC4]/40 font-bold bg-[#D6CDB8]/50"><span>Bibliotek</span></a>
+            <a href="/utveckling" class="flex items-center gap-3.5 px-4 py-3 text-sm font-semibold rounded-2xl hover:bg-[#E8DCC4]/40"><span>Min utveckling</span></a>
+            <a href="/installningar" class="flex items-center gap-3.5 px-4 py-3 text-sm font-semibold rounded-2xl hover:bg-[#E8DCC4]/40"><span>Inställningar och integritet</span></a>
+        </nav>
+    </aside>
+
+    <!-- HÖGER BACKDROP & MENY (INSIKTER & PÅMINNELSER) -->
+    <div id="falk-right-backdrop" onclick="closeRightMenu()" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300 z-40"></div>
+    <aside id="falk-right-drawer" class="fixed top-0 right-0 h-full w-80 bg-[#FAF8F0]/95 backdrop-blur-md shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out z-50 flex flex-col border-l border-[#DDD0B8]">
+        <div class="p-6 border-b border-[#E6E0D4]/80">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-[11px] font-bold tracking-wide text-[#8C5D37] uppercase">ÖVERSYNER & FOKUS</p>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <svg class="w-5 h-5 text-[#8C5D37] stroke-current fill-none shrink-0" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <g stroke="currentColor">
+                                <line x1="12" y1="1.5" x2="12" y2="3.5" />
+                                <line x1="4.5" y1="4.5" x2="5.9" y2="5.9" />
+                                <line x1="1.5" y1="12" x2="3.5" y2="12" />
+                                <line x1="19.5" y1="4.5" x2="18.1" y2="5.9" />
+                                <line x1="22.5" y1="12" x2="20.5" y2="12" />
+                            </g>
+                            <path d="M 8.5 13 C 7 11.2 7 8 9 6 C 10.8 4.2 13.2 4.2 15 6 C 17 8 17 11.2 15.5 13 C 14.8 13.8 14.5 14.5 14.5 15.5 L 9.5 15.5 C 9.5 14.5 9.2 13.8 8.5 13 Z" />
+                            <line x1="9.5" y1="18" x2="14.5" y2="18" />
+                            <line x1="10.5" y1="20.5" x2="13.5" y2="20.5" />
+                        </svg>
+                        <h2 class="text-xl font-extrabold text-[#2D2721]">Insikter & Påminnelser</h2>
+                    </div>
+                </div>
+                <button onclick="closeRightMenu()" class="p-1 text-stone-600 hover:text-black rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+        </div>
+        <div class="flex-1 p-5 space-y-4 overflow-y-auto">
+            <div class="falk-card p-4 rounded-2xl border border-[#DDD0B8] shadow-xs">
+                <div class="flex items-center gap-2 text-[#8C5D37] mb-2">
+                    <svg class="w-5 h-5 text-[#8C5D37] stroke-current fill-none shrink-0" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <g stroke="currentColor">
+                            <line x1="12" y1="1.5" x2="12" y2="3.5" />
+                            <line x1="4.5" y1="4.5" x2="5.9" y2="5.9" />
+                            <line x1="1.5" y1="12" x2="3.5" y2="12" />
+                            <line x1="19.5" y1="4.5" x2="18.1" y2="5.9" />
+                            <line x1="22.5" y1="12" x2="20.5" y2="12" />
+                        </g>
+                        <path d="M 8.5 13 C 7 11.2 7 8 9 6 C 10.8 4.2 13.2 4.2 15 6 C 17 8 17 11.2 15.5 13 C 14.8 13.8 14.5 14.5 14.5 15.5 L 9.5 15.5 C 9.5 14.5 9.2 13.8 8.5 13 Z" />
+                        <line x1="9.5" y1="18" x2="14.5" y2="18" />
+                        <line x1="10.5" y1="20.5" x2="13.5" y2="20.5" />
+                    </svg>
+                    <h3 class="text-xs font-bold uppercase tracking-wider">Senaste Insikt</h3>
+                </div>
+                <p class="text-xs italic font-serif leading-relaxed text-stone-700">"Att sätta gränser handlar inte om att stänga ute andra, utan om att hålla dig själv hel."</p>
+            </div>
+
+            <div class="falk-card p-4 rounded-2xl border border-[#DDD0B8] shadow-xs">
+                <div class="flex items-center gap-2 text-[#8C5D37] mb-2">
+                    <span class="text-base">🔔</span>
+                    <h3 class="text-xs font-bold uppercase tracking-wider">Aktiv Påminnelse</h3>
+                </div>
+                <p class="text-xs font-medium text-stone-700">Reflektera kring dina 3 viktigaste prioriteringar inför morgondagen.</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- HEADER (SOLID BAKGRUND, CENTRERAD LOGO, LAMPIKON MED STRÅLAR) -->
+    <header class="relative flex items-center justify-between px-5 py-4 border-b border-[#D8CAB0]/80 bg-[#E8DCC4] sticky top-0 z-30 transition-colors duration-200">
+        <div class="flex items-center gap-3 z-10">
+            <button onclick="openLeftMenu()" class="p-1 text-black hover:opacity-75 transition-all focus:outline-none" title="Öppna meny">
+                <svg class="w-6 h-6 text-black stroke-current" fill="none" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+            <span class="px-2.5 py-0.5 text-[11px] font-bold tracking-wider text-[#8C5D37] bg-[#FAF8F0] border border-[#DDD0B8] rounded-full uppercase shadow-xs">GÄST</span>
+        </div>
+
+        <div class="absolute left-1/2 -translate-x-1/2 flex items-center">
+            <a href="/" class="text-2xl font-black tracking-wider text-black hover:opacity-75 transition-all cursor-pointer">FALK</a>
+        </div>
+
+        <div class="flex items-center gap-4 z-10">
+            <a href="/" class="text-black hover:opacity-75 transition-all" title="Ny chat">
+                <svg class="w-5 h-5 text-black stroke-current" fill="none" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+            </a>
+            <button onclick="openRightMenu()" class="group text-black hover:opacity-100 transition-all focus:outline-none p-1 relative flex items-center justify-center" title="Insikter & Påminnelser">
+                <svg class="w-6 h-6 text-black stroke-current fill-none relative" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <g class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 stroke-current">
+                        <line x1="12" y1="1.5" x2="12" y2="3.5" />
+                        <line x1="4.5" y1="4.5" x2="5.9" y2="5.9" />
+                        <line x1="1.5" y1="12" x2="3.5" y2="12" />
+                        <line x1="19.5" y1="4.5" x2="18.1" y2="5.9" />
+                        <line x1="22.5" y1="12" x2="20.5" y2="12" />
+                    </g>
+                    <path d="M 8.5 13 C 7 11.2 7 8 9 6 C 10.8 4.2 13.2 4.2 15 6 C 17 8 17 11.2 15.5 13 C 14.8 13.8 14.5 14.5 14.5 15.5 L 9.5 15.5 C 9.5 14.5 9.2 13.8 8.5 13 Z" />
+                    <line x1="9.5" y1="18" x2="14.5" y2="18" />
+                    <line x1="10.5" y1="20.5" x2="13.5" y2="20.5" />
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-1 max-w-5xl w-full mx-auto px-4 py-6">
+
+        <!-- DASHBOARD GRID CONTAINER -->
+        <div id="dashboard-grid" class="transition-opacity duration-300 space-y-6">
+            <div class="text-center">
+                <h1 class="text-2xl font-extrabold">Övningar</h1>
+                <p class="text-xs italic opacity-75 mt-1 font-serif">15 strukturerade verktyg för personlig utveckling och reflektion.</p>
+            </div>
+
+            <!-- KATEGORIFILTER CHIPS -->
+            <div class="falk-card p-3 rounded-2xl flex flex-wrap gap-2 items-center justify-center shadow-xs">
+                <button onclick="filterCategory('all')" id="cat-chip-all" class="filter-chip active text-xs px-3.5 py-1.5 rounded-full font-semibold">Alla (15)</button>
+                <button onclick="filterCategory('mindset')" id="cat-chip-mindset" class="filter-chip text-xs px-3.5 py-1.5 rounded-full font-medium">Mindset & Tankar (5)</button>
+                <button onclick="filterCategory('stress')" id="cat-chip-stress" class="filter-chip text-xs px-3.5 py-1.5 rounded-full font-medium">Stress & Lugn (3)</button>
+                <button onclick="filterCategory('handling')" id="cat-chip-handling" class="filter-chip text-xs px-3.5 py-1.5 rounded-full font-medium">Handling & Beslut (4)</button>
+                <button onclick="filterCategory('relationer')" id="cat-chip-relationer" class="filter-chip text-xs px-3.5 py-1.5 rounded-full font-medium">Relationer & Gränser (3)</button>
+            </div>
+
+            <!-- RESPONSTIVT 1, 2 OCH 3-KOLUMNS GRID -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5" id="exercise-grid">
+
+                <!-- 1. Värdekompassen -->
+                <button data-category="relationer" onclick="selectPrompt('Övning: Värdekompassen - Hjälp mig identifiera mina tre mest obrytbara kärnvärden.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">🌱</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Värdekompassen</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Relationer</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Hjälp mig identifiera mina tre mest obrytbara kärnvärden i livet just nu."</p>
+                    </div>
+                </button>
+
+                <!-- 2. Syna tanken -->
+                <button data-category="mindset" onclick="selectPrompt('Övning: Syna tanken - Guide mig i att syna och ifrågasätta en tanke som gnager.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">☁️</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Syna tanken</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Mindset</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Guide mig i att syna och ifrågasätta en tanke som gnager i mig."</p>
+                    </div>
+                </button>
+
+                <!-- 3. Beslutsklarhet -->
+                <button data-category="handling" onclick="selectPrompt('Övning: Beslutsklarhet - Hjälp mig formulera och strukturera ett svårt beslut jag skjuter på.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">💼</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Beslutsklarhet</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Handling</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Hjälp mig formulera och strukturera ett svårt beslut jag skjuter på."</p>
+                    </div>
+                </button>
+
+                <!-- 4. Lugnsankring -->
+                <button data-category="stress" onclick="selectPrompt('Övning: Lugnsankring - Ge mig en 3-stegs mikro-reflektion för att släppa anspänning här och nu.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">🍃</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Lugnsankring</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Stress</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Ge mig en 3-stegs mikro-reflektion för att släppa anspänning här och nu."</p>
+                    </div>
+                </button>
+
+                <!-- 5. Mikrosteg -->
+                <button data-category="handling" onclick="selectPrompt('Övning: Mikrosteg - Hjälp mig bryta ned mitt viktigaste mål till en 10-minuters mikrohandling.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">🎯</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Mikrosteg</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Handling</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Hjälp mig bryta ned mitt viktigaste mål till en 10-minuters mikrohandling."</p>
+                    </div>
+                </button>
+
+                <!-- 6. Samtalsförberedelse -->
+                <button data-category="relationer" onclick="selectPrompt('Övning: Samtalsförberedelse - Hjälp mig förbereda mina argument inför ett tufft samtal.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">💬</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Samtalsförberedelse</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Relationer</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Hjälp mig förbereda mina argument inför ett tufft samtal."</p>
+                    </div>
+                </button>
+
+                <!-- 7. Energitjuvar -->
+                <button data-category="stress" onclick="selectPrompt('Övning: Kartlägg energitjuvar - Analysera mina energitjuvar under det senaste dygnet.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">⚡</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Energitjuvar</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Stress</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Analysera mina energitjuvar under det senaste dygnet."</p>
+                    </div>
+                </button>
+
+                <!-- 8. Mönsterkoll -->
+                <button data-category="mindset" onclick="selectPrompt('Övning: Mönsterkoll - Hjälp mig se om jag upprepar en invand reaktion i en återkommande situation.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">🔍</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Mönsterkoll</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Mindset</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Hjälp mig se om jag upprepar en invand reaktion i en situation."</p>
+                    </div>
+                </button>
+
+                <!-- 9. Utomstående blick -->
+                <button data-category="mindset" onclick="selectPrompt('Övning: Utomstående blick - Hjälp mig se min nuvarande utmaning ur ett utomståendes ögon.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">💡</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Utomstående blick</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Mindset</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Hjälp mig se min nuvarande utmaning ur ett utomståendes ögon."</p>
+                    </div>
+                </button>
+
+                <!-- 10. NY: Inre kritikern -->
+                <button data-category="mindset" onclick="selectPrompt('Övning: Inre kritikern - Hjälp mig identifiera och omformulera min strängaste inre röst just nu.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">🎭</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Inre kritikern</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Mindset</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Hjälp mig identifiera och omformulera min strängaste inre röst."</p>
+                    </div>
+                </button>
+
+                <!-- 11. NY: Kontrollcirkeln -->
+                <button data-category="stress" onclick="selectPrompt('Övning: Kontrollcirkeln - Guide mig i att separera det jag kan påverka från det jag måste acceptera.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">⭕</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Kontrollcirkeln</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Stress</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Separera det jag kan påverka från det jag måste acceptera."</p>
+                    </div>
+                </button>
+
+                <!-- 12. NY: Gränssättning -->
+                <button data-category="relationer" onclick="selectPrompt('Övning: Gränssättning - Hjälp mig formulera ett tydligt, respektfullt nej till en förfrågan som dränerar mig.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">🛡️</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Nej utan skuld</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Relationer</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Formulera ett tydligt, respektfullt 'nej' utan skuld."</p>
+                    </div>
+                </button>
+
+                <!-- 13. NY: Prokrastineringskoden -->
+                <button data-category="handling" onclick="selectPrompt('Övning: Motståndets rot - Analysera varför jag skjuter på en specifik uppgift och hjälp mig bryta låsningen.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">⏳</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Motståndets rot</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Handling</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Analysera varför jag skjuter på en uppgift och bryt låsningen."</p>
+                    </div>
+                </button>
+
+                <!-- 14. NY: Framtidsperspektivet -->
+                <button data-category="mindset" onclick="selectPrompt('Övning: Framtidsperspektivet - Hjälp mig betrakta mitt nuvarande dilemma ur mitt 70-åriga jags ögon.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">🏔️</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Ditt 70-åriga jag</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Mindset</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Betrakta mitt nuvarande dilemma ur mitt 70-åriga jags ögon."</p>
+                    </div>
+                </button>
+
+                <!-- 15. NY: Friktionsanalys -->
+                <button data-category="handling" onclick="selectPrompt('Övning: Friktionsanalys - Identifiera den osynliga friktionen som hindrar mig från att upprätthålla min viktigaste vana.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">⚙️</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Friktionsanalys</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Handling</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Identifiera den osynliga friktionen som hindrar min vana."</p>
+                    </div>
+                </button>
+
+            </div>
+        </div>
+
+        <!-- CHATT TRÅD (VISAS NÄR ÖVNING KLICKAS) -->
+        <div id="chat-thread" class="hidden space-y-4 pb-12 max-w-2xl mx-auto">
+            <div id="chat-messages" class="space-y-4"></div>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="sticky bottom-0 bg-transparent backdrop-blur-md pt-2 pb-4 px-4 z-20">
+        <div class="max-w-2xl mx-auto">
+            <form id="chat-form" onsubmit="handleChatSubmit(event)" class="bg-white rounded-full p-1.5 pl-4 flex items-center justify-between shadow-sm border border-[#D8CAB0]">
+                <div class="flex items-center gap-3 flex-1">
+                    <svg class="w-5 h-5 text-stone-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                    <input id="chat-input" type="text" autocomplete="off" placeholder="Starta en övning eller skriv..." class="w-full text-sm bg-transparent border-none focus:outline-none text-stone-800 placeholder-stone-400">
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" class="p-1.5 text-stone-500 hover:text-black transition-all transform rotate-90" title="Inställningar"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg></button>
+                    <button type="submit" class="bg-[#4E5C4B] hover:bg-[#3D493B] text-white text-xs font-semibold px-4 py-2 rounded-full transition-all">Skicka</button>
+                </div>
+            </form>
+        </div>
+    </footer>
+
+    <script>
+        const savedTheme = localStorage.getItem('falk_theme') || 'standard';
+        document.body.className = 'theme-' + savedTheme + ' min-h-screen flex flex-col justify-between antialiased relative overflow-x-hidden';
+        let isChatActive = false;
+
+        function filterCategory(cat) {
+            const chips = document.querySelectorAll('.filter-chip');
+            chips.forEach(c => c.classList.remove('active'));
+            
+            const activeChip = document.getElementById('cat-chip-' + cat);
+            if (activeChip) activeChip.classList.add('active');
+
+            const cards = document.querySelectorAll('.exercise-card');
+            cards.forEach(card => {
+                if (cat === 'all' || card.getAttribute('data-category') === cat) {
+                    card.classList.remove('hidden-card');
+                } else {
+                    card.classList.add('hidden-card');
+                }
+            });
+        }
+
+        function escapeHtml(str) { return str ? str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
+        function selectPrompt(promptText) { document.getElementById("chat-input").value = promptText; executeSendMessage(promptText); }
+        function handleChatSubmit(e) { e.preventDefault(); const inp = document.getElementById("chat-input"); if (inp.value.trim()) executeSendMessage(inp.value.trim()); }
+        function executeSendMessage(text) {
+            document.getElementById("chat-input").value = "";
+            if (!isChatActive) {
+                const grid = document.getElementById("dashboard-grid");
+                grid.classList.add("opacity-0");
+                setTimeout(() => { grid.classList.add("hidden"); document.getElementById("chat-thread").classList.remove("hidden"); isChatActive = true; }, 200);
+            }
+            appendUserMessage(text);
+            const ai = appendAiSkeleton();
+            fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            }).then(res => res.text()).then(reply => { ai.innerText = reply; });
+        }
+        function appendUserMessage(text) {
+            const div = document.createElement("div"); div.className = "flex justify-end";
+            div.innerHTML = '<div class="user-bubble max-w-[85%] px-4 py-3 text-sm shadow-xs">' + escapeHtml(text) + '</div>';
+            document.getElementById("chat-messages").appendChild(div);
+        }
+        function appendAiSkeleton() {
+            const div = document.createElement("div"); div.className = "flex justify-start";
+            const b = document.createElement("div"); b.className = "ai-bubble max-w-[90%] px-4 py-3 text-sm shadow-xs leading-relaxed";
+            b.innerHTML = '<span class="animate-pulse text-stone-500 font-medium">FALK tänker...</span>';
+            div.appendChild(b); document.getElementById("chat-messages").appendChild(div); return b;
+        }
+        function openLeftMenu() { document.getElementById("falk-left-drawer").classList.remove("-translate-x-full"); document.getElementById("falk-left-backdrop").classList.remove("hidden"); setTimeout(() => document.getElementById("falk-left-backdrop").classList.remove("opacity-0"), 10); }
+        function closeLeftMenu() { document.getElementById("falk-left-drawer").classList.add("-translate-x-full"); document.getElementById("falk-left-backdrop").classList.add("opacity-0"); setTimeout(() => document.getElementById("falk-left-backdrop").classList.add("hidden"), 300); }
+        function openRightMenu() { document.getElementById("falk-right-drawer").classList.remove("translate-x-full"); document.getElementById("falk-right-backdrop").classList.remove("hidden"); setTimeout(() => document.getElementById("falk-right-backdrop").classList.remove("opacity-0"), 10); }
+        function closeRightMenu() { document.getElementById("falk-right-drawer").classList.add("translate-x-full"); document.getElementById("falk-right-backdrop").classList.add("opacity-0"); setTimeout(() => document.getElementById("falk-right-backdrop").classList.add("hidden"), 300); }
+    </script>
+</body>
+</html>
