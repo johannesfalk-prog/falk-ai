@@ -3,130 +3,149 @@ import logging
 
 logger = logging.getLogger("falk-backend")
 
-PHASE_DEFINITIONS = {
-    1: {
-        "name": "Trygghet",
-        "goal": "Skapa lugn, bekräfta upplevelsen, sänka tempot. Inga tidiga råd eller djupanalyser.",
-        "guidance": "Möt användaren med trygghet och bekräftelse. Kräv ingen prestation."
-    },
-    2: {
-        "name": "Förståelse",
-        "goal": "Samla pusselbitar. Utforska situationen och vad användaren hoppas på.",
-        "guidance": "Spegla vad du hör och ställ klargörande frågor innan du drar slutsatser."
-    },
-    3: {
-        "name": "Utforskande",
-        "goal": "Ställ djup- och spegelfrågor för att undersöka mönster och känslor.",
-        "guidance": "Ställ öppna frågor utan press. Hjälp användaren att utforska orsaker."
-    },
-    4: {
-        "name": "Perspektiv",
-        "goal": "Introducera nya synvinklar varsamt ('Får jag dela ett perspektiv?').",
-        "guidance": "Erbjud nya vinklar från ett fågelperspektiv utan att påtvinga en lösning."
-    },
-    5: {
-        "name": "Klarhet",
-        "goal": "Sortera och destillera kärnan i utmaningen. Sammanfatta insikterna.",
-        "guidance": "Hjälp användaren att skilja brus från kärnfrågan."
-    },
-    6: {
-        "name": "Handling",
-        "goal": "Identifiera det minsta hållbara nästa steget utifrån användarens värderingar.",
-        "guidance": "Ge inga order. Utforska vad användaren själv ser som ett rimligt nästa steg."
-    },
-    7: {
-        "name": "Reflektion",
-        "goal": "Förankra lärandet och ställ en avslutande reflektionsfråga.",
-        "guidance": "Avsluta alltid med en fråga om vad användaren tar med sig från samtalet."
-    }
-}
+CRISIS_KEYWORDS = [
+    "ta mitt liv", "självmord", "ta livet av mig", "vill inte leva", 
+    "skada mig", "hoppa framför", "avsluta allt", "skära mig"
+]
 
-def detect_conversation_phase(groq_client, user_message, conversation_history=""):
+EMERGENCY_RESOURCES_SE = """
+Om du eller någon du känner befinner er i en akut kris eller har tankar på att ta ditt liv, finns det hjälp att få direkt:
+- **Självmordslinjen (Mind):** Ring eller chatta på **90101** (öppet dygnet runt, mind.se)
+- **Akutpsyk/Nödnummer:** Ring **112** vid akut fara
+- **Sjukvårdsrådgivningen:** Ring **1177** för medicinsk vägledning
+- **Jourhavande medmänniska:** Ring **08-702 16 80** (kvällar och nätter)
+"""
+
+def detect_crisis_llm(groq_client, user_message):
     """
-    Klassificerar vilken av de 7 samtalsfaser samtalet befinner sig i.
+    Snabbklassificerar om meddelandet innehåller akuta kris-signaler eller medicinska/juridiska diagnosförfrågningar.
     """
-    classification_prompt = f"""
-    Du är en metodisk samtalsanalytiker för FALK/WAYJS.
-    Klassificera vilken samtalsfas (1-7) dialogen befinner sig i baserat på historik och sista meddelande.
+    # 1. Hårdkodad nyckelordssökning för omedelbar avstyring (0 ms latency)
+    msg_lower = user_message.lower()
+    for kw in CRISIS_KEYWORDS:
+        if kw in msg_lower:
+            logger.warning(f"🚨 AKUT KRIS DETEKTERAD VIA NYCKELORD: '{kw}'")
+            return "ACUTE_CRISIS"
 
-    FASER:
-    1. Trygghet (Första kontakt, stress, osäkerhet, behöver bli förstådd)
-    2. Förståelse (Samlar fakta/pusselbitar, klargör situationen)
-    3. Utforskande (Djupare reflektion kring mönster, känslor och orsaker)
-    4. Perspektiv (Redo för nya synvinklar och alternativa vinklar)
-    5. Klarhet (Redo att sortera och sammanfatta kärnfrågan)
-    6. Handling (Redo att identifiera minsta nästa steg)
-    7. Reflektion (Avslutande lärande och summering)
+    # 2. LLM-baserad djupanalys för subtila krissignaler eller gränsöverskridanden
+    system_prompt = """
+    Analysera användarens meddelande för FALK AI / WAYJS.
+    Klassificera meddelandet i exakt en av följande tre kategorier:
+    1. "ACUTE_CRISIS": Uttryck för självmordstankar, självskada, akut psykotiskt tillstånd eller omedelbar livsfara.
+    2. "MEDICAL_LEGAL_BOUNDARIES": Användaren ber om en psykiatrisk diagnos, medicinsk receptförskrivning eller bindande juridisk rådgivning.
+    3. "NONE": Standard samtal, reflektion, stress eller livsfrågor.
 
-    Samtalshistorik:
-    {conversation_history}
-
-    Senaste användarmeddelande:
-    "{user_message}"
-
-    Returnera ENDAST JSON i formatet:
-    {{"phase": 1, "reasoning": "Kort motivering"}}
+    Returnera JSON:
+    {"category": "ACUTE_CRISIS" | "MEDICAL_LEGAL_BOUNDARIES" | "NONE"}
     """
 
     try:
         res = groq_client.chat.completions.create(
-            messages=[{"role": "user", "content": classification_prompt}],
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            model="openai/gpt-oss-120b",
+            temperature=0.0,
+            response_format={"type": "json_object"}
+        )
+        data = json.loads(res.choices[0].message.content)
+        category = data.get("category", "NONE")
+        if category in ["ACUTE_CRISIS", "MEDICAL_LEGAL_BOUNDARIES"]:
+            logger.warning(f"🚨 KRIS/GRÄNSKLASSIFICERING: {category}")
+        return category
+    except Exception as e:
+        logger.error(f"⚠️ Krisdetektering fel: {e}")
+        return "NONE"
+
+def detect_conversation_phase(groq_client, user_message, conversation_history=""):
+    """
+    Klassificerar samtalets fas (1-7) utifrån The Wayjs Conversation Method.
+    """
+    classifier_prompt = f"""
+    Du är fasklassificerare för FALK AI.
+    Analyser dialoghistoriken och det senaste meddelandet för att avgöra vilken fas samtalet befinner sig i:
+    Fas 1: Trygghet (Inledande kontakt, validering)
+    Fas 2: Förståelse (Kartläggning av situationen och känslorna)
+    Fas 3: Utforskande (Djupare frågor kring rotorsaker och mönster)
+    Fas 4: Perspektiv (Fågelperspektiv, utmana antaganden varsamt)
+    Fas 5: Klarhet (Sammanfattning av kärnan)
+    Fas 6: Handling (Identifiering av minsta nästa steg)
+    Fas 7: Reflektion (Utvärdering och lärdom från samtalet)
+
+    Historik:
+    {conversation_history}
+
+    Senaste meddelande:
+    "{user_message}"
+
+    Returnera JSON:
+    {{"phase": <1-7 integer>}}
+    """
+    try:
+        res = groq_client.chat.completions.create(
+            messages=[{"role": "user", "content": classifier_prompt}],
             model="openai/gpt-oss-120b",
             temperature=0.1,
             response_format={"type": "json_object"}
         )
         data = json.loads(res.choices[0].message.content)
-        phase_num = int(data.get("phase", 1))
-        if phase_num not in PHASE_DEFINITIONS:
-            phase_num = 1
-        logger.info(f"🎯 Fasdetektor identifierade Fas {phase_num}: {PHASE_DEFINITIONS[phase_num]['name']}")
-        return phase_num
+        return int(data.get("phase", 1))
     except Exception as e:
-        logger.error(f"⚠️ Fasdetektorfel, faller tillbaka på Fas 1: {e}")
+        logger.error(f"⚠️ Fasklassificeringsfel: {e}")
         return 1
+
 
 class FalkDualPromptEngine:
     @staticmethod
-    def build_dual_layer_prompt(active_playbook=None, RAG_context="", compass_scores=None, current_phase=1):
-        phase_info = PHASE_DEFINITIONS.get(current_phase, PHASE_DEFINITIONS[1])
+    def build_dual_layer_prompt(active_playbook, RAG_context, compass_scores, current_phase, crisis_status="NONE"):
         
-        static_core = f"""
-==================================================================
-FALK STATIC CORE INSTRUCTIONS (FALK BIBLE & PLAYBOOK)
-==================================================================
-Du är Falk, den digitala mentorn bakom WAYJS.
-Du har ett fågelperspektiv på människors liv och hjälper dem att navigera med större klarhet, bättre omdöme och hållbara beslut.
+        # OMRIGGNING VID AKUT KRIS: Överskrid standard prompt och aktivera Kris-direktiv
+        if crisis_status == "ACUTE_CRISIS":
+            return f"""
+            DU ÄR FALK – DIGITAL MENTOR FÖR WAYJS.
+            🚨 VIKTIGT SÄKERHETSDIREKTIV: ANVÄNDAREN BEFINNER SIG I ELLER UTTRYCKER AKUT KRIS / SJÄLVMORDSTANKAR.
 
-PERSONLIGHET & SAMTALS-DNA:
-- Du är lugn, varm, nyfiken, intelligent, tålmodig och ärlig.
-- Du förklarar komplexa saker enkelt och med korta meningar.
-- Du ställer fler frågor än du ger råd (ca 70% frågor, 30% reflektioner).
+            DINA DIREKTIV FÖR DETTA SVAR:
+            1. BRYT OMEDELBART DEN VANLIGA 7-FASCOACHINGEN. Ställ INGA öppna reflekterande frågor om rotorsaker.
+            2. Bevara ditt absoluta lugn, din värme och din värdighet. Drabbas inte av panik och använd inga klyschor ("Tänk positivt").
+            3. Bekräfta användarens smärta och att känslan är tung, men förtydliga lugnt din gräns: Du är en digital mentor, inte en akutsjukvårdsenhet eller psykolog.
+            4. Ge användaren följande kontaktuppgifter direkt i svaret:
+            {EMERGENCY_RESOURCES_SE}
+            5. Avsluta med att visa att du finns kvar som lugn närvaro om de vill prata vidare när de har tagit en kontakt med stöd.
+            """
 
-FÖRBJUDNA BETEENDEN (STRIKTA NEGATIVA CONSTRAINTS):
-- Använd ALDRIG ordet "Du borde" eller variant därav.
-- Använd ALDRIG utropstecken (!).
-- Använd ALDRIG överdrivna uttryck som "Fantastiskt!", "Wow!", "Du är grym!".
-- Avsluta ALDRIG med floskler som "Hoppas det hjälper". Avsluta ALLTID med en reflektionsfråga.
-"""
+        if crisis_status == "MEDICAL_LEGAL_BOUNDARIES":
+            return f"""
+            DU ÄR FALK – DIGITAL MENTOR FÖR WAYJS.
+            ⚠️ SÄKERHETSREGEL: ANVÄNDAREN EFTERFRÅGAR MEDICINSK/PSYKIATRISK DIAGNOS ELLER JURIDISK RÅDGIVNING.
 
-        dynamic_context = f"""
-==================================================================
-DYNAMIC CONTEXT LAYER (REAL-TIME STATE & RHYTHM)
-==================================================================
-AKTUELL SAMTALSFAS: Fas {current_phase} - {phase_info['name']}
-FASMÅL: {phase_info['goal']}
-FASVÄGLEDNING: {phase_info['guidance']}
+            DINA DIREKTIV:
+            1. Avsäg dig vänligt men bestämt rollen som läkare/psykolog/jurist.
+            2. Förklara att du kan hjälpa användaren att sortera sina tankar inför ett möte med rätt profession, men att du inte sätter diagnoser eller ger recept.
+            3. Återgå därefter varsamt till samtalet från ett fågelperspektiv.
+            """
 
-AKTIV KOMPASSSTÄLLNING:
-{json.dumps(compass_scores) if compass_scores else "Standard"}
+        # STANDARD DUAL-LAYER PROMPT (När ingen kris föreligger)
+        return f"""
+        DU ÄR FALK – DIGITAL MENTOR OCH VÄGVISARE FÖR WAYJS.
+        Du ser världen från ovan (Fågelperspektivet). Du är lugn, varm, nyfiken, tålmodig och ödmjuk.
 
-AKTIV PLAYBOOK:
-{active_playbook if active_playbook else "Generellt Mentorsamtal"}
+        --- GYLLENE REGLER & GUARDRAILS ---
+        - Använd ALDRIG ord som "Du borde...", "Det är enkelt...", "Alla...", "Ingen...".
+        - Använd INGA utropstecken (!) eller överdriven entusiasm ("Wow!", "Fantastiskt!").
+        - Ge ALDRIG bara ett råd. Erbjud perspektiv och alternativ.
+        - Ställ MAX 1 viktig fråga per svar.
 
-RELEVANTA ANVÄNDARMINNEN (RAG):
-{RAG_context if RAG_context else "Inga tidigare minnen anropade."}
+        --- SAMTALSFAS & SYFTE ---
+        Aktuell Fas: {current_phase} / 7.
+        Aktiv Playbook: {active_playbook}
 
-INSTRUKTION FÖR SVARET:
-Responsera med hänsyn till Fas {current_phase} ({phase_info['name']}). Håll tonen lugn och avsluta med en reflektionsfråga.
-"""
-        return static_core + "\n" + dynamic_context
+        --- ANVÄNDARMINNE (RAG) ---
+        {RAG_context if RAG_context else "Inga tidigare minnen hittades."}
+
+        --- DYNAMISK KOMPASS ---
+        Scores: {compass_scores}
+
+        Skapa ditt svar utifrån Fas {current_phase} med Falks unika röst.
+        """
