@@ -9,7 +9,7 @@ from supabase import create_client, Client
 from groq import Groq
 import openai
 from playbooks import detect_playbook_llm
-from prompt_engine import FalkPromptEngine
+from prompt_engine import FalkDualPromptEngine
 
 load_dotenv()
 
@@ -25,11 +25,8 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-USER_COMPASS_STATE = {
-    "default": {"personal": 75, "relation": 65, "work": 82, "life": 58}
-}
-GUEST_MESSAGE_COUNTS = {}
 MAX_GUEST_MESSAGES = 6
+DEFAULT_SCORES = {"personal": 75, "relation": 65, "work": 82, "life": 58}
 
 def get_session_identity():
     user_id = request.headers.get("X-User-ID")
@@ -38,10 +35,42 @@ def get_session_identity():
         guest_uuid = str(uuid.uuid4())
     return user_id, guest_uuid
 
-def async_post_conversation_worker(user_id, guest_uuid, user_message, falk_response):
+def load_compass_state(user_id, guest_uuid):
+    """Hämtar senast sparade kompassvärden från Supabase, eller returnerar standardvärden."""
     try:
-        session_key = user_id or guest_uuid or "default"
-        current_scores = USER_COMPASS_STATE.get(session_key, USER_COMPASS_STATE["default"].copy())
+        query = supabase.table("chat_sessions").select("metadata").order("created_at", desc=True).limit(1)
+        if user_id:
+            res = query.eq("user_id", user_id).execute()
+        elif guest_uuid:
+            res = query.eq("guest_uuid", guest_uuid).execute()
+        else:
+            return DEFAULT_SCORES.copy()
+
+        if res.data and len(res.data) > 0 and res.data[0].get("metadata"):
+            meta = res.data[0]["metadata"]
+            if isinstance(meta, str):
+                meta = json.loads(meta)
+            if "compass_scores" in meta:
+                return meta["compass_scores"]
+    except Exception as e:
+        print(f"⚠️ Supabase load error: {e}")
+    return DEFAULT_SCORES.copy()
+
+def get_guest_message_count(guest_uuid):
+    """Räknar antalet skickade meddelanden för en gäst i Supabase."""
+    if not guest_uuid:
+        return 0
+    try:
+        res = supabase.table("chat_sessions").select("id", count="exact").eq("guest_uuid", guest_uuid).execute()
+        return res.count if res.count is not None else len(res.data or [])
+    except Exception as e:
+        print(f"⚠️ Supabase count error: {e}")
+        return 0
+
+def async_post_conversation_worker(user_id, guest_uuid, session_id, user_message, falk_response):
+    """Analyserar samtalet och persisterar uppdaterade Kompassvärden direkt till Supabase."""
+    try:
+        current_scores = load_compass_state(user_id, guest_uuid)
 
         analysis_prompt = f"""
         Analysera följande dialog för FALK/WAYJS:
@@ -69,7 +98,11 @@ def async_post_conversation_worker(user_id, guest_uuid, user_message, falk_respo
             d = int(deltas.get(k, 0))
             current_scores[k] = max(0, min(100, current_scores[k] + d))
 
-        USER_COMPASS_STATE[session_key] = current_scores
+        # Persistera uppdaterade kompassvärden i Supabase chat_sessions metadata
+        if session_id:
+            supabase.table("chat_sessions").update({
+                "metadata": json.dumps({"compass_scores": current_scores})
+            }).eq("id", session_id).execute()
 
         insight = output.get("insight")
         if insight and insight.lower() != "null":
@@ -105,9 +138,8 @@ def gdpr_consent():
 @app.route('/api/dashboard', methods=['GET'])
 def get_dashboard_data():
     user_id, guest_uuid = get_session_identity()
-    session_key = user_id or guest_uuid or "default"
-    scores = USER_COMPASS_STATE.get(session_key, USER_COMPASS_STATE["default"])
-    guest_count = GUEST_MESSAGE_COUNTS.get(guest_uuid, 0) if not user_id else 0
+    scores = load_compass_state(user_id, guest_uuid)
+    guest_count = get_guest_message_count(guest_uuid) if not user_id else 0
     
     return jsonify({
         "user_badge": "GUEST" if not user_id else "PREMIUM",
@@ -124,16 +156,7 @@ def register():
     if not email:
         return jsonify({"error": "E-postadress krävs."}), 400
 
-    # Giltig UUID-sträng som fungerar med Supabase UUID-kolumner
     new_user_id = str(uuid.uuid4())
-
-    if guest_uuid in USER_COMPASS_STATE:
-        USER_COMPASS_STATE[new_user_id] = USER_COMPASS_STATE.pop(guest_uuid)
-    else:
-        USER_COMPASS_STATE[new_user_id] = USER_COMPASS_STATE["default"].copy()
-
-    if guest_uuid in GUEST_MESSAGE_COUNTS:
-        GUEST_MESSAGE_COUNTS.pop(guest_uuid)
 
     try:
         supabase.table("user_memories").update({"user_id": new_user_id}).eq("guest_uuid", guest_uuid).execute()
@@ -152,7 +175,6 @@ def chat():
     data = request.json or {}
     user_message = data.get("message", "").strip()
     session_id = data.get("session_id")
-    modifier_type = data.get("modifier_type")
 
     if not user_message:
         return jsonify({"error": "Meddelande saknas."}), 400
@@ -160,23 +182,23 @@ def chat():
     user_id, guest_uuid = get_session_identity()
 
     if not user_id:
-        current_count = GUEST_MESSAGE_COUNTS.get(guest_uuid, 0)
+        current_count = get_guest_message_count(guest_uuid)
         if current_count >= MAX_GUEST_MESSAGES:
-            session_key = guest_uuid or "default"
-            scores = USER_COMPASS_STATE.get(session_key, USER_COMPASS_STATE["default"])
+            scores = load_compass_state(user_id, guest_uuid)
             return jsonify({
                 "error": "GUEST_LIMIT_REACHED",
                 "response": "Vi har nått gränsen för vår kostnadsfria provsession (6 meddelanden). Skapa ditt konto för att låsa upp obegränsad tillgång och bevara din utveckling.",
                 "limit_reached": True,
                 "compass_scores": scores
             }), 402
-        GUEST_MESSAGE_COUNTS[guest_uuid] = current_count + 1
 
     if not session_id:
+        current_scores = load_compass_state(user_id, guest_uuid)
         session_payload = {
             "user_id": user_id if user_id else None,
             "guest_uuid": guest_uuid if not user_id else None,
-            "title": user_message[:30] + "..."
+            "title": user_message[:30] + "...",
+            "metadata": json.dumps({"compass_scores": current_scores})
         }
         try:
             s_res = supabase.table("chat_sessions").insert(session_payload).execute()
@@ -202,10 +224,12 @@ def chat():
     except Exception as e:
         print(f"⚠️ RAG-fel: {e}")
 
-    system_content = FalkPromptEngine.build_system_prompt(
+    current_scores = load_compass_state(user_id, guest_uuid)
+
+    system_content = FalkDualPromptEngine.build_dual_layer_prompt(
         active_playbook=active_playbook,
-        modifier_type=modifier_type,
-        RAG_context=context_str
+        RAG_context=context_str,
+        compass_scores=current_scores
     )
 
     messages_payload = [{"role": "system", "content": system_content}, {"role": "user", "content": user_message}]
@@ -222,13 +246,14 @@ def chat():
 
     threading.Thread(
         target=async_post_conversation_worker,
-        args=(user_id, guest_uuid, user_message, falk_response)
+        args=(user_id, guest_uuid, session_id, user_message, falk_response)
     ).start()
 
+    guest_left = max(0, MAX_GUEST_MESSAGES - (get_guest_message_count(guest_uuid) + 1)) if not user_id else 999
     resp = make_response(jsonify({
         "response": falk_response, 
         "session_id": session_id,
-        "guest_messages_left": max(0, MAX_GUEST_MESSAGES - GUEST_MESSAGE_COUNTS.get(guest_uuid, 0)) if not user_id else 999
+        "guest_messages_left": guest_left
     }))
     if guest_uuid and not request.cookies.get("guest_uuid"):
         resp.set_cookie("guest_uuid", guest_uuid, httponly=True, max_age=31536000, samesite='Lax')
