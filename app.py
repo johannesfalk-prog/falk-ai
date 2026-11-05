@@ -2,7 +2,8 @@ import os
 import uuid
 import json
 import threading
-from flask import Flask, request, jsonify, make_response, render_template
+import logging
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -13,11 +14,17 @@ from prompt_engine import FalkDualPromptEngine
 
 load_dotenv()
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("falk-backend")
+
 app = Flask(__name__, template_folder="templates")
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "falk_secret_fallback")
 
-# Tillåt CORS för alla ursprung i produktion (Render SSL support)
-CORS(app, supports_credentials=True, origins="*")
+# CORS-härdning: Tillåt dynamiska origins via miljövariabel eller explicit lista
+raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5001,http://127.0.0.1:5001,https://falk-backend.onrender.com")
+allowed_origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+
+CORS(app, supports_credentials=True, origins=allowed_origins)
 
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 openai_client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -53,7 +60,7 @@ def load_compass_state(user_id, guest_uuid):
             if "compass_scores" in meta:
                 return meta["compass_scores"]
     except Exception as e:
-        print(f"⚠️ Supabase load error: {e}")
+        logger.error(f"⚠️ Supabase load error: {e}")
     return DEFAULT_SCORES.copy()
 
 def get_guest_message_count(guest_uuid):
@@ -63,10 +70,11 @@ def get_guest_message_count(guest_uuid):
         res = supabase.table("chat_sessions").select("id", count="exact").eq("guest_uuid", guest_uuid).execute()
         return res.count if res.count is not None else len(res.data or [])
     except Exception as e:
-        print(f"⚠️ Supabase count error: {e}")
+        logger.error(f"⚠️ Supabase count error: {e}")
         return 0
 
 def async_post_conversation_worker(user_id, guest_uuid, session_id, user_message, falk_response):
+    logger.info(f"🔄 Bakgrundsarbetare startad för session: {session_id}")
     try:
         current_scores = load_compass_state(user_id, guest_uuid)
 
@@ -100,6 +108,7 @@ def async_post_conversation_worker(user_id, guest_uuid, session_id, user_message
             supabase.table("chat_sessions").update({
                 "metadata": json.dumps({"compass_scores": current_scores})
             }).eq("id", session_id).execute()
+            logger.info(f"✅ Supabase session metadata uppdaterad: {current_scores}")
 
         insight = output.get("insight")
         if insight and insight.lower() != "null":
@@ -113,8 +122,9 @@ def async_post_conversation_worker(user_id, guest_uuid, session_id, user_message
                 "category": "general"
             }
             supabase.table("user_memories").insert(payload).execute()
+            logger.info("✅ Nytt användarminne lagrat i Supabase.")
     except Exception as e:
-        print(f"❌ Worker error: {e}")
+        logger.error(f"❌ Worker error: {e}")
 
 @app.route('/')
 def index():
@@ -159,7 +169,7 @@ def register():
         supabase.table("user_memories").update({"user_id": new_user_id}).eq("guest_uuid", guest_uuid).execute()
         supabase.table("chat_sessions").update({"user_id": new_user_id}).eq("guest_uuid", guest_uuid).execute()
     except Exception as e:
-        print(f"⚠️ Migreringsvarning i Supabase: {e}")
+        logger.warning(f"⚠️ Migreringsvarning i Supabase: {e}")
 
     return jsonify({
         "status": "success",
@@ -202,7 +212,7 @@ def chat():
             if s_res.data:
                 session_id = s_res.data[0]["id"]
         except Exception as e:
-            print(f"⚠️ Supabase session error: {e}")
+            logger.error(f"⚠️ Supabase session error: {e}")
 
     active_playbook = detect_playbook_llm(groq_client, user_message)
 
@@ -219,7 +229,7 @@ def chat():
             memories = [m['content'] for m in rpc_res.data]
             context_str = "- " + "\n- ".join(memories)
     except Exception as e:
-        print(f"⚠️ RAG-fel: {e}")
+        logger.error(f"⚠️ RAG-fel: {e}")
 
     current_scores = load_compass_state(user_id, guest_uuid)
 
@@ -241,10 +251,12 @@ def chat():
     except Exception as e:
         return jsonify({"error": f"Groq API Error: {str(e)}"}), 500
 
-    threading.Thread(
+    worker_thread = threading.Thread(
         target=async_post_conversation_worker,
         args=(user_id, guest_uuid, session_id, user_message, falk_response)
-    ).start()
+    )
+    worker_thread.daemon = True
+    worker_thread.start()
 
     guest_left = max(0, MAX_GUEST_MESSAGES - (get_guest_message_count(guest_uuid) + 1)) if not user_id else 999
     resp = make_response(jsonify({
