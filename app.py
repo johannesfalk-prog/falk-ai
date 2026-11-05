@@ -42,6 +42,22 @@ def get_session_identity():
         guest_uuid = str(uuid.uuid4())
     return user_id, guest_uuid
 
+def load_session_metadata(session_id):
+    """Hämtar hela metadata-objektet för en session från Supabase."""
+    if not session_id:
+        return {}
+    try:
+        res = supabase.table("chat_sessions").select("metadata").eq("id", session_id).execute()
+        if res.data and len(res.data) > 0:
+            meta = res.data[0].get("metadata")
+            if isinstance(meta, str):
+                return json.loads(meta)
+            elif isinstance(meta, dict):
+                return meta
+    except Exception as e:
+        logger.error(f"⚠️ Supabase metadata load error: {e}")
+    return {}
+
 def load_compass_state(user_id, guest_uuid):
     try:
         query = supabase.table("chat_sessions").select("metadata").order("created_at", desc=True).limit(1)
@@ -75,7 +91,13 @@ def get_guest_message_count(guest_uuid):
 def async_post_conversation_worker(user_id, guest_uuid, session_id, user_message, falk_response):
     logger.info(f"🔄 Bakgrundsarbetare startad för session: {session_id}")
     try:
-        current_scores = load_compass_state(user_id, guest_uuid)
+        current_meta = load_session_metadata(session_id)
+        current_scores = current_meta.get("compass_scores", load_compass_state(user_id, guest_uuid))
+        history_list = current_meta.get("history_log", [])
+
+        # Lägg till senaste turen i historikloggen
+        history_list.append({"role": "user", "content": user_message})
+        history_list.append({"role": "assistant", "content": falk_response})
 
         analysis_prompt = f"""
         Analysera följande dialog för FALK/WAYJS:
@@ -104,10 +126,14 @@ def async_post_conversation_worker(user_id, guest_uuid, session_id, user_message
             current_scores[k] = max(0, min(100, current_scores[k] + d))
 
         if session_id:
+            updated_meta = {
+                "compass_scores": current_scores,
+                "history_log": history_list[-12:]  # Spara de senaste 12 meddelandena
+            }
             supabase.table("chat_sessions").update({
-                "metadata": json.dumps({"compass_scores": current_scores})
+                "metadata": json.dumps(updated_meta)
             }).eq("id", session_id).execute()
-            logger.info(f"✅ Supabase session metadata uppdaterad: {current_scores}")
+            logger.info(f"✅ Supabase session metadata & historik uppdaterad för session {session_id}")
 
         insight = output.get("insight")
         if insight and insight.lower() != "null":
@@ -127,7 +153,7 @@ def async_post_conversation_worker(user_id, guest_uuid, session_id, user_message
 
 @app.route('/')
 def index():
-    return jsonify({"status": "online", "service": "Falk AI Engine", "version": "1.2"}), 200
+    return jsonify({"status": "online", "service": "Falk AI Engine", "version": "1.3"}), 200
 
 @app.route('/api/gdpr/consent', methods=['POST'])
 def gdpr_consent():
@@ -181,7 +207,7 @@ def chat():
     data = request.json or {}
     user_message = data.get("message", "").strip()
     session_id = data.get("session_id")
-    raw_history = data.get("history", [])  # Förväntar sig en lista: [{"role": "user/assistant", "content": "..."}]
+    raw_history = data.get("history")
 
     if not user_message:
         return jsonify({"error": "Meddelande saknas."}), 400
@@ -205,7 +231,7 @@ def chat():
             "user_id": user_id if user_id else None,
             "guest_uuid": guest_uuid if not user_id else None,
             "title": user_message[:30] + "...",
-            "metadata": json.dumps({"compass_scores": current_scores})
+            "metadata": json.dumps({"compass_scores": current_scores, "history_log": []})
         }
         try:
             s_res = supabase.table("chat_sessions").insert(session_payload).execute()
@@ -214,16 +240,24 @@ def chat():
         except Exception as e:
             logger.error(f"⚠️ Supabase session error: {e}")
 
-    # Formatera samtalshistoriken för fasdetektorn och LLM-prompten
-    history_str = ""
+    # RESOLVA HISTORIK: 1) Från request payload 2) Fallback från Supabase session metadata
+    effective_history = []
     if isinstance(raw_history, list) and len(raw_history) > 0:
+        effective_history = raw_history
+    elif session_id:
+        db_meta = load_session_metadata(session_id)
+        effective_history = db_meta.get("history_log", [])
+
+    # Formatera historiksträng till 7-fasdetektorn
+    history_str = ""
+    if len(effective_history) > 0:
         formatted_turns = []
-        for turn in raw_history[-6:]:  # Ta med de senaste 6 turerna för kontext
+        for turn in effective_history[-6:]:
             role = "Användare" if turn.get("role") == "user" else "Falk"
             formatted_turns.append(f"{role}: {turn.get('content', '')}")
         history_str = "\n".join(formatted_turns)
 
-    # Automatiskt fasklassificering med fullständig historik
+    # Automatisk fasklassificering med garanterad historikkontext
     current_phase = detect_conversation_phase(groq_client, user_message, conversation_history=history_str)
     active_playbook = detect_playbook_llm(groq_client, user_message)
 
@@ -251,11 +285,9 @@ def chat():
         current_phase=current_phase
     )
 
-    # Sätt ihop prompten inklusive historiken
     messages_payload = [{"role": "system", "content": system_content}]
-    if isinstance(raw_history, list):
-        for turn in raw_history[-6:]:
-            messages_payload.append({"role": turn.get("role", "user"), "content": turn.get("content", "")})
+    for turn in effective_history[-6:]:
+        messages_payload.append({"role": turn.get("role", "user"), "content": turn.get("content", "")})
     messages_payload.append({"role": "user", "content": user_message})
 
     try:
