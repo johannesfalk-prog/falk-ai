@@ -10,7 +10,7 @@ from supabase import create_client, Client
 from groq import Groq
 import openai
 from playbooks import detect_playbook_llm
-from prompt_engine import FalkDualPromptEngine
+from prompt_engine import FalkDualPromptEngine, detect_conversation_phase
 
 load_dotenv()
 
@@ -20,7 +20,6 @@ logger = logging.getLogger("falk-backend")
 app = Flask(__name__, template_folder="templates")
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "falk_secret_fallback")
 
-# CORS-härdning: Tillåt dynamiska origins via miljövariabel eller explicit lista
 raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5001,http://127.0.0.1:5001,https://falk-backend.onrender.com")
 allowed_origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
 
@@ -128,7 +127,7 @@ def async_post_conversation_worker(user_id, guest_uuid, session_id, user_message
 
 @app.route('/')
 def index():
-    return jsonify({"status": "online", "service": "Falk AI Engine", "version": "1.0"}), 200
+    return jsonify({"status": "online", "service": "Falk AI Engine", "version": "1.1"}), 200
 
 @app.route('/api/gdpr/consent', methods=['POST'])
 def gdpr_consent():
@@ -214,6 +213,8 @@ def chat():
         except Exception as e:
             logger.error(f"⚠️ Supabase session error: {e}")
 
+    # Automatiskt fasklassificering och playbook-detektion
+    current_phase = detect_conversation_phase(groq_client, user_message)
     active_playbook = detect_playbook_llm(groq_client, user_message)
 
     context_str = ""
@@ -236,7 +237,8 @@ def chat():
     system_content = FalkDualPromptEngine.build_dual_layer_prompt(
         active_playbook=active_playbook,
         RAG_context=context_str,
-        compass_scores=current_scores
+        compass_scores=current_scores,
+        current_phase=current_phase
     )
 
     messages_payload = [{"role": "system", "content": system_content}, {"role": "user", "content": user_message}]
@@ -262,6 +264,7 @@ def chat():
     resp = make_response(jsonify({
         "response": falk_response, 
         "session_id": session_id,
+        "current_phase": current_phase,
         "guest_messages_left": guest_left
     }))
     if guest_uuid and not request.cookies.get("guest_uuid"):
