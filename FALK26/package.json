@@ -1,0 +1,13 @@
+{
+  "name": "falk-backend",
+  "version": "1.0.0",
+  "description": "FALK Modular Application",
+  "main": "static/js/dist/app.min.js",
+  "scripts": {
+    "build": "node build.js",
+    "watch": "node --watch build.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0"
+  }
+}

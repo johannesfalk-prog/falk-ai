@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FALK - Inställningar & Integritet</title>
+    <script src="https://cdn.tailwindcss.com">
+        function openRightMenu() {
+            const drawer = document.getElementById("falk-right-drawer");
+            const backdrop = document.getElementById("falk-right-backdrop");
+            if (drawer && backdrop) {
+                drawer.classList.remove("translate-x-full");
+                backdrop.classList.remove("hidden");
+                setTimeout(() => backdrop.classList.remove("opacity-0"), 10);
+            }
+        }
+        function closeRightMenu() {
+            const drawer = document.getElementById("falk-right-drawer");
+            const backdrop = document.getElementById("falk-right-backdrop");
+            if (drawer && backdrop) {
+                drawer.classList.add("translate-x-full");
+                backdrop.classList.add("opacity-0");
+                setTimeout(() => backdrop.classList.add("hidden"), 300);
+            }
+        }
+
+    
+        let falkItems = [
+            { id: 1, type: 'insight', text: 'Att sätta gränser handlar inte om att stänga ute andra, utan om att hålla dig själv hel.', created: 'Idag', frequency: null },
+            { id: 2, type: 'reminder', text: 'Reflektera kring dina 3 viktigaste prioriteringar inför morgondagen.', created: 'Igår', frequency: 'dagligen', datetime: null }
+        ];
+
+        let activeRightFilter = 'all';
+
+        function renderRightDrawer() {
+            const container = document.getElementById('right-drawer-list');
+            if (!container) return;
+
+            container.innerHTML = '';
+            const filtered = falkItems.filter(item => activeRightFilter === 'all' || item.type === activeRightFilter);
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 text-xs italic text-stone-500">Inga sparade objekt i denna vy.</div>';
+                return;
+            }
+
+            filtered.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'falk-card p-3.5 rounded-2xl border border-[#DDD0B8] shadow-xs space-y-2 relative group';
+                
+                const isInsight = item.type === 'insight';
+                const icon = isInsight ? '🌱' : '🔔';
+                const tagLabel = isInsight ? 'Insikt' : `Påminnelse (${item.frequency || 'tillsvidare'})`;
+                const tagBg = isInsight ? 'bg-emerald-100/70 text-emerald-800' : 'bg-amber-100/70 text-amber-800';
+
+                function escapeHtmlLocal(str) { return str ? str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${tagBg} flex items-center gap-1">
+                            <span>${icon}</span> ${tagLabel}
+                        </span>
+                        <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100">
+                            <button onclick="editFalkItem(${item.id})" class="text-[11px] font-bold text-stone-600 hover:text-black px-1.5 py-0.5 rounded hover:bg-stone-200/60" title="Redigera">✏️</button>
+                            ${isInsight ? `<button onclick="convertInsightToReminder(${item.id})" class="text-[11px] font-bold text-amber-800 hover:text-amber-950 px-1.5 py-0.5 rounded hover:bg-amber-100/60" title="Lägg till påminnelse">🔔</button>` : ''}
+                            <button onclick="deleteFalkItem(${item.id})" class="text-[11px] font-bold text-red-600 hover:text-red-800 px-1.5 py-0.5 rounded hover:bg-red-100/60" title="Ta bort">✕</button>
+                        </div>
+                    </div>
+                    <p class="text-xs ${isInsight ? 'italic font-serif' : 'font-medium'} text-stone-800 leading-relaxed">${escapeHtmlLocal(item.text)}</p>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function filterRightDrawer(type) {
+            activeRightFilter = type;
+            document.querySelectorAll('.right-tab-chip').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById('right-tab-' + type);
+            if (activeBtn) activeBtn.classList.add('active');
+            renderRightDrawer();
+        }
+
+        function openManualInsightModal(text = '', type = 'insight') {
+            document.getElementById('modal-title').innerText = text ? 'Spara notering' : 'Skapa ny insikt / påminnelse';
+            document.getElementById('modal-item-id').value = '';
+            document.getElementById('modal-text-input').value = text;
+            setModalType(type);
+            
+            const backdrop = document.getElementById('falk-modal-backdrop');
+            backdrop.classList.remove('hidden');
+            setTimeout(() => backdrop.classList.remove('opacity-0'), 10);
+        }
+
+        function closeFalkModal() {
+            const backdrop = document.getElementById('falk-modal-backdrop');
+            backdrop.classList.add('opacity-0');
+            setTimeout(() => backdrop.classList.add('hidden'), 300);
+        }
+
+        function setModalType(type) {
+            document.getElementById('modal-item-type').value = type;
+            const btnInsight = document.getElementById('modal-btn-type-insight');
+            const btnReminder = document.getElementById('modal-btn-type-reminder');
+            const reminderOpts = document.getElementById('modal-reminder-options');
+
+            if (type === 'insight') {
+                btnInsight.className = 'py-2 text-xs font-bold rounded-xl border border-[#2D2721] text-white bg-[#2D2721]';
+                btnReminder.className = 'py-2 text-xs font-bold rounded-xl border border-[#DDD0B8] text-stone-700 bg-white';
+                reminderOpts.classList.add('hidden');
+            } else {
+                btnReminder.className = 'py-2 text-xs font-bold rounded-xl border border-[#2D2721] text-white bg-[#2D2721]';
+                btnInsight.className = 'py-2 text-xs font-bold rounded-xl border border-[#DDD0B8] text-stone-700 bg-white';
+                reminderOpts.classList.remove('hidden');
+            }
+        }
+
+        function toggleCustomTimeField() {
+            const val = document.getElementById('modal-frequency-select').value;
+            const group = document.getElementById('modal-custom-time-group');
+            if (val === 'anpassat') group.classList.remove('hidden');
+            else group.classList.add('hidden');
+        }
+
+        function saveModalData(e) {
+            e.preventDefault();
+            const id = document.getElementById('modal-item-id').value;
+            const text = document.getElementById('modal-text-input').value.trim();
+            const type = document.getElementById('modal-item-type').value;
+            const freq = type === 'reminder' ? document.getElementById('modal-frequency-select').value : null;
+            const dt = type === 'reminder' && freq === 'anpassat' ? document.getElementById('modal-datetime-input').value : null;
+
+            if (!text) return;
+
+            if (id) {
+                const item = falkItems.find(x => x.id == id);
+                if (item) {
+                    item.text = text;
+                    item.type = type;
+                    item.frequency = freq;
+                    item.datetime = dt;
+                }
+            } else {
+                falkItems.unshift({
+                    id: Date.now(),
+                    type: type,
+                    text: text,
+                    created: 'Nyss',
+                    frequency: freq,
+                    datetime: dt
+                });
+            }
+
+            closeFalkModal();
+            renderRightDrawer();
+            openRightMenu();
+        }
+
+        function editFalkItem(id) {
+            const item = falkItems.find(x => x.id == id);
+            if (!item) return;
+
+            document.getElementById('modal-title').innerText = 'Redigera ' + (item.type === 'insight' ? 'insikt' : 'påminnelse');
+            document.getElementById('modal-item-id').value = item.id;
+            document.getElementById('modal-text-input').value = item.text;
+            setModalType(item.type);
+
+            if (item.type === 'reminder') {
+                document.getElementById('modal-frequency-select').value = item.frequency || 'tillsvidare';
+                if (item.datetime) {
+                    document.getElementById('modal-datetime-input').value = item.datetime;
+                }
+                toggleCustomTimeField();
+            }
+
+            const backdrop = document.getElementById('falk-modal-backdrop');
+            backdrop.classList.remove('hidden');
+            setTimeout(() => backdrop.classList.remove('opacity-0'), 10);
+        }
+
+        function convertInsightToReminder(id) {
+            const item = falkItems.find(x => x.id == id);
+            if (item) {
+                openManualInsightModal(item.text, 'reminder');
+            }
+        }
+
+        function deleteFalkItem(id) {
+            falkItems = falkItems.filter(x => x.id != id);
+            renderRightDrawer();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderRightDrawer();
+        });
+
+    </script>
+    <style>
+        body.theme-standard { background-color: #E8DCC4 !important; color: #38322B; }
+        body.theme-dark { background-color: #1C1A17 !important; color: #E8DCC4; }
+        .falk-card { background-color: #FAF8F0; border: 1px solid #DDD0B8; }
+        body.theme-dark .falk-card { background-color: #26231F !important; border-color: #3D3730 !important; color: #E8DCC4 !important; }
+        .nav-active-pill { background-color: #D6CDB8 !important; box-shadow: 0 2px 5px rgba(0,0,0,0.06); font-weight: 700 !important; }
+    
+        body.theme-dark header {
+            background-color: #1C1A17 !important;
+            border-color: #3D3730 !important;
+        }
+        body.theme-dark header a, body.theme-dark header button {
+            color: #E8DCC4 !important;
+        }
+
+    
+        .right-tab-chip { background-color: transparent; color: #4A4238; }
+        .right-tab-chip.active { background-color: #2D2721 !important; color: #FFFFFF !important; }
+        body.theme-dark .right-tab-chip.active { background-color: #E8DCC4 !important; color: #1C1A17 !important; }
+
+    </style>
+</head>
+                <!-- HÖGER BACKDROP & MENY (IDENTISK ÖVER ALLA SIDOR) -->
+    <div id="falk-right-backdrop" onclick="closeRightMenu()" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300 z-40"></div>
+    <aside id="falk-right-drawer" class="fixed top-0 right-0 h-full w-85 bg-[#FAF8F0]/95 backdrop-blur-md shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out z-50 flex flex-col border-l border-[#DDD0B8]">
+        <div class="p-5 border-b border-[#E6E0D4]/80 space-y-3">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-[11px] font-bold tracking-wide text-[#8C5D37] uppercase">ÖVERSYNER & FOKUS</p>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <svg class="w-5 h-5 text-[#8C5D37] stroke-current fill-none shrink-0" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <g stroke="currentColor">
+                                <line x1="12" y1="1.5" x2="12" y2="3.5" />
+                                <line x1="4.5" y1="4.5" x2="5.9" y2="5.9" />
+                                <line x1="1.5" y1="12" x2="3.5" y2="12" />
+                                <line x1="19.5" y1="4.5" x2="18.1" y2="5.9" />
+                                <line x1="22.5" y1="12" x2="20.5" y2="12" />
+                            </g>
+                            <path d="M 8.5 13 C 7 11.2 7 8 9 6 C 10.8 4.2 13.2 4.2 15 6 C 17 8 17 11.2 15.5 13 C 14.8 13.8 14.5 14.5 14.5 15.5 L 9.5 15.5 C 9.5 14.5 9.2 13.8 8.5 13 Z" />
+                            <line x1="9.5" y1="18" x2="14.5" y2="18" />
+                            <line x1="10.5" y1="20.5" x2="13.5" y2="20.5" />
+                        </svg>
+                        <h2 class="text-lg font-extrabold text-[#2D2721]">Insikter & Påminnelser</h2>
+                    </div>
+                </div>
+                <button onclick="closeRightMenu()" class="p-1 text-stone-600 hover:text-black rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <div class="flex items-center gap-1.5 p-1 bg-[#E8DCC4]/50 rounded-xl border border-[#DDD0B8]">
+                <button onclick="filterRightDrawer('all')" id="right-tab-all" class="right-tab-chip active flex-1 py-1 text-[11px] font-bold rounded-lg transition-all text-center">Alla</button>
+                <button onclick="filterRightDrawer('insight')" id="right-tab-insight" class="right-tab-chip flex-1 py-1 text-[11px] font-bold rounded-lg transition-all text-center">Insikter</button>
+                <button onclick="filterRightDrawer('reminder')" id="right-tab-reminder" class="right-tab-chip flex-1 py-1 text-[11px] font-bold rounded-lg transition-all text-center">Påminnelser</button>
+            </div>
+        </div>
+
+        <div class="flex-1 p-4 space-y-3 overflow-y-auto" id="right-drawer-list"></div>
+
+        <div class="p-4 border-t border-[#E6E0D4]/80 mt-auto">
+            <button onclick="openManualInsightModal()" class="w-full py-3 bg-[#4E5C4B] hover:bg-[#3D493B] text-white text-xs font-semibold rounded-full transition-all flex items-center justify-center gap-1.5 shadow-xs">
+                <span>+ Skriv egen insikt / påminnelse</span>
+            </button>
+        </div>
+    </aside>
+<body class="theme-standard min-h-screen flex flex-col justify-between antialiased selection:bg-stone-300 relative overflow-x-hidden">
+
+            <!-- VÄNSTER BACKDROP & MENY (IDENTISK ÖVER ALLA SIDOR) -->
+    <div id="falk-left-backdrop" onclick="closeLeftMenu()" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300 z-40"></div>
+    <aside id="falk-left-drawer" class="fixed top-0 left-0 h-full w-80 bg-[#FAF8F0]/95 backdrop-blur-md shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out z-50 flex flex-col border-r border-[#DDD0B8]">
+        <div class="p-6 border-b border-[#E6E0D4]/80">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-[11px] font-bold tracking-wide text-[#8C5D37] uppercase">FALK - EN KOMPASS MED PERSPEKTIV</p>
+                    <h2 class="text-xl font-extrabold text-[#2D2721] mt-0.5">Meny</h2>
+                </div>
+                <button onclick="closeLeftMenu()" class="p-1 text-stone-600 hover:text-black rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+        </div>
+        <nav class="flex-1 p-5 space-y-2 overflow-y-auto">
+            <a href="/" class="flex items-center gap-3.5 px-4 py-3 text-sm rounded-2xl transition-all font-medium text-stone-700 hover:bg-[#E8DCC4]/40">
+                <svg class="w-5 h-5 text-stone-700 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                <span>Chatt</span>
+            </a>
+            <a href="/bibliotek" class="flex items-center gap-3.5 px-4 py-3 text-sm rounded-2xl transition-all font-medium text-stone-700 hover:bg-[#E8DCC4]/40">
+                <svg class="w-5 h-5 text-stone-700 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                <span>Bibliotek</span>
+            </a>
+            <a href="/utveckling" class="flex items-center gap-3.5 px-4 py-3 text-sm rounded-2xl transition-all font-medium text-stone-700 hover:bg-[#E8DCC4]/40">
+                <svg class="w-5 h-5 text-stone-700 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                <span>Min utveckling</span>
+            </a>
+            <a href="/installningar" class="flex items-center gap-3.5 px-4 py-3 text-sm rounded-2xl transition-all bg-[#D6CDB8]/60 font-bold text-[#2D2721]">
+                <svg class="w-5 h-5 text-stone-700 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <span>Inställningar och integritet</span>
+            </a>
+        </nav>
+        <div class="p-5 border-t border-[#E6E0D4]/80 mt-auto flex items-center justify-between">
+            <span class="px-4 py-1.5 text-xs font-bold tracking-wider text-stone-800 bg-white border border-[#DDD0B8] rounded-full uppercase shadow-xs">GÄST</span>
+            <button class="px-6 py-2 text-xs font-bold text-white bg-[#3A352E] hover:bg-[#2D2721] rounded-full transition-all">Logga in</button>
+        </div>
+    </aside>
+
+    <!-- HEADER -->
+        <!-- HEADER (SOLID BAKGRUND, ABSOLUT CENTRERING, GLÖDLAMPA) -->
+    <header class="relative flex items-center justify-between px-5 py-4 border-b border-[#D8CAB0]/80 bg-[#E8DCC4] sticky top-0 z-30 transition-colors duration-200">
+        <div class="flex items-center gap-3 z-10">
+            <button id="open-menu-btn" onclick="openLeftMenu()" class="p-1 text-black hover:opacity-75 transition-all focus:outline-none" title="Öppna meny">
+                <svg class="w-6 h-6 text-black stroke-current" fill="none" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+            <span class="px-2.5 py-0.5 text-[11px] font-bold tracking-wider text-[#8C5D37] bg-[#FAF8F0] border border-[#DDD0B8] rounded-full uppercase shadow-xs">
+                GÄST
+            </span>
+        </div>
+
+        <div class="absolute left-1/2 -translate-x-1/2 flex items-center">
+            <a href="/" class="text-2xl font-black tracking-wider text-black hover:opacity-75 transition-all cursor-pointer">FALK</a>
+        </div>
+
+        <div class="flex items-center gap-4 z-10">
+            <a href="/" class="text-black hover:opacity-75 transition-all" title="Startsida / Ny chat">
+                <svg class="w-5 h-5 text-black stroke-current" fill="none" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path>
+                </svg>
+            </a>
+
+                        <button onclick="openRightMenu()" class="group text-black hover:opacity-100 transition-all focus:outline-none p-1 relative flex items-center justify-center" title="Insikter & Påminnelser">
+                <svg class="w-6 h-6 text-black stroke-current fill-none relative" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <!-- Strålar runt lampan (Endast synliga vid hover) -->
+                    <g class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 stroke-current">
+                        <line x1="12" y1="1.5" x2="12" y2="3.5" />
+                        <line x1="4.5" y1="4.5" x2="5.9" y2="5.9" />
+                        <line x1="1.5" y1="12" x2="3.5" y2="12" />
+                        <line x1="19.5" y1="4.5" x2="18.1" y2="5.9" />
+                        <line x1="22.5" y1="12" x2="20.5" y2="12" />
+                    </g>
+                    <!-- Glödlampskupa (Formad exakt enligt skiss) -->
+                    <path d="M 8.5 13 C 7 11.2 7 8 9 6 C 10.8 4.2 13.2 4.2 15 6 C 17 8 17 11.2 15.5 13 C 14.8 13.8 14.5 14.5 14.5 15.5 L 9.5 15.5 C 9.5 14.5 9.2 13.8 8.5 13 Z" />
+                    <!-- Dubbla horisontella bottenstreck -->
+                    <line x1="9.5" y1="18" x2="14.5" y2="18" />
+                    <line x1="10.5" y1="20.5" x2="13.5" y2="20.5" />
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- INSTÄLLNINGAR INNEHÅLL -->
+    <main class="flex-1 max-w-2xl w-full mx-auto px-4 py-6 space-y-5">
+        <div class="text-center">
+            <h1 class="text-xl font-extrabold">Inställningar & integritet</h1>
+            <p class="text-xs italic opacity-75 mt-1 font-serif">Hantera dina gränssnittsval, data och kontosäkerhet</p>
+        </div>
+
+        <!-- 1. VAL AV VY (TEMA-TOGGLE) -->
+        <div class="falk-card p-5 rounded-2xl shadow-sm space-y-3">
+            <h2 class="text-xs font-bold tracking-wider uppercase text-[#8C5D37]">Val av vy (Tema)</h2>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="setFalkTheme('standard')" id="theme-btn-standard" class="py-2.5 px-4 rounded-xl text-xs font-bold border border-[#DDD0B8] transition-all">
+                    FALK Standard
+                </button>
+                <button onclick="setFalkTheme('dark')" id="theme-btn-dark" class="py-2.5 px-4 rounded-xl text-xs font-bold border border-[#DDD0B8] transition-all">
+                    Mörk vy
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. DATAHANTERING & EXPORT -->
+        <div class="falk-card p-5 rounded-2xl shadow-sm space-y-3">
+            <h2 class="text-xs font-bold tracking-wider uppercase text-[#8C5D37]">Dina data & export</h2>
+            <p class="text-xs opacity-80">Du äger din data. Du kan när som helst ladda ned en fullständig kopia av dina reflektioner och samtal.</p>
+            <button onclick="downloadUserData()" class="bg-[#4E5C4B] text-white text-xs font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-all flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                <span>Exportera all min data (.json)</span>
+            </button>
+        </div>
+
+        <!-- 3. JURIDIK & VINKLAR -->
+        <div class="falk-card p-5 rounded-2xl shadow-sm space-y-2">
+            <h2 class="text-xs font-bold tracking-wider uppercase text-[#8C5D37]">Vilkor & integritet</h2>
+            <a href="#" class="block text-xs font-semibold hover:underline py-1">Användarvillkor</a>
+            <a href="#" class="block text-xs font-semibold hover:underline py-1">Integritetspolicy & GDPR</a>
+        </div>
+
+        <!-- 4. RADERA KONTO (DESTRUKTIVT ZON) -->
+        <div class="falk-card p-5 rounded-2xl shadow-sm space-y-3 border-red-200">
+            <h2 class="text-xs font-bold tracking-wider uppercase text-red-700">Fara / Kontoåtgärder</h2>
+            <p class="text-xs opacity-80">Raderar permanent hela ditt konto, dina sparade insikter och din samtalshistorik.</p>
+            <button onclick="confirmAccountDeletion()" class="bg-red-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl hover:bg-red-800 transition-all">
+                Radera mitt konto och all min data
+            </button>
+        </div>
+    </main>
+
+    <script>
+        function applyThemeUI(theme) {
+            document.body.className = 'theme-' + theme + ' min-h-screen flex flex-col justify-between antialiased relative overflow-x-hidden';
+            const btnStd = document.getElementById('theme-btn-standard');
+            const btnDark = document.getElementById('theme-btn-dark');
+            
+            if (theme === 'dark') {
+                btnDark.classList.add('bg-[#3D3730]', 'text-white');
+                btnStd.classList.remove('bg-[#2D2721]', 'text-white');
+            } else {
+                btnStd.classList.add('bg-[#2D2721]', 'text-white');
+                btnDark.classList.remove('bg-[#3D3730]', 'text-white');
+            }
+        }
+
+        function setFalkTheme(theme) {
+            localStorage.setItem('falk_theme', theme);
+            applyThemeUI(theme);
+        }
+
+        const savedTheme = localStorage.getItem('falk_theme') || 'standard';
+        applyThemeUI(savedTheme);
+
+        async function downloadUserData() {
+            try {
+                const res = await fetch('/api/user/export');
+                const data = await res.json();
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'falk_min_data.json';
+                a.click();
+            } catch (e) {
+                alert("Kunde inte exportera data.");
+            }
+        }
+
+        async function confirmAccountDeletion() {
+            if (confirm("ÄR DU SÄKER? Detta raderar permanent alla dina insikter och din samtalshistorik.")) {
+                try {
+                    await fetch('/api/user/delete', { method: 'POST' });
+                    alert("Ditt konto och all data har raderats.");
+                    window.location.href = "/";
+                } catch (e) {
+                    alert("Kunde inte radera konto.");
+                }
+            }
+        }
+
+        function openLeftMenu() {
+            document.getElementById("falk-left-drawer").classList.remove("-translate-x-full");
+            document.getElementById("falk-left-backdrop").classList.remove("hidden");
+            setTimeout(() => document.getElementById("falk-left-backdrop").classList.remove("opacity-0"), 10);
+        }
+        function closeLeftMenu() {
+            document.getElementById("falk-left-drawer").classList.add("-translate-x-full");
+            document.getElementById("falk-left-backdrop").classList.add("opacity-0");
+            setTimeout(() => document.getElementById("falk-left-backdrop").classList.add("hidden"), 300);
+        }
+    
+        function openRightMenu() {
+            const drawer = document.getElementById("falk-right-drawer");
+            const backdrop = document.getElementById("falk-right-backdrop");
+            if (drawer && backdrop) {
+                drawer.classList.remove("translate-x-full");
+                backdrop.classList.remove("hidden");
+                setTimeout(() => backdrop.classList.remove("opacity-0"), 10);
+            }
+        }
+        function closeRightMenu() {
+            const drawer = document.getElementById("falk-right-drawer");
+            const backdrop = document.getElementById("falk-right-backdrop");
+            if (drawer && backdrop) {
+                drawer.classList.add("translate-x-full");
+                backdrop.classList.add("opacity-0");
+                setTimeout(() => backdrop.classList.add("hidden"), 300);
+            }
+        }
+
+    
+        let falkItems = [
+            { id: 1, type: 'insight', text: 'Att sätta gränser handlar inte om att stänga ute andra, utan om att hålla dig själv hel.', created: 'Idag', frequency: null },
+            { id: 2, type: 'reminder', text: 'Reflektera kring dina 3 viktigaste prioriteringar inför morgondagen.', created: 'Igår', frequency: 'dagligen', datetime: null }
+        ];
+
+        let activeRightFilter = 'all';
+
+        function renderRightDrawer() {
+            const container = document.getElementById('right-drawer-list');
+            if (!container) return;
+
+            container.innerHTML = '';
+            const filtered = falkItems.filter(item => activeRightFilter === 'all' || item.type === activeRightFilter);
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 text-xs italic text-stone-500">Inga sparade objekt i denna vy.</div>';
+                return;
+            }
+
+            filtered.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'falk-card p-3.5 rounded-2xl border border-[#DDD0B8] shadow-xs space-y-2 relative group';
+                
+                const isInsight = item.type === 'insight';
+                const icon = isInsight ? '🌱' : '🔔';
+                const tagLabel = isInsight ? 'Insikt' : `Påminnelse (${item.frequency || 'tillsvidare'})`;
+                const tagBg = isInsight ? 'bg-emerald-100/70 text-emerald-800' : 'bg-amber-100/70 text-amber-800';
+
+                function escapeHtmlLocal(str) { return str ? str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${tagBg} flex items-center gap-1">
+                            <span>${icon}</span> ${tagLabel}
+                        </span>
+                        <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100">
+                            <button onclick="editFalkItem(${item.id})" class="text-[11px] font-bold text-stone-600 hover:text-black px-1.5 py-0.5 rounded hover:bg-stone-200/60" title="Redigera">✏️</button>
+                            ${isInsight ? `<button onclick="convertInsightToReminder(${item.id})" class="text-[11px] font-bold text-amber-800 hover:text-amber-950 px-1.5 py-0.5 rounded hover:bg-amber-100/60" title="Lägg till påminnelse">🔔</button>` : ''}
+                            <button onclick="deleteFalkItem(${item.id})" class="text-[11px] font-bold text-red-600 hover:text-red-800 px-1.5 py-0.5 rounded hover:bg-red-100/60" title="Ta bort">✕</button>
+                        </div>
+                    </div>
+                    <p class="text-xs ${isInsight ? 'italic font-serif' : 'font-medium'} text-stone-800 leading-relaxed">${escapeHtmlLocal(item.text)}</p>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function filterRightDrawer(type) {
+            activeRightFilter = type;
+            document.querySelectorAll('.right-tab-chip').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById('right-tab-' + type);
+            if (activeBtn) activeBtn.classList.add('active');
+            renderRightDrawer();
+        }
+
+        function openManualInsightModal(text = '', type = 'insight') {
+            document.getElementById('modal-title').innerText = text ? 'Spara notering' : 'Skapa ny insikt / påminnelse';
+            document.getElementById('modal-item-id').value = '';
+            document.getElementById('modal-text-input').value = text;
+            setModalType(type);
+            
+            const backdrop = document.getElementById('falk-modal-backdrop');
+            backdrop.classList.remove('hidden');
+            setTimeout(() => backdrop.classList.remove('opacity-0'), 10);
+        }
+
+        function closeFalkModal() {
+            const backdrop = document.getElementById('falk-modal-backdrop');
+            backdrop.classList.add('opacity-0');
+            setTimeout(() => backdrop.classList.add('hidden'), 300);
+        }
+
+        function setModalType(type) {
+            document.getElementById('modal-item-type').value = type;
+            const btnInsight = document.getElementById('modal-btn-type-insight');
+            const btnReminder = document.getElementById('modal-btn-type-reminder');
+            const reminderOpts = document.getElementById('modal-reminder-options');
+
+            if (type === 'insight') {
+                btnInsight.className = 'py-2 text-xs font-bold rounded-xl border border-[#2D2721] text-white bg-[#2D2721]';
+                btnReminder.className = 'py-2 text-xs font-bold rounded-xl border border-[#DDD0B8] text-stone-700 bg-white';
+                reminderOpts.classList.add('hidden');
+            } else {
+                btnReminder.className = 'py-2 text-xs font-bold rounded-xl border border-[#2D2721] text-white bg-[#2D2721]';
+                btnInsight.className = 'py-2 text-xs font-bold rounded-xl border border-[#DDD0B8] text-stone-700 bg-white';
+                reminderOpts.classList.remove('hidden');
+            }
+        }
+
+        function toggleCustomTimeField() {
+            const val = document.getElementById('modal-frequency-select').value;
+            const group = document.getElementById('modal-custom-time-group');
+            if (val === 'anpassat') group.classList.remove('hidden');
+            else group.classList.add('hidden');
+        }
+
+        function saveModalData(e) {
+            e.preventDefault();
+            const id = document.getElementById('modal-item-id').value;
+            const text = document.getElementById('modal-text-input').value.trim();
+            const type = document.getElementById('modal-item-type').value;
+            const freq = type === 'reminder' ? document.getElementById('modal-frequency-select').value : null;
+            const dt = type === 'reminder' && freq === 'anpassat' ? document.getElementById('modal-datetime-input').value : null;
+
+            if (!text) return;
+
+            if (id) {
+                const item = falkItems.find(x => x.id == id);
+                if (item) {
+                    item.text = text;
+                    item.type = type;
+                    item.frequency = freq;
+                    item.datetime = dt;
+                }
+            } else {
+                falkItems.unshift({
+                    id: Date.now(),
+                    type: type,
+                    text: text,
+                    created: 'Nyss',
+                    frequency: freq,
+                    datetime: dt
+                });
+            }
+
+            closeFalkModal();
+            renderRightDrawer();
+            openRightMenu();
+        }
+
+        function editFalkItem(id) {
+            const item = falkItems.find(x => x.id == id);
+            if (!item) return;
+
+            document.getElementById('modal-title').innerText = 'Redigera ' + (item.type === 'insight' ? 'insikt' : 'påminnelse');
+            document.getElementById('modal-item-id').value = item.id;
+            document.getElementById('modal-text-input').value = item.text;
+            setModalType(item.type);
+
+            if (item.type === 'reminder') {
+                document.getElementById('modal-frequency-select').value = item.frequency || 'tillsvidare';
+                if (item.datetime) {
+                    document.getElementById('modal-datetime-input').value = item.datetime;
+                }
+                toggleCustomTimeField();
+            }
+
+            const backdrop = document.getElementById('falk-modal-backdrop');
+            backdrop.classList.remove('hidden');
+            setTimeout(() => backdrop.classList.remove('opacity-0'), 10);
+        }
+
+        function convertInsightToReminder(id) {
+            const item = falkItems.find(x => x.id == id);
+            if (item) {
+                openManualInsightModal(item.text, 'reminder');
+            }
+        }
+
+        function deleteFalkItem(id) {
+            falkItems = falkItems.filter(x => x.id != id);
+            renderRightDrawer();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderRightDrawer();
+        });
+
+    </script>
+    <!-- MODAL FÖR SKAPANDE OCH REDIGERING AV PÅMINNELSER / INSIKTER -->
+    <div id="falk-modal-backdrop" class="fixed inset-0 bg-black/50 backdrop-blur-xs hidden opacity-0 transition-opacity duration-300 z-50 flex items-center justify-center p-4">
+        <div class="bg-[#FAF8F0] w-full max-w-md rounded-3xl border border-[#DDD0B8] shadow-2xl overflow-hidden p-6 space-y-5 transform scale-95 transition-transform duration-300" id="falk-modal-box">
+            <div class="flex items-center justify-between border-b border-[#E6E0D4] pb-3">
+                <h3 class="text-base font-extrabold text-[#2D2721]" id="modal-title">Hantera notering</h3>
+                <button onclick="closeFalkModal()" class="text-stone-500 hover:text-black">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <form id="falk-modal-form" onsubmit="saveModalData(event)" class="space-y-4">
+                <input type="hidden" id="modal-item-id" value="">
+                <input type="hidden" id="modal-item-type" value="reminder">
+
+                <div>
+                    <label class="block text-[11px] font-bold text-[#8C5D37] uppercase mb-1">Innehåll / Reflektion</label>
+                    <textarea id="modal-text-input" rows="3" required class="w-full text-xs p-3 rounded-xl border border-[#DDD0B8] bg-white text-stone-800 focus:outline-none focus:ring-1 focus:ring-[#8C5D37]" placeholder="Skriv din insikt eller påminnelse här..."></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" onclick="setModalType('insight')" id="modal-btn-type-insight" class="py-2 text-xs font-bold rounded-xl border border-[#DDD0B8] text-stone-700 bg-white">🌱 Insikt</button>
+                    <button type="button" onclick="setModalType('reminder')" id="modal-btn-type-reminder" class="py-2 text-xs font-bold rounded-xl border border-[#2D2721] text-white bg-[#2D2721]">🔔 Påminnelse</button>
+                </div>
+
+                <div id="modal-reminder-options" class="space-y-3 bg-[#E8DCC4]/40 p-3.5 rounded-2xl border border-[#DDD0B8]">
+                    <div>
+                        <label class="block text-[10px] font-bold text-stone-600 uppercase mb-1">Hur ofta vill du påminnas?</label>
+                        <select id="modal-frequency-select" onchange="toggleCustomTimeField()" class="w-full text-xs p-2 rounded-lg border border-[#DDD0B8] bg-white font-semibold">
+                            <option value="tillsvidare">Tillsvidare (tills jag stänger den)</option>
+                            <option value="dagligen">Varje dag</option>
+                            <option value="veckovis">Varje vecka</option>
+                            <option value="anpassat">Anpassat datum & tid</option>
+                        </select>
+                    </div>
+
+                    <div id="modal-custom-time-group" class="hidden">
+                        <label class="block text-[10px] font-bold text-stone-600 uppercase mb-1">Välj datum & tid</label>
+                        <input type="datetime-local" id="modal-datetime-input" class="w-full text-xs p-2 rounded-lg border border-[#DDD0B8] bg-white font-medium">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeFalkModal()" class="px-4 py-2 text-xs font-semibold text-stone-600 hover:text-stone-900">Avbryt</button>
+                    <button type="submit" class="px-5 py-2 bg-[#4E5C4B] hover:bg-[#3D493B] text-white text-xs font-semibold rounded-xl">Spara</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- FOKUS MODAL (FÄRGPALETT: #E8DCC4, #C57B57, #4E5C4B, #A8BFA1) -->
+    <div id="falk-fokus-backdrop" onclick="closeFocusModal()" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300 z-50"></div>
+    
+    <div id="falk-fokus-modal" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] max-w-md bg-[#FAF8F0] border border-[#DDD0B8] rounded-3xl shadow-2xl hidden opacity-0 transition-all duration-300 z-50 p-6 space-y-5">
+        
+        <!-- HEADER -->
+        <div class="flex items-center justify-between pb-3 border-b border-[#E6E0D4]">
+            <h2 class="text-xl font-extrabold text-[#2D2721]">Fokus</h2>
+            <div class="flex items-center gap-4">
+                <button onclick="resetFocusSliders()" class="text-xs font-bold text-[#C57B57] hover:underline transition-all">Återställ</button>
+                <button onclick="closeFocusModal()" class="text-stone-500 hover:text-black font-bold text-lg p-1">✕</button>
+            </div>
+        </div>
+
+        <!-- 5 SLIDERS CONTAINER (DEFAULT 50%) -->
+        <div class="space-y-4">
+            
+            <!-- 1. Självförtroende -->
+            <div class="space-y-1">
+                <div class="flex justify-between text-xs font-bold text-[#2D2721]">
+                    <span>Självförtroende</span>
+                    <span id="val-sjalvfortroende" class="text-[#C57B57]">50%</span>
+                </div>
+                <input type="range" id="slider-sjalvfortroende" min="0" max="100" value="50" oninput="updateSliderUI('sjalvfortroende')" class="falk-slider w-full">
+            </div>
+
+            <!-- 2. Stresshantering -->
+            <div class="space-y-1">
+                <div class="flex justify-between text-xs font-bold text-[#2D2721]">
+                    <span>Stresshantering</span>
+                    <span id="val-stresshantering" class="text-[#C57B57]">50%</span>
+                </div>
+                <input type="range" id="slider-stresshantering" min="0" max="100" value="50" oninput="updateSliderUI('stresshantering')" class="falk-slider w-full">
+            </div>
+
+            <!-- 3. Handlingskraft -->
+            <div class="space-y-1">
+                <div class="flex justify-between text-xs font-bold text-[#2D2721]">
+                    <span>Handlingskraft</span>
+                    <span id="val-handlingskraft" class="text-[#C57B57]">50%</span>
+                </div>
+                <input type="range" id="slider-handlingskraft" min="0" max="100" value="50" oninput="updateSliderUI('handlingskraft')" class="falk-slider w-full">
+            </div>
+
+            <!-- 4. Gränssättning -->
+            <div class="space-y-1">
+                <div class="flex justify-between text-xs font-bold text-[#2D2721]">
+                    <span>Gränssättning</span>
+                    <span id="val-granssattning" class="text-[#C57B57]">50%</span>
+                </div>
+                <input type="range" id="slider-granssattning" min="0" max="100" value="50" oninput="updateSliderUI('granssattning')" class="falk-slider w-full">
+            </div>
+
+            <!-- 5. Motivation -->
+            <div class="space-y-1">
+                <div class="flex justify-between text-xs font-bold text-[#2D2721]">
+                    <span>Motivation</span>
+                    <span id="val-motivation" class="text-[#C57B57]">50%</span>
+                </div>
+                <input type="range" id="slider-motivation" min="0" max="100" value="50" oninput="updateSliderUI('motivation')" class="falk-slider w-full">
+            </div>
+
+        </div>
+
+        <!-- BOTTENKNAPP -->
+        <button onclick="saveAndApplyFocus()" class="w-full py-3 bg-[#4E5C4B] hover:bg-[#3D493B] text-white text-xs font-bold rounded-full transition-all shadow-xs">
+            Verkställ Fokusinställningar
+        </button>
+    </div>
+
+    <!-- ANPASSAD STYLE FÖR SLIDERS (#A8BFA1 SPÅR, #C57B57 THUMB) -->
+    <style>
+        .falk-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            background: #A8BFA1;
+            border-radius: 9999px;
+            outline: none;
+        }
+        .falk-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #C57B57;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: transform 0.15s ease;
+        }
+        .falk-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+    </style>
+
+
+    <script>
+        let initialFocusState = { sjalvfortroende: 50, stresshantering: 50, handlingskraft: 50, granssattning: 50, motivation: 50 };
+
+        window.updateSliderUI = function(key) {
+            const el = document.getElementById('slider-' + key);
+            const lbl = document.getElementById('val-' + key);
+            if (el && lbl) lbl.innerText = el.value + '%';
+        };
+
+        window.openFocusModal = function() {
+            const saved = localStorage.getItem('falk_focus_settings');
+            if (saved) {
+                try {
+                    initialFocusState = JSON.parse(saved);
+                    Object.keys(initialFocusState).forEach(k => {
+                        const el = document.getElementById('slider-' + k);
+                        if (el) {
+                            el.value = initialFocusState[k];
+                            window.updateSliderUI(k);
+                        }
+                    });
+                } catch(e){}
+            }
+            const bd = document.getElementById("falk-fokus-backdrop");
+            const md = document.getElementById("falk-fokus-modal");
+            if (bd && md) {
+                bd.classList.remove("hidden");
+                md.classList.remove("hidden");
+                requestAnimationFrame(() => {
+                    bd.classList.remove("opacity-0");
+                    md.classList.remove("opacity-0");
+                });
+            }
+        };
+
+        window.closeFocusModal = function() {
+            const bd = document.getElementById("falk-fokus-backdrop");
+            const md = document.getElementById("falk-fokus-modal");
+            if (bd && md) {
+                bd.classList.add("opacity-0");
+                md.classList.add("opacity-0");
+                setTimeout(() => {
+                    bd.classList.add("hidden");
+                    md.classList.add("hidden");
+                }, 300);
+            }
+        };
+
+        window.resetFocusSliders = function() {
+            ['sjalvfortroende', 'stresshantering', 'handlingskraft', 'granssattning', 'motivation'].forEach(k => {
+                const el = document.getElementById('slider-' + k);
+                if (el) {
+                    el.value = 50;
+                    window.updateSliderUI(k);
+                }
+            });
+        };
+
+        window.saveAndApplyFocus = function() {
+            const currentFocus = {
+                sjalvfortroende: parseInt(document.getElementById('slider-sjalvfortroende').value),
+                stresshantering: parseInt(document.getElementById('slider-stresshantering').value),
+                handlingskraft: parseInt(document.getElementById('slider-handlingskraft').value),
+                granssattning: parseInt(document.getElementById('slider-granssattning').value),
+                motivation: parseInt(document.getElementById('slider-motivation').value)
+            };
+
+            const isChanged = JSON.stringify(currentFocus) !== JSON.stringify(initialFocusState);
+            localStorage.setItem('falk_focus_settings', JSON.stringify(currentFocus));
+            initialFocusState = { ...currentFocus };
+
+            window.closeFocusModal();
+
+            if (isChanged) {
+                // Växla vy till chatttråd om vi är på startskärmen
+                const dash = document.getElementById("dashboard-grid");
+                const thread = document.getElementById("chat-thread");
+                if (dash && thread && !dash.classList.contains("hidden")) {
+                    dash.classList.add("hidden");
+                    thread.classList.remove("hidden");
+                    if (typeof isChatActive !== 'undefined') isChatActive = true;
+                }
+
+                // Generera anpassningssvar i chatten
+                const ai = appendAiSkeleton();
+                setTimeout(() => {
+                    ai.innerText = `Jag har registrerat dina nya Fokus-inställningar:
+
+` +
+                        `• Självförtroende: ${currentFocus.sjalvfortroende}%
+` +
+                        `• Stresshantering: ${currentFocus.stresshantering}%
+` +
+                        `• Handlingskraft: ${currentFocus.handlingskraft}%
+` +
+                        `• Gränssättning: ${currentFocus.granssattning}%
+` +
+                        `• Motivation: ${currentFocus.motivation}%
+
+` +
+                        `Jag har anpassat min kompass efter din nuvarande profil. Hur vill du ta dig an din utmaning just nu?`;
+                }, 500);
+            }
+        };
+    </script>
+
+</body>
+</html>

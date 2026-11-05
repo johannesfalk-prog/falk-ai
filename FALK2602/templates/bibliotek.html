@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FALK - Övningar</title>
+    <script src="https://cdn.tailwindcss.com">
+        let falkItems = [
+            { id: 1, type: 'insight', text: 'Att sätta gränser handlar inte om att stänga ute andra, utan om att hålla dig själv hel.', created: 'Idag', frequency: null },
+            { id: 2, type: 'reminder', text: 'Reflektera kring dina 3 viktigaste prioriteringar inför morgondagen.', created: 'Igår', frequency: 'dagligen', datetime: null }
+        ];
+
+        let activeRightFilter = 'all';
+
+        function renderRightDrawer() {
+            const container = document.getElementById('right-drawer-list');
+            if (!container) return;
+
+            container.innerHTML = '';
+            const filtered = falkItems.filter(item => activeRightFilter === 'all' || item.type === activeRightFilter);
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 text-xs italic text-stone-500">Inga sparade objekt i denna vy.</div>';
+                return;
+            }
+
+            filtered.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'falk-card p-3.5 rounded-2xl border border-[#DDD0B8] shadow-xs space-y-2 relative group';
+                
+                const isInsight = item.type === 'insight';
+                const icon = isInsight ? '🌱' : '🔔';
+                const tagLabel = isInsight ? 'Insikt' : `Påminnelse (${item.frequency || 'tillsvidare'})`;
+                const tagBg = isInsight ? 'bg-emerald-100/70 text-emerald-800' : 'bg-amber-100/70 text-amber-800';
+
+                function escapeHtmlLocal(str) { return str ? str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${tagBg} flex items-center gap-1">
+                            <span>${icon}</span> ${tagLabel}
+                        </span>
+                        <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100">
+                            <button onclick="editFalkItem(${item.id})" class="text-[11px] font-bold text-stone-600 hover:text-black px-1.5 py-0.5 rounded hover:bg-stone-200/60" title="Redigera">✏️</button>
+                            ${isInsight ? `<button onclick="convertInsightToReminder(${item.id})" class="text-[11px] font-bold text-amber-800 hover:text-amber-950 px-1.5 py-0.5 rounded hover:bg-amber-100/60" title="Lägg till påminnelse">🔔</button>` : ''}
+                            <button onclick="deleteFalkItem(${item.id})" class="text-[11px] font-bold text-red-600 hover:text-red-800 px-1.5 py-0.5 rounded hover:bg-red-100/60" title="Ta bort">✕</button>
+                        </div>
+                    </div>
+                    <p class="text-xs ${isInsight ? 'italic font-serif' : 'font-medium'} text-stone-800 leading-relaxed">${escapeHtmlLocal(item.text)}</p>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function filterRightDrawer(type) {
+            activeRightFilter = type;
+            document.querySelectorAll('.right-tab-chip').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById('right-tab-' + type);
+            if (activeBtn) activeBtn.classList.add('active');
+            renderRightDrawer();
+        }
+
+        function openManualInsightModal(text = '', type = 'insight') {
+            document.getElementById('modal-title').innerText = text ? 'Spara notering' : 'Skapa ny insikt / påminnelse';
+            document.getElementById('modal-item-id').value = '';
+            document.getElementById('modal-text-input').value = text;
+            setModalType(type);
+            
+            const backdrop = document.getElementById('falk-modal-backdrop');
+            backdrop.classList.remove('hidden');
+            setTimeout(() => backdrop.classList.remove('opacity-0'), 10);
+        }
+
+        function closeFalkModal() {
+            const backdrop = document.getElementById('falk-modal-backdrop');
+            backdrop.classList.add('opacity-0');
+            setTimeout(() => backdrop.classList.add('hidden'), 300);
+        }
+
+        function setModalType(type) {
+            document.getElementById('modal-item-type').value = type;
+            const btnInsight = document.getElementById('modal-btn-type-insight');
+            const btnReminder = document.getElementById('modal-btn-type-reminder');
+            const reminderOpts = document.getElementById('modal-reminder-options');
+
+            if (type === 'insight') {
+                btnInsight.className = 'py-2 text-xs font-bold rounded-xl border border-[#2D2721] text-white bg-[#2D2721]';
+                btnReminder.className = 'py-2 text-xs font-bold rounded-xl border border-[#DDD0B8] text-stone-700 bg-white';
+                reminderOpts.classList.add('hidden');
+            } else {
+                btnReminder.className = 'py-2 text-xs font-bold rounded-xl border border-[#2D2721] text-white bg-[#2D2721]';
+                btnInsight.className = 'py-2 text-xs font-bold rounded-xl border border-[#DDD0B8] text-stone-700 bg-white';
+                reminderOpts.classList.remove('hidden');
+            }
+        }
+
+        function toggleCustomTimeField() {
+            const val = document.getElementById('modal-frequency-select').value;
+            const group = document.getElementById('modal-custom-time-group');
+            if (val === 'anpassat') group.classList.remove('hidden');
+            else group.classList.add('hidden');
+        }
+
+        function saveModalData(e) {
+            e.preventDefault();
+            const id = document.getElementById('modal-item-id').value;
+            const text = document.getElementById('modal-text-input').value.trim();
+            const type = document.getElementById('modal-item-type').value;
+            const freq = type === 'reminder' ? document.getElementById('modal-frequency-select').value : null;
+            const dt = type === 'reminder' && freq === 'anpassat' ? document.getElementById('modal-datetime-input').value : null;
+
+            if (!text) return;
+
+            if (id) {
+                const item = falkItems.find(x => x.id == id);
+                if (item) {
+                    item.text = text;
+                    item.type = type;
+                    item.frequency = freq;
+                    item.datetime = dt;
+                }
+            } else {
+                falkItems.unshift({
+                    id: Date.now(),
+                    type: type,
+                    text: text,
+                    created: 'Nyss',
+                    frequency: freq,
+                    datetime: dt
+                });
+            }
+
+            closeFalkModal();
+            renderRightDrawer();
+            openRightMenu();
+        }
+
+        function editFalkItem(id) {
+            const item = falkItems.find(x => x.id == id);
+            if (!item) return;
+
+            document.getElementById('modal-title').innerText = 'Redigera ' + (item.type === 'insight' ? 'insikt' : 'påminnelse');
+            document.getElementById('modal-item-id').value = item.id;
+            document.getElementById('modal-text-input').value = item.text;
+            setModalType(item.type);
+
+            if (item.type === 'reminder') {
+                document.getElementById('modal-frequency-select').value = item.frequency || 'tillsvidare';
+                if (item.datetime) {
+                    document.getElementById('modal-datetime-input').value = item.datetime;
+                }
+                toggleCustomTimeField();
+            }
+
+            const backdrop = document.getElementById('falk-modal-backdrop');
+            backdrop.classList.remove('hidden');
+            setTimeout(() => backdrop.classList.remove('opacity-0'), 10);
+        }
+
+        function convertInsightToReminder(id) {
+            const item = falkItems.find(x => x.id == id);
+            if (item) {
+                openManualInsightModal(item.text, 'reminder');
+            }
+        }
+
+        function deleteFalkItem(id) {
+            falkItems = falkItems.filter(x => x.id != id);
+            renderRightDrawer();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderRightDrawer();
+        });
+
+    </script>
+    <style>
+        body.theme-standard { background-color: #E8DCC4 !important; color: #38322B; }
+        body.theme-dark { background-color: #1C1A17 !important; color: #E8DCC4; }
+        body.theme-dark header { background-color: #1C1A17 !important; border-color: #3D3730 !important; }
+        body.theme-dark header a, body.theme-dark header button { color: #E8DCC4 !important; }
+        
+        .falk-card { background-color: #FAF8F0; border: 1px solid #DDD0B8; }
+        body.theme-dark .falk-card { background-color: #26231F !important; border-color: #3D3730 !important; color: #E8DCC4 !important; }
+        
+        .filter-chip {
+            background-color: #FAF8F0;
+            border: 1px solid #DDD0B8;
+            color: #4A4238;
+            transition: all 0.2s ease;
+        }
+        .filter-chip.active {
+            background-color: #2D2721 !important;
+            color: #FFFFFF !important;
+            border-color: #2D2721 !important;
+        }
+        body.theme-dark .filter-chip {
+            background-color: #26231F;
+            border-color: #3D3730;
+            color: #C5BBAA;
+        }
+        body.theme-dark .filter-chip.active {
+            background-color: #E8DCC4 !important;
+            color: #1C1A17 !important;
+        }
+
+        .exercise-card.hidden-card {
+            display: none !important;
+        }
+
+        .user-bubble { background-color: #4E5C4B !important; color: #FAF8F0; border-radius: 1.25rem 1.25rem 0.25rem 1.25rem; white-space: pre-wrap; word-break: break-word; }
+        .ai-bubble { background-color: #FAF8F0; color: #2D2721; border: 1px solid #DDD0B8; border-radius: 1.25rem 1.25rem 1.25rem 0.25rem; white-space: pre-wrap; word-break: break-word; line-height: 1.6; }
+        body.theme-dark .ai-bubble { background-color: #26231F !important; color: #E8DCC4 !important; border-color: #3D3730 !important; }
+    
+        .right-tab-chip { background-color: transparent; color: #4A4238; }
+        .right-tab-chip.active { background-color: #2D2721 !important; color: #FFFFFF !important; }
+        body.theme-dark .right-tab-chip.active { background-color: #E8DCC4 !important; color: #1C1A17 !important; }
+
+    </style>
+</head>
+<body class="theme-standard min-h-screen flex flex-col justify-between antialiased relative overflow-x-hidden">
+
+            <!-- VÄNSTER BACKDROP & MENY (IDENTISK ÖVER ALLA SIDOR) -->
+    <div id="falk-left-backdrop" onclick="closeLeftMenu()" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300 z-40"></div>
+    <aside id="falk-left-drawer" class="fixed top-0 left-0 h-full w-80 bg-[#FAF8F0]/95 backdrop-blur-md shadow-2xl transform -translate-x-full transition-transform duration-300 ease-in-out z-50 flex flex-col border-r border-[#DDD0B8]">
+        <div class="p-6 border-b border-[#E6E0D4]/80">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-[11px] font-bold tracking-wide text-[#8C5D37] uppercase">FALK - EN KOMPASS MED PERSPEKTIV</p>
+                    <h2 class="text-xl font-extrabold text-[#2D2721] mt-0.5">Meny</h2>
+                </div>
+                <button onclick="closeLeftMenu()" class="p-1 text-stone-600 hover:text-black rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+        </div>
+        <nav class="flex-1 p-5 space-y-2 overflow-y-auto">
+            <a href="/" class="flex items-center gap-3.5 px-4 py-3 text-sm rounded-2xl transition-all font-medium text-stone-700 hover:bg-[#E8DCC4]/40">
+                <svg class="w-5 h-5 text-stone-700 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                <span>Chatt</span>
+            </a>
+            <a href="/bibliotek" onclick="if(typeof IS_GUEST !== 'undefined' && IS_GUEST){ event.preventDefault(); openPaywallModal('bibliotek'); }" onclick="if(IS_GUEST){ event.preventDefault(); openPaywallModal('bibliotek'); }" class="flex items-center gap-3.5 px-4 py-3 text-sm rounded-2xl transition-all bg-[#D6CDB8]/60 font-bold text-[#2D2721]">
+                <svg class="w-5 h-5 text-stone-700 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                <span>Bibliotek</span>
+            </a>
+            <a href="/utveckling" onclick="if(typeof IS_GUEST !== 'undefined' && IS_GUEST){ event.preventDefault(); openPaywallModal('utveckling'); }" onclick="if(IS_GUEST){ event.preventDefault(); openPaywallModal('utveckling'); }" class="flex items-center gap-3.5 px-4 py-3 text-sm rounded-2xl transition-all font-medium text-stone-700 hover:bg-[#E8DCC4]/40">
+                <svg class="w-5 h-5 text-stone-700 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                <span>Min utveckling</span>
+            </a>
+            <a href="/installningar" class="flex items-center gap-3.5 px-4 py-3 text-sm rounded-2xl transition-all font-medium text-stone-700 hover:bg-[#E8DCC4]/40">
+                <svg class="w-5 h-5 text-stone-700 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <span>Inställningar och integritet</span>
+            </a>
+        </nav>
+        <div class="p-5 border-t border-[#E6E0D4]/80 mt-auto flex items-center justify-between">
+            <span class="px-4 py-1.5 text-xs font-bold tracking-wider text-stone-800 bg-white border border-[#DDD0B8] rounded-full uppercase shadow-xs">GÄST</span>
+            <button class="px-6 py-2 text-xs font-bold text-white bg-[#3A352E] hover:bg-[#2D2721] rounded-full transition-all">Logga in</button>
+        </div>
+    </aside>
+
+                <!-- HÖGER BACKDROP & MENY (IDENTISK ÖVER ALLA SIDOR) -->
+    <div id="falk-right-backdrop" onclick="closeRightMenu()" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300 z-40"></div>
+    <aside id="falk-right-drawer" class="fixed top-0 right-0 h-full w-85 bg-[#FAF8F0]/95 backdrop-blur-md shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out z-50 flex flex-col border-l border-[#DDD0B8]">
+        <div class="p-5 border-b border-[#E6E0D4]/80 space-y-3">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-[11px] font-bold tracking-wide text-[#8C5D37] uppercase">ÖVERSYNER & FOKUS</p>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <svg class="w-5 h-5 text-[#8C5D37] stroke-current fill-none shrink-0" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <g stroke="currentColor">
+                                <line x1="12" y1="1.5" x2="12" y2="3.5" />
+                                <line x1="4.5" y1="4.5" x2="5.9" y2="5.9" />
+                                <line x1="1.5" y1="12" x2="3.5" y2="12" />
+                                <line x1="19.5" y1="4.5" x2="18.1" y2="5.9" />
+                                <line x1="22.5" y1="12" x2="20.5" y2="12" />
+                            </g>
+                            <path d="M 8.5 13 C 7 11.2 7 8 9 6 C 10.8 4.2 13.2 4.2 15 6 C 17 8 17 11.2 15.5 13 C 14.8 13.8 14.5 14.5 14.5 15.5 L 9.5 15.5 C 9.5 14.5 9.2 13.8 8.5 13 Z" />
+                            <line x1="9.5" y1="18" x2="14.5" y2="18" />
+                            <line x1="10.5" y1="20.5" x2="13.5" y2="20.5" />
+                        </svg>
+                        <h2 class="text-lg font-extrabold text-[#2D2721]">Insikter & Påminnelser</h2>
+                    </div>
+                </div>
+                <button onclick="closeRightMenu()" class="p-1 text-stone-600 hover:text-black rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <div class="flex items-center gap-1.5 p-1 bg-[#E8DCC4]/50 rounded-xl border border-[#DDD0B8]">
+                <button onclick="filterRightDrawer('all')" id="right-tab-all" class="right-tab-chip active flex-1 py-1 text-[11px] font-bold rounded-lg transition-all text-center">Alla</button>
+                <button onclick="filterRightDrawer('insight')" id="right-tab-insight" class="right-tab-chip flex-1 py-1 text-[11px] font-bold rounded-lg transition-all text-center">Insikter</button>
+                <button onclick="filterRightDrawer('reminder')" id="right-tab-reminder" class="right-tab-chip flex-1 py-1 text-[11px] font-bold rounded-lg transition-all text-center">Påminnelser</button>
+            </div>
+        </div>
+
+        <div class="flex-1 p-4 space-y-3 overflow-y-auto" id="right-drawer-list"></div>
+
+        <div class="p-4 border-t border-[#E6E0D4]/80 mt-auto">
+            <button onclick="openManualInsightModal()" class="w-full py-3 bg-[#4E5C4B] hover:bg-[#3D493B] text-white text-xs font-semibold rounded-full transition-all flex items-center justify-center gap-1.5 shadow-xs">
+                <span>+ Skriv egen insikt / påminnelse</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- HEADER (SOLID BAKGRUND, CENTRERAD LOGO, LAMPIKON MED STRÅLAR) -->
+    <header class="relative flex items-center justify-between px-5 py-4 border-b border-[#D8CAB0]/80 bg-[#E8DCC4] sticky top-0 z-30 transition-colors duration-200">
+        <div class="flex items-center gap-3 z-10">
+            <button onclick="openLeftMenu()" class="p-1 text-black hover:opacity-75 transition-all focus:outline-none" title="Öppna meny">
+                <svg class="w-6 h-6 text-black stroke-current" fill="none" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+            <span class="px-2.5 py-0.5 text-[11px] font-bold tracking-wider text-[#8C5D37] bg-[#FAF8F0] border border-[#DDD0B8] rounded-full uppercase shadow-xs">GÄST</span>
+        </div>
+
+        <div class="absolute left-1/2 -translate-x-1/2 flex items-center">
+            <a href="/" class="text-2xl font-black tracking-wider text-black hover:opacity-75 transition-all cursor-pointer">FALK</a>
+        </div>
+
+        <div class="flex items-center gap-4 z-10">
+            <a href="/" class="text-black hover:opacity-75 transition-all" title="Ny chat">
+                <svg class="w-5 h-5 text-black stroke-current" fill="none" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+            </a>
+            <button onclick="if(IS_GUEST){ openPaywallModal('right_menu'); } else { openRightMenu(); }" class="group text-black hover:opacity-100 transition-all focus:outline-none p-1 relative flex items-center justify-center" title="Insikter & Påminnelser">
+                <svg class="w-6 h-6 text-black stroke-current fill-none relative" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <g class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 stroke-current">
+                        <line x1="12" y1="1.5" x2="12" y2="3.5" />
+                        <line x1="4.5" y1="4.5" x2="5.9" y2="5.9" />
+                        <line x1="1.5" y1="12" x2="3.5" y2="12" />
+                        <line x1="19.5" y1="4.5" x2="18.1" y2="5.9" />
+                        <line x1="22.5" y1="12" x2="20.5" y2="12" />
+                    </g>
+                    <path d="M 8.5 13 C 7 11.2 7 8 9 6 C 10.8 4.2 13.2 4.2 15 6 C 17 8 17 11.2 15.5 13 C 14.8 13.8 14.5 14.5 14.5 15.5 L 9.5 15.5 C 9.5 14.5 9.2 13.8 8.5 13 Z" />
+                    <line x1="9.5" y1="18" x2="14.5" y2="18" />
+                    <line x1="10.5" y1="20.5" x2="13.5" y2="20.5" />
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-1 max-w-5xl w-full mx-auto px-4 py-6">
+
+        <!-- DASHBOARD GRID CONTAINER -->
+        <div id="dashboard-grid" class="transition-opacity duration-300 space-y-6">
+            <div class="text-center">
+                <h1 class="text-2xl font-extrabold">Övningar</h1>
+                <p class="text-xs italic opacity-75 mt-1 font-serif">15 strukturerade verktyg för personlig utveckling och reflektion.</p>
+            </div>
+
+            <!-- KATEGORIFILTER CHIPS -->
+            <div class="falk-card p-3 rounded-2xl flex flex-wrap gap-2 items-center justify-center shadow-xs">
+                <button onclick="filterCategory('all')" id="cat-chip-all" class="filter-chip active text-xs px-3.5 py-1.5 rounded-full font-semibold">Alla (15)</button>
+                <button onclick="filterCategory('mindset')" id="cat-chip-mindset" class="filter-chip text-xs px-3.5 py-1.5 rounded-full font-medium">Mindset & Tankar (5)</button>
+                <button onclick="filterCategory('stress')" id="cat-chip-stress" class="filter-chip text-xs px-3.5 py-1.5 rounded-full font-medium">Stress & Lugn (3)</button>
+                <button onclick="filterCategory('handling')" id="cat-chip-handling" class="filter-chip text-xs px-3.5 py-1.5 rounded-full font-medium">Handling & Beslut (4)</button>
+                <button onclick="filterCategory('relationer')" id="cat-chip-relationer" class="filter-chip text-xs px-3.5 py-1.5 rounded-full font-medium">Relationer & Gränser (3)</button>
+            </div>
+
+            <!-- RESPONSTIVT 1, 2 OCH 3-KOLUMNS GRID -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5" id="exercise-grid">
+
+                <!-- 1. Värdekompassen -->
+                <button data-category="relationer" onclick="selectPrompt('Övning: Värdekompassen - Hjälp mig identifiera mina tre mest obrytbara kärnvärden.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">🌱</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Värdekompassen</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Relationer</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Hjälp mig identifiera mina tre mest obrytbara kärnvärden i livet just nu."</p>
+                    </div>
+                </button>
+
+                <!-- 2. Syna tanken -->
+                <button data-category="mindset" onclick="selectPrompt('Övning: Syna tanken - Guide mig i att syna och ifrågasätta en tanke som gnager.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">☁️</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Syna tanken</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Mindset</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Guide mig i att syna och ifrågasätta en tanke som gnager i mig."</p>
+                    </div>
+                </button>
+
+                <!-- 3. Beslutsklarhet -->
+                <button data-category="handling" onclick="selectPrompt('Övning: Beslutsklarhet - Hjälp mig formulera och strukturera ett svårt beslut jag skjuter på.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">💼</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Beslutsklarhet</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Handling</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Hjälp mig formulera och strukturera ett svårt beslut jag skjuter på."</p>
+                    </div>
+                </button>
+
+                <!-- 4. Lugnsankring -->
+                <button data-category="stress" onclick="selectPrompt('Övning: Lugnsankring - Ge mig en 3-stegs mikro-reflektion för att släppa anspänning här och nu.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">🍃</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Lugnsankring</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Stress</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Ge mig en 3-stegs mikro-reflektion för att släppa anspänning här och nu."</p>
+                    </div>
+                </button>
+
+                <!-- 5. Mikrosteg -->
+                <button data-category="handling" onclick="selectPrompt('Övning: Mikrosteg - Hjälp mig bryta ned mitt viktigaste mål till en 10-minuters mikrohandling.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">🎯</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Mikrosteg</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Handling</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Hjälp mig bryta ned mitt viktigaste mål till en 10-minuters mikrohandling."</p>
+                    </div>
+                </button>
+
+                <!-- 6. Samtalsförberedelse -->
+                <button data-category="relationer" onclick="selectPrompt('Övning: Samtalsförberedelse - Hjälp mig förbereda mina argument inför ett tufft samtal.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">💬</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Samtalsförberedelse</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Relationer</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Hjälp mig förbereda mina argument inför ett tufft samtal."</p>
+                    </div>
+                </button>
+
+                <!-- 7. Energitjuvar -->
+                <button data-category="stress" onclick="selectPrompt('Övning: Kartlägg energitjuvar - Analysera mina energitjuvar under det senaste dygnet.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">⚡</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Energitjuvar</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Stress</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Analysera mina energitjuvar under det senaste dygnet."</p>
+                    </div>
+                </button>
+
+                <!-- 8. Mönsterkoll -->
+                <button data-category="mindset" onclick="selectPrompt('Övning: Mönsterkoll - Hjälp mig se om jag upprepar en invand reaktion i en återkommande situation.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">🔍</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Mönsterkoll</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Mindset</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Hjälp mig se om jag upprepar en invand reaktion i en situation."</p>
+                    </div>
+                </button>
+
+                <!-- 9. Utomstående blick -->
+                <button data-category="mindset" onclick="selectPrompt('Övning: Utomstående blick - Hjälp mig se min nuvarande utmaning ur ett utomståendes ögon.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">💡</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Utomstående blick</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Mindset</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Hjälp mig se min nuvarande utmaning ur ett utomståendes ögon."</p>
+                    </div>
+                </button>
+
+                <!-- 10. NY: Inre kritikern -->
+                <button data-category="mindset" onclick="selectPrompt('Övning: Inre kritikern - Hjälp mig identifiera och omformulera min strängaste inre röst just nu.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">🎭</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Inre kritikern</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Mindset</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Hjälp mig identifiera och omformulera min strängaste inre röst."</p>
+                    </div>
+                </button>
+
+                <!-- 11. NY: Kontrollcirkeln -->
+                <button data-category="stress" onclick="selectPrompt('Övning: Kontrollcirkeln - Guide mig i att separera det jag kan påverka från det jag måste acceptera.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">⭕</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Kontrollcirkeln</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Stress</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Separera det jag kan påverka från det jag måste acceptera."</p>
+                    </div>
+                </button>
+
+                <!-- 12. NY: Gränssättning -->
+                <button data-category="relationer" onclick="selectPrompt('Övning: Gränssättning - Hjälp mig formulera ett tydligt, respektfullt nej till en förfrågan som dränerar mig.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">🛡️</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Nej utan skuld</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Relationer</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Formulera ett tydligt, respektfullt 'nej' utan skuld."</p>
+                    </div>
+                </button>
+
+                <!-- 13. NY: Prokrastineringskoden -->
+                <button data-category="handling" onclick="selectPrompt('Övning: Motståndets rot - Analysera varför jag skjuter på en specifik uppgift och hjälp mig bryta låsningen.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">⏳</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Motståndets rot</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Handling</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Analysera varför jag skjuter på en uppgift och bryt låsningen."</p>
+                    </div>
+                </button>
+
+                <!-- 14. NY: Framtidsperspektivet -->
+                <button data-category="mindset" onclick="selectPrompt('Övning: Framtidsperspektivet - Hjälp mig betrakta mitt nuvarande dilemma ur mitt 70-åriga jags ögon.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">🏔️</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Ditt 70-åriga jag</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Mindset</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Betrakta mitt nuvarande dilemma ur mitt 70-åriga jags ögon."</p>
+                    </div>
+                </button>
+
+                <!-- 15. NY: Friktionsanalys -->
+                <button data-category="handling" onclick="selectPrompt('Övning: Friktionsanalys - Identifiera den osynliga friktionen som hindrar mig från att upprätthålla min viktigaste vana.')" class="exercise-card w-full text-left p-4 rounded-2xl falk-card shadow-xs hover:shadow-md transition-all group flex flex-col justify-between h-full hover:border-[#8C5D37]/40">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl leading-none">⚙️</span>
+                                <h2 class="text-sm font-bold group-hover:text-[#8C5D37] transition-colors">Friktionsanalys</h2>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-[#E8DCC4] rounded-full text-[#8C5D37]">Handling</span>
+                        </div>
+                        <p class="text-[12px] italic opacity-80 font-serif leading-snug">"Identifiera den osynliga friktionen som hindrar min vana."</p>
+                    </div>
+                </button>
+
+            </div>
+        </div>
+
+        <!-- CHATT TRÅD (VISAS NÄR ÖVNING KLICKAS) -->
+        <div id="chat-thread" class="hidden space-y-4 pb-12 max-w-2xl mx-auto">
+            <div id="chat-messages" class="space-y-4"></div>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="sticky bottom-0 bg-transparent backdrop-blur-md pt-2 pb-4 px-4 z-20">
+        <div class="max-w-2xl mx-auto">
+            <form id="chat-form" onsubmit="handleChatSubmit(event)" class="bg-white rounded-full p-1.5 pl-4 flex items-center justify-between shadow-sm border border-[#D8CAB0]">
+                <div class="flex items-center gap-3 flex-1">
+                    <svg class="w-5 h-5 text-stone-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                    <input id="chat-input" type="text" autocomplete="off" placeholder="Starta en övning eller skriv..." class="w-full text-sm bg-transparent border-none focus:outline-none text-stone-800 placeholder-stone-400">
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="focus-toggle-btn" onclick="openFocusModal()" class="p-1.5 text-stone-500 hover:text-[#C57B57] transition-all transform rotate-90 focus:outline-none" title="Öppna Fokus & Parameterinställningar"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg></button>
+                    <button type="submit" class="bg-[#4E5C4B] hover:bg-[#3D493B] text-white text-xs font-semibold px-4 py-2 rounded-full transition-all">Skicka</button>
+                </div>
+            </form>
+        </div>
+    </footer>
+
+    <script>
+        const savedTheme = localStorage.getItem('falk_theme') || 'standard';
+        document.body.className = 'theme-' + savedTheme + ' min-h-screen flex flex-col justify-between antialiased relative overflow-x-hidden';
+        let isChatActive = false;
+
+        function filterCategory(cat) {
+            const chips = document.querySelectorAll('.filter-chip');
+            chips.forEach(c => c.classList.remove('active'));
+            
+            const activeChip = document.getElementById('cat-chip-' + cat);
+            if (activeChip) activeChip.classList.add('active');
+
+            const cards = document.querySelectorAll('.exercise-card');
+            cards.forEach(card => {
+                if (cat === 'all' || card.getAttribute('data-category') === cat) {
+                    card.classList.remove('hidden-card');
+                } else {
+                    card.classList.add('hidden-card');
+                }
+            });
+        }
+
+        function escapeHtml(str) { return str ? str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
+        function selectPrompt(promptText) { document.getElementById("chat-input").value = promptText; executeSendMessage(promptText); }
+        function handleChatSubmit(e) { e.preventDefault(); const inp = document.getElementById("chat-input"); if (inp.value.trim()) executeSendMessage(inp.value.trim()); }
+        function executeSendMessage(text) {
+            document.getElementById("chat-input").value = "";
+            if (!isChatActive) {
+                const grid = document.getElementById("dashboard-grid");
+                grid.classList.add("opacity-0");
+                setTimeout(() => { grid.classList.add("hidden"); document.getElementById("chat-thread").classList.remove("hidden"); isChatActive = true; }, 200);
+            }
+            appendUserMessage(text);
+            const ai = appendAiSkeleton();
+            fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            }).then(res => res.text()).then(reply => { ai.innerText = reply; });
+        }
+        function appendUserMessage(text) {
+            const div = document.createElement("div"); div.className = "flex justify-end";
+            div.innerHTML = '<div class="user-bubble max-w-[85%] px-4 py-3 text-sm shadow-xs">' + escapeHtml(text) + '</div>';
+            document.getElementById("chat-messages").appendChild(div);
+        }
+        function appendAiSkeleton() {
+            const div = document.createElement("div"); div.className = "flex justify-start";
+            const b = document.createElement("div"); b.className = "ai-bubble max-w-[90%] px-4 py-3 text-sm shadow-xs leading-relaxed";
+            b.innerHTML = '<span class="animate-pulse text-stone-500 font-medium">FALK tänker...</span>';
+            div.appendChild(b); document.getElementById("chat-messages").appendChild(div); return b;
+        }
+        function openLeftMenu() { document.getElementById("falk-left-drawer").classList.remove("-translate-x-full"); document.getElementById("falk-left-backdrop").classList.remove("hidden"); setTimeout(() => document.getElementById("falk-left-backdrop").classList.remove("opacity-0"), 10); }
+        function closeLeftMenu() { document.getElementById("falk-left-drawer").classList.add("-translate-x-full"); document.getElementById("falk-left-backdrop").classList.add("opacity-0"); setTimeout(() => document.getElementById("falk-left-backdrop").classList.add("hidden"), 300); }
+        function openRightMenu() { document.getElementById("falk-right-drawer").classList.remove("translate-x-full"); document.getElementById("falk-right-backdrop").classList.remove("hidden"); setTimeout(() => document.getElementById("falk-right-backdrop").classList.remove("opacity-0"), 10); }
+        function closeRightMenu() { document.getElementById("falk-right-drawer").classList.add("translate-x-full"); document.getElementById("falk-right-backdrop").classList.add("opacity-0"); setTimeout(() => document.getElementById("falk-right-backdrop").classList.add("hidden"), 300); }
+    
+        let falkItems = [
+            { id: 1, type: 'insight', text: 'Att sätta gränser handlar inte om att stänga ute andra, utan om att hålla dig själv hel.', created: 'Idag', frequency: null },
+            { id: 2, type: 'reminder', text: 'Reflektera kring dina 3 viktigaste prioriteringar inför morgondagen.', created: 'Igår', frequency: 'dagligen', datetime: null }
+        ];
+
+        let activeRightFilter = 'all';
+
+        function renderRightDrawer() {
+            const container = document.getElementById('right-drawer-list');
+            if (!container) return;
+
+            container.innerHTML = '';
+            const filtered = falkItems.filter(item => activeRightFilter === 'all' || item.type === activeRightFilter);
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 text-xs italic text-stone-500">Inga sparade objekt i denna vy.</div>';
+                return;
+            }
+
+            filtered.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'falk-card p-3.5 rounded-2xl border border-[#DDD0B8] shadow-xs space-y-2 relative group';
+                
+                const isInsight = item.type === 'insight';
+                const icon = isInsight ? '🌱' : '🔔';
+                const tagLabel = isInsight ? 'Insikt' : `Påminnelse (${item.frequency || 'tillsvidare'})`;
+                const tagBg = isInsight ? 'bg-emerald-100/70 text-emerald-800' : 'bg-amber-100/70 text-amber-800';
+
+                function escapeHtmlLocal(str) { return str ? str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${tagBg} flex items-center gap-1">
+                            <span>${icon}</span> ${tagLabel}
+                        </span>
+                        <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100">
+                            <button onclick="editFalkItem(${item.id})" class="text-[11px] font-bold text-stone-600 hover:text-black px-1.5 py-0.5 rounded hover:bg-stone-200/60" title="Redigera">✏️</button>
+                            ${isInsight ? `<button onclick="convertInsightToReminder(${item.id})" class="text-[11px] font-bold text-amber-800 hover:text-amber-950 px-1.5 py-0.5 rounded hover:bg-amber-100/60" title="Lägg till påminnelse">🔔</button>` : ''}
+                            <button onclick="deleteFalkItem(${item.id})" class="text-[11px] font-bold text-red-600 hover:text-red-800 px-1.5 py-0.5 rounded hover:bg-red-100/60" title="Ta bort">✕</button>
+                        </div>
+                    </div>
+                    <p class="text-xs ${isInsight ? 'italic font-serif' : 'font-medium'} text-stone-800 leading-relaxed">${escapeHtmlLocal(item.text)}</p>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function filterRightDrawer(type) {
+            activeRightFilter = type;
+            document.querySelectorAll('.right-tab-chip').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById('right-tab-' + type);
+            if (activeBtn) activeBtn.classList.add('active');
+            renderRightDrawer();
+        }
+
+        function openManualInsightModal(text = '', type = 'insight') {
+            document.getElementById('modal-title').innerText = text ? 'Spara notering' : 'Skapa ny insikt / påminnelse';
+            document.getElementById('modal-item-id').value = '';
+            document.getElementById('modal-text-input').value = text;
+            setModalType(type);
+            
+            const backdrop = document.getElementById('falk-modal-backdrop');
+            backdrop.classList.remove('hidden');
+            setTimeout(() => backdrop.classList.remove('opacity-0'), 10);
+        }
+
+        function closeFalkModal() {
+            const backdrop = document.getElementById('falk-modal-backdrop');
+            backdrop.classList.add('opacity-0');
+            setTimeout(() => backdrop.classList.add('hidden'), 300);
+        }
+
+        function setModalType(type) {
+            document.getElementById('modal-item-type').value = type;
+            const btnInsight = document.getElementById('modal-btn-type-insight');
+            const btnReminder = document.getElementById('modal-btn-type-reminder');
+            const reminderOpts = document.getElementById('modal-reminder-options');
+
+            if (type === 'insight') {
+                btnInsight.className = 'py-2 text-xs font-bold rounded-xl border border-[#2D2721] text-white bg-[#2D2721]';
+                btnReminder.className = 'py-2 text-xs font-bold rounded-xl border border-[#DDD0B8] text-stone-700 bg-white';
+                reminderOpts.classList.add('hidden');
+            } else {
+                btnReminder.className = 'py-2 text-xs font-bold rounded-xl border border-[#2D2721] text-white bg-[#2D2721]';
+                btnInsight.className = 'py-2 text-xs font-bold rounded-xl border border-[#DDD0B8] text-stone-700 bg-white';
+                reminderOpts.classList.remove('hidden');
+            }
+        }
+
+        function toggleCustomTimeField() {
+            const val = document.getElementById('modal-frequency-select').value;
+            const group = document.getElementById('modal-custom-time-group');
+            if (val === 'anpassat') group.classList.remove('hidden');
+            else group.classList.add('hidden');
+        }
+
+        function saveModalData(e) {
+            e.preventDefault();
+            const id = document.getElementById('modal-item-id').value;
+            const text = document.getElementById('modal-text-input').value.trim();
+            const type = document.getElementById('modal-item-type').value;
+            const freq = type === 'reminder' ? document.getElementById('modal-frequency-select').value : null;
+            const dt = type === 'reminder' && freq === 'anpassat' ? document.getElementById('modal-datetime-input').value : null;
+
+            if (!text) return;
+
+            if (id) {
+                const item = falkItems.find(x => x.id == id);
+                if (item) {
+                    item.text = text;
+                    item.type = type;
+                    item.frequency = freq;
+                    item.datetime = dt;
+                }
+            } else {
+                falkItems.unshift({
+                    id: Date.now(),
+                    type: type,
+                    text: text,
+                    created: 'Nyss',
+                    frequency: freq,
+                    datetime: dt
+                });
+            }
+
+            closeFalkModal();
+            renderRightDrawer();
+            openRightMenu();
+        }
+
+        function editFalkItem(id) {
+            const item = falkItems.find(x => x.id == id);
+            if (!item) return;
+
+            document.getElementById('modal-title').innerText = 'Redigera ' + (item.type === 'insight' ? 'insikt' : 'påminnelse');
+            document.getElementById('modal-item-id').value = item.id;
+            document.getElementById('modal-text-input').value = item.text;
+            setModalType(item.type);
+
+            if (item.type === 'reminder') {
+                document.getElementById('modal-frequency-select').value = item.frequency || 'tillsvidare';
+                if (item.datetime) {
+                    document.getElementById('modal-datetime-input').value = item.datetime;
+                }
+                toggleCustomTimeField();
+            }
+
+            const backdrop = document.getElementById('falk-modal-backdrop');
+            backdrop.classList.remove('hidden');
+            setTimeout(() => backdrop.classList.remove('opacity-0'), 10);
+        }
+
+        function convertInsightToReminder(id) {
+            const item = falkItems.find(x => x.id == id);
+            if (item) {
+                openManualInsightModal(item.text, 'reminder');
+            }
+        }
+
+        function deleteFalkItem(id) {
+            falkItems = falkItems.filter(x => x.id != id);
+            renderRightDrawer();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderRightDrawer();
+        });
+
+    </script>
+    <!-- MODAL FÖR SKAPANDE OCH REDIGERING AV PÅMINNELSER / INSIKTER -->
+    <div id="falk-modal-backdrop" class="fixed inset-0 bg-black/50 backdrop-blur-xs hidden opacity-0 transition-opacity duration-300 z-50 flex items-center justify-center p-4">
+        <div class="bg-[#FAF8F0] w-full max-w-md rounded-3xl border border-[#DDD0B8] shadow-2xl overflow-hidden p-6 space-y-5 transform scale-95 transition-transform duration-300" id="falk-modal-box">
+            <div class="flex items-center justify-between border-b border-[#E6E0D4] pb-3">
+                <h3 class="text-base font-extrabold text-[#2D2721]" id="modal-title">Hantera notering</h3>
+                <button onclick="closeFalkModal()" class="text-stone-500 hover:text-black">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <form id="falk-modal-form" onsubmit="saveModalData(event)" class="space-y-4">
+                <input type="hidden" id="modal-item-id" value="">
+                <input type="hidden" id="modal-item-type" value="reminder">
+
+                <div>
+                    <label class="block text-[11px] font-bold text-[#8C5D37] uppercase mb-1">Innehåll / Reflektion</label>
+                    <textarea id="modal-text-input" rows="3" required class="w-full text-xs p-3 rounded-xl border border-[#DDD0B8] bg-white text-stone-800 focus:outline-none focus:ring-1 focus:ring-[#8C5D37]" placeholder="Skriv din insikt eller påminnelse här..."></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" onclick="setModalType('insight')" id="modal-btn-type-insight" class="py-2 text-xs font-bold rounded-xl border border-[#DDD0B8] text-stone-700 bg-white">🌱 Insikt</button>
+                    <button type="button" onclick="setModalType('reminder')" id="modal-btn-type-reminder" class="py-2 text-xs font-bold rounded-xl border border-[#2D2721] text-white bg-[#2D2721]">🔔 Påminnelse</button>
+                </div>
+
+                <div id="modal-reminder-options" class="space-y-3 bg-[#E8DCC4]/40 p-3.5 rounded-2xl border border-[#DDD0B8]">
+                    <div>
+                        <label class="block text-[10px] font-bold text-stone-600 uppercase mb-1">Hur ofta vill du påminnas?</label>
+                        <select id="modal-frequency-select" onchange="toggleCustomTimeField()" class="w-full text-xs p-2 rounded-lg border border-[#DDD0B8] bg-white font-semibold">
+                            <option value="tillsvidare">Tillsvidare (tills jag stänger den)</option>
+                            <option value="dagligen">Varje dag</option>
+                            <option value="veckovis">Varje vecka</option>
+                            <option value="anpassat">Anpassat datum & tid</option>
+                        </select>
+                    </div>
+
+                    <div id="modal-custom-time-group" class="hidden">
+                        <label class="block text-[10px] font-bold text-stone-600 uppercase mb-1">Välj datum & tid</label>
+                        <input type="datetime-local" id="modal-datetime-input" class="w-full text-xs p-2 rounded-lg border border-[#DDD0B8] bg-white font-medium">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeFalkModal()" class="px-4 py-2 text-xs font-semibold text-stone-600 hover:text-stone-900">Avbryt</button>
+                    <button type="submit" class="px-5 py-2 bg-[#4E5C4B] hover:bg-[#3D493B] text-white text-xs font-semibold rounded-xl">Spara</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- FOKUS MODAL (FÄRGPALETT: #E8DCC4, #C57B57, #4E5C4B, #A8BFA1) -->
+    <div id="falk-fokus-backdrop" onclick="closeFocusModal()" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300 z-50"></div>
+    
+    <div id="falk-fokus-modal" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] max-w-md bg-[#FAF8F0] border border-[#DDD0B8] rounded-3xl shadow-2xl hidden opacity-0 transition-all duration-300 z-50 p-6 space-y-5">
+        
+        <!-- HEADER -->
+        <div class="flex items-center justify-between pb-3 border-b border-[#E6E0D4]">
+            <h2 class="text-xl font-extrabold text-[#2D2721]">Fokus</h2>
+            <div class="flex items-center gap-4">
+                <button onclick="resetFocusSliders()" class="text-xs font-bold text-[#C57B57] hover:underline transition-all">Återställ</button>
+                <button onclick="closeFocusModal()" class="text-stone-500 hover:text-black font-bold text-lg p-1">✕</button>
+            </div>
+        </div>
+
+        <!-- 5 SLIDERS CONTAINER (DEFAULT 50%) -->
+        <div class="space-y-4">
+            
+            <!-- 1. Självförtroende -->
+            <div class="space-y-1">
+                <div class="flex justify-between text-xs font-bold text-[#2D2721]">
+                    <span>Självförtroende</span>
+                    <span id="val-sjalvfortroende" class="text-[#C57B57]">50%</span>
+                </div>
+                <input type="range" id="slider-sjalvfortroende" min="0" max="100" value="50" oninput="updateSliderUI('sjalvfortroende')" class="falk-slider w-full">
+            </div>
+
+            <!-- 2. Stresshantering -->
+            <div class="space-y-1">
+                <div class="flex justify-between text-xs font-bold text-[#2D2721]">
+                    <span>Stresshantering</span>
+                    <span id="val-stresshantering" class="text-[#C57B57]">50%</span>
+                </div>
+                <input type="range" id="slider-stresshantering" min="0" max="100" value="50" oninput="updateSliderUI('stresshantering')" class="falk-slider w-full">
+            </div>
+
+            <!-- 3. Handlingskraft -->
+            <div class="space-y-1">
+                <div class="flex justify-between text-xs font-bold text-[#2D2721]">
+                    <span>Handlingskraft</span>
+                    <span id="val-handlingskraft" class="text-[#C57B57]">50%</span>
+                </div>
+                <input type="range" id="slider-handlingskraft" min="0" max="100" value="50" oninput="updateSliderUI('handlingskraft')" class="falk-slider w-full">
+            </div>
+
+            <!-- 4. Gränssättning -->
+            <div class="space-y-1">
+                <div class="flex justify-between text-xs font-bold text-[#2D2721]">
+                    <span>Gränssättning</span>
+                    <span id="val-granssattning" class="text-[#C57B57]">50%</span>
+                </div>
+                <input type="range" id="slider-granssattning" min="0" max="100" value="50" oninput="updateSliderUI('granssattning')" class="falk-slider w-full">
+            </div>
+
+            <!-- 5. Motivation -->
+            <div class="space-y-1">
+                <div class="flex justify-between text-xs font-bold text-[#2D2721]">
+                    <span>Motivation</span>
+                    <span id="val-motivation" class="text-[#C57B57]">50%</span>
+                </div>
+                <input type="range" id="slider-motivation" min="0" max="100" value="50" oninput="updateSliderUI('motivation')" class="falk-slider w-full">
+            </div>
+
+        </div>
+
+        <!-- BOTTENKNAPP -->
+        <button onclick="saveAndApplyFocus()" class="w-full py-3 bg-[#4E5C4B] hover:bg-[#3D493B] text-white text-xs font-bold rounded-full transition-all shadow-xs">
+            Verkställ Fokusinställningar
+        </button>
+    </div>
+
+    <!-- ANPASSAD STYLE FÖR SLIDERS (#A8BFA1 SPÅR, #C57B57 THUMB) -->
+    <style>
+        .falk-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            background: #A8BFA1;
+            border-radius: 9999px;
+            outline: none;
+        }
+        .falk-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #C57B57;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: transform 0.15s ease;
+        }
+        .falk-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+    </style>
+
+
+    <script>
+        let initialFocusState = { sjalvfortroende: 50, stresshantering: 50, handlingskraft: 50, granssattning: 50, motivation: 50 };
+
+        window.updateSliderUI = function(key) {
+            const el = document.getElementById('slider-' + key);
+            const lbl = document.getElementById('val-' + key);
+            if (el && lbl) lbl.innerText = el.value + '%';
+        };
+
+        window.openFocusModal = function() {
+            const saved = localStorage.getItem('falk_focus_settings');
+            if (saved) {
+                try {
+                    initialFocusState = JSON.parse(saved);
+                    Object.keys(initialFocusState).forEach(k => {
+                        const el = document.getElementById('slider-' + k);
+                        if (el) {
+                            el.value = initialFocusState[k];
+                            window.updateSliderUI(k);
+                        }
+                    });
+                } catch(e){}
+            }
+            const bd = document.getElementById("falk-fokus-backdrop");
+            const md = document.getElementById("falk-fokus-modal");
+            if (bd && md) {
+                bd.classList.remove("hidden");
+                md.classList.remove("hidden");
+                requestAnimationFrame(() => {
+                    bd.classList.remove("opacity-0");
+                    md.classList.remove("opacity-0");
+                });
+            }
+        };
+
+        window.closeFocusModal = function() {
+            const bd = document.getElementById("falk-fokus-backdrop");
+            const md = document.getElementById("falk-fokus-modal");
+            if (bd && md) {
+                bd.classList.add("opacity-0");
+                md.classList.add("opacity-0");
+                setTimeout(() => {
+                    bd.classList.add("hidden");
+                    md.classList.add("hidden");
+                }, 300);
+            }
+        };
+
+        window.resetFocusSliders = function() {
+            ['sjalvfortroende', 'stresshantering', 'handlingskraft', 'granssattning', 'motivation'].forEach(k => {
+                const el = document.getElementById('slider-' + k);
+                if (el) {
+                    el.value = 50;
+                    window.updateSliderUI(k);
+                }
+            });
+        };
+
+        window.saveAndApplyFocus = function() {
+            const currentFocus = {
+                sjalvfortroende: parseInt(document.getElementById('slider-sjalvfortroende').value),
+                stresshantering: parseInt(document.getElementById('slider-stresshantering').value),
+                handlingskraft: parseInt(document.getElementById('slider-handlingskraft').value),
+                granssattning: parseInt(document.getElementById('slider-granssattning').value),
+                motivation: parseInt(document.getElementById('slider-motivation').value)
+            };
+
+            const isChanged = JSON.stringify(currentFocus) !== JSON.stringify(initialFocusState);
+            localStorage.setItem('falk_focus_settings', JSON.stringify(currentFocus));
+            initialFocusState = { ...currentFocus };
+
+            window.closeFocusModal();
+
+            if (isChanged) {
+                // Växla vy till chatttråd om vi är på startskärmen
+                const dash = document.getElementById("dashboard-grid");
+                const thread = document.getElementById("chat-thread");
+                if (dash && thread && !dash.classList.contains("hidden")) {
+                    dash.classList.add("hidden");
+                    thread.classList.remove("hidden");
+                    if (typeof isChatActive !== 'undefined') isChatActive = true;
+                }
+
+                // Generera anpassningssvar i chatten
+                const ai = appendAiSkeleton();
+                setTimeout(() => {
+                    ai.innerText = `Jag har registrerat dina nya Fokus-inställningar:
+
+` +
+                        `• Självförtroende: ${currentFocus.sjalvfortroende}%
+` +
+                        `• Stresshantering: ${currentFocus.stresshantering}%
+` +
+                        `• Handlingskraft: ${currentFocus.handlingskraft}%
+` +
+                        `• Gränssättning: ${currentFocus.granssattning}%
+` +
+                        `• Motivation: ${currentFocus.motivation}%
+
+` +
+                        `Jag har anpassat min kompass efter din nuvarande profil. Hur vill du ta dig an din utmaning just nu?`;
+                }, 500);
+            }
+        };
+    </script>
+
+
+    
+
+        <!-- ACTION KNAPPAR -->
+        <div class="space-y-3 pt-2">
+            <button onclick="alert('Omdirigerar till registrering...')" class="w-full py-3.5 bg-[#4E5C4B] hover:bg-[#3D493B] text-white text-xs font-bold rounded-full transition-all shadow-md tracking-wide uppercase">
+                Skapa konto – Prova fritt
+            </button>
+            <button onclick="alert('Omdirigerar till inloggning...')" class="w-full py-3 bg-[#FAF8F0] hover:bg-[#E8DCC4] text-[#2D2721] border border-[#DDD0B8] text-xs font-bold rounded-full transition-all">
+                Redan medlem? Logga in
+            </button>
+        </div>
+
+        <!-- STÄNG-KNAPP -->
+        <button onclick="closePaywallModal()" class="text-xs font-semibold text-stone-500 hover:text-black transition-all block mx-auto">
+            Fortsätt titta runt som gäst
+        </button>
+    </div>
+
+
+    <script>
+        // SPÅRA GÄST-MEDDELANDEN (MAX 6 ST)
+        const IS_GUEST = true; // Gästläge aktiverat
+        const MAX_GUEST_MESSAGES = 6;
+
+        function getGuestMessageCount() {
+            return parseInt(localStorage.getItem('falk_guest_msg_count') || '0');
+        }
+
+        function incrementGuestMessageCount() {
+            const count = getGuestMessageCount() + 1;
+            localStorage.setItem('falk_guest_msg_count', count.toString());
+            return count;
+        }
+
+        window.openPaywallModal = function(reason = 'general') {
+            const titleEl = document.getElementById('paywall-title');
+            const subEl = document.getElementById('paywall-[#C57B57] subtitle');
+            
+            if (reason === 'chat_limit') {
+                if (titleEl) titleEl.innerText = 'Du har nått dina 6 gratissvar';
+                if (subEl) subEl.innerText = 'Skapa ett konto för att fortsätta konversationen med FALK utan avbrott.';
+            } else if (reason === 'right_menu') {
+                if (titleEl) titleEl.innerText = 'Lås upp Översyner & Fokus';
+                if (subEl) subEl.innerText = 'Som medlem kan du spara insikter, ställa in påminnelser och skräddarsy ditt fokus.';
+            } else if (reason === 'bibliotek') {
+                if (titleEl) titleEl.innerText = 'Lås upp hela Biblioteket';
+                if (subEl) subEl.innerText = 'Få tillgång till alla 15 guidade övningar och reflektionsverktyg.';
+            } else if (reason === 'utveckling') {
+                if (titleEl) titleEl.innerText = 'Lås upp Min Utveckling';
+                if (subEl) subEl.innerText = 'Följ din resa över tid med statistik, vane-spårning och utvecklingshjul.';
+            } else if (reason === 'export') {
+                if (titleEl) titleEl.innerText = 'Lås upp Dataexport';
+                if (subEl) subEl.innerText = 'Som medlem kan du exportera all din historik och alla insikter när du vill.';
+            }
+
+            const bd = document.getElementById("falk-paywall-backdrop");
+            const md = document.getElementById("falk-paywall-modal");
+            if (bd && md) {
+                bd.classList.remove("hidden");
+                md.classList.remove("hidden");
+                requestAnimationFrame(() => {
+                    bd.classList.remove("opacity-0");
+                    md.classList.remove("opacity-0");
+                });
+            }
+        };
+
+        window.closePaywallModal = function() {
+            const bd = document.getElementById("falk-paywall-backdrop");
+            const md = document.getElementById("falk-paywall-modal");
+            if (bd && md) {
+                bd.classList.add("opacity-0");
+                md.classList.add("opacity-0");
+                setTimeout(() => {
+                    bd.classList.add("hidden");
+                    md.classList.add("hidden");
+                }, 300);
+            }
+        };
+
+        // KONTROLLERA URL-PARAMETRAR FÖR OMDIRIGERINGAR
+        document.addEventListener("DOMContentLoaded", () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('paywall') === 'true') {
+                const reason = urlParams.get('reason') || 'general';
+                window.openPaywallModal(reason);
+            }
+        });
+    </script>
+
+
+        
+
+        <!-- ACTION KNAPPAR (REN & STARK CTA) -->
+        <div class="space-y-2.5 pt-1">
+            <button onclick="alert('Omdirigerar till kassan...')" class="w-full py-3.5 bg-[#4E5C4B] hover:bg-[#3D493B] text-white text-xs font-bold rounded-full transition-all shadow-md tracking-wider uppercase">
+                Skapa konto – Prova fritt
+            </button>
+            <button onclick="alert('Omdirigerar till inloggning...')" class="w-full py-3 bg-[#FAF8F0] hover:bg-[#E8DCC4] text-[#2D2721] border border-[#DDD0B8] text-xs font-bold rounded-full transition-all">
+                Redan medlem? Logga in
+            </button>
+        </div>
+
+        <!-- CLOSE LINK -->
+        <button onclick="closePaywallModal()" class="text-xs font-semibold text-stone-500 hover:text-black transition-all block mx-auto pt-1">
+            Fortsätt titta runt som gäst
+        </button>
+    </div>
+
+        <!-- ACTION KNAPPAR MED PRIS-BADGE -->
+        <div class="space-y-2.5 pt-1">
+            <button onclick="alert('Omdirigerar till kassan...')" class="w-full py-3.5 bg-[#4E5C4B] hover:bg-[#3D493B] text-white text-xs font-bold rounded-full transition-all shadow-md flex items-center justify-center gap-2 flex-wrap">
+                <span class="uppercase tracking-wider">Skapa konto</span>
+                <span class="normal-case bg-[#C57B57] text-white px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-xs">
+                    199 kr/mån <span class="line-through opacity-75">ord. 249 kr/mån</span>
+                </span>
+            </button>
+            <button onclick="alert('Omdirigerar till inloggning...')" class="w-full py-3 bg-[#FAF8F0] hover:bg-[#E8DCC4] text-[#2D2721] border border-[#DDD0B8] text-xs font-bold rounded-full transition-all">
+                Redan medlem? Logga in
+            </button>
+        </div>
+
+        <!-- CLOSE LINK -->
+        <button onclick="closePaywallModal()" class="text-xs font-semibold text-stone-500 hover:text-black transition-all block mx-auto pt-1">
+            Fortsätt titta runt som gäst
+        </button>
+    </div>
+
+
+    
+
+
+    <!-- UNIVERSAL PAYWALL MODAL -->
+    <div id="falk-paywall-backdrop" onclick="closePaywallModal()" class="fixed inset-0 bg-black/60 backdrop-blur-md hidden opacity-0 transition-opacity duration-300 z-50"></div>
+    
+    <div id="falk-paywall-modal" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] max-w-md bg-[#FAF8F0] border border-[#DDD0B8] rounded-3xl shadow-2xl hidden opacity-0 transition-all duration-300 z-50 p-6 sm:p-8 text-center space-y-5">
+        
+        <!-- LOCK ICON -->
+        <div class="mx-auto w-12 h-12 rounded-2xl bg-[#E8DCC4] border border-[#DDD0B8] flex items-center justify-center text-xl shadow-xs">
+            🔒
+        </div>
+
+        <!-- HEADER (KRAV 2 & 3: NY UNDERRUBRIK OCH ANPASSAD DYNAMISK RUBRIK) -->
+        <div class="space-y-1.5">
+            <span class="text-[11px] font-bold tracking-widest text-[#8C5D37] uppercase">FALK PREMIUM</span>
+            <h2 id="paywall-title" class="text-2xl font-black text-[#2D2721] leading-tight">Lås upp hela din kompass</h2>
+            <p id="paywall-subtitle" class="text-xs text-stone-600 font-serif italic leading-relaxed max-w-sm mx-auto">
+                Du har nått gränsen för gästläget. Skapa ett konto eller logga in för att fortsätta utan begränsningar.
+            </p>
+        </div>
+
+        <!-- VÄRDELISTA MED PRIS-BADGE OVERST -->
+        <div class="bg-white/80 border border-[#DDD0B8] rounded-2xl p-4 text-left space-y-3 text-xs text-stone-800">
+            <div class="flex items-center justify-between pb-2.5 border-b border-[#E6E0D4]">
+                <span class="font-bold text-[#8C5D37] text-[11px] uppercase tracking-wider">Erbjudande:</span>
+                <span class="bg-[#C57B57] text-white px-3 py-1 rounded-full text-[11px] font-bold shadow-xs">
+                    199 kr/mån <span class="line-through opacity-75 font-normal text-[10px] ml-1">ord. 249 kr/mån</span>
+                </span>
+            </div>
+
+            <div class="flex items-center gap-2.5">
+                <span class="text-[#4E5C4B] font-bold text-sm">✓</span>
+                <span class="font-medium">Obegränsad chatt, fördjupade perspektiv</span>
+            </div>
+            <div class="flex items-center gap-2.5">
+                <span class="text-[#4E5C4B] font-bold text-sm">✓</span>
+                <span class="font-medium">Spara insikter & påminnelser</span>
+            </div>
+            <div class="flex items-center gap-2.5">
+                <span class="text-[#4E5C4B] font-bold text-sm">✓</span>
+                <span class="font-medium">Full tillgång till Biblioteket</span>
+            </div>
+            <div class="flex items-center gap-2.5">
+                <span class="text-[#4E5C4B] font-bold text-sm">✓</span>
+                <span class="font-medium">Min utveckling och fler funktioner</span>
+            </div>
+        </div>
+
+        <!-- ACTION KNAPPAR (KRAV 1: ENDAST "SKAPA KONTO") -->
+        <div class="space-y-2.5 pt-1">
+            <button onclick="alert('Omdirigerar till kassan...')" class="w-full py-3.5 bg-[#4E5C4B] hover:bg-[#3D493B] text-white text-xs font-bold rounded-full transition-all shadow-md tracking-wider uppercase">
+                Skapa konto
+            </button>
+            <button onclick="alert('Omdirigerar till inloggning...')" class="w-full py-3 bg-[#FAF8F0] hover:bg-[#E8DCC4] text-[#2D2721] border border-[#DDD0B8] text-xs font-bold rounded-full transition-all">
+                Redan medlem? Logga in
+            </button>
+        </div>
+
+        <!-- CLOSE LINK -->
+        <button onclick="closePaywallModal()" class="text-xs font-semibold text-stone-500 hover:text-black transition-all block mx-auto pt-1">
+            Fortsätt titta runt som gäst
+        </button>
+    </div>
+
+
+    <script>
+        const IS_GUEST = true;
+        const MAX_GUEST_MESSAGES = 6;
+
+        function getGuestMessageCount() {
+            return parseInt(localStorage.getItem('falk_guest_msg_count') || '0');
+        }
+
+        function incrementGuestMessageCount() {
+            const count = getGuestMessageCount() + 1;
+            localStorage.setItem('falk_guest_msg_count', count.toString());
+            return count;
+        }
+
+        window.openPaywallModal = function(reason = 'general') {
+            const titleEl = document.getElementById('paywall-title');
+            const subEl = document.getElementById('paywall-subtitle');
+            
+            // KRAV 2: Standard underrubrik
+            if (subEl) subEl.innerText = 'Du har nått gränsen för gästläget. Skapa ett konto eller logga in för att fortsätta utan begränsningar.';
+
+            // KRAV 3: Ändrad rubrik för höger meny trigger
+            if (reason === 'chat_limit') {
+                if (titleEl) titleEl.innerText = 'Du har nått dina 6 gratissvar';
+            } else if (reason === 'right_menu') {
+                if (titleEl) titleEl.innerText = 'Lås upp Insikter & Påminnelser';
+            } else if (reason === 'bibliotek') {
+                if (titleEl) titleEl.innerText = 'Lås upp hela Biblioteket';
+            } else if (reason === 'utveckling') {
+                if (titleEl) titleEl.innerText = 'Lås upp Min Utveckling';
+            } else if (reason === 'export') {
+                if (titleEl) titleEl.innerText = 'Lås upp Dataexport';
+            }
+
+            const bd = document.getElementById("falk-paywall-backdrop");
+            const md = document.getElementById("falk-paywall-modal");
+            if (bd && md) {
+                bd.classList.remove("hidden");
+                md.classList.remove("hidden");
+                requestAnimationFrame(() => {
+                    bd.classList.remove("opacity-0");
+                    md.classList.remove("opacity-0");
+                });
+            }
+        };
+
+        window.closePaywallModal = function() {
+            const bd = document.getElementById("falk-paywall-backdrop");
+            const md = document.getElementById("falk-paywall-modal");
+            if (bd && md) {
+                bd.classList.add("opacity-0");
+                md.classList.add("opacity-0");
+                setTimeout(() => {
+                    bd.classList.add("hidden");
+                    md.classList.add("hidden");
+                }, 300);
+            }
+        };
+    </script>
+
+</body>
+</html>
