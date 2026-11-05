@@ -10,7 +10,7 @@ from supabase import create_client, Client
 from groq import Groq
 import openai
 from playbooks import detect_playbook_llm
-from prompt_engine import FalkDualPromptEngine, detect_conversation_phase
+from prompt_engine import FalkDualPromptEngine, detect_conversation_phase, detect_crisis_llm
 
 load_dotenv()
 
@@ -257,6 +257,9 @@ def chat():
             formatted_turns.append(f"{role}: {turn.get('content', '')}")
         history_str = "\n".join(formatted_turns)
 
+    # Detektera kris och säkerhetsgränser FÖRST
+    crisis_status = detect_crisis_llm(groq_client, user_message)
+
     # Automatisk fasklassificering med garanterad historikkontext
     current_phase = detect_conversation_phase(groq_client, user_message, conversation_history=history_str)
     active_playbook = detect_playbook_llm(groq_client, user_message)
@@ -282,7 +285,8 @@ def chat():
         active_playbook=active_playbook,
         RAG_context=context_str,
         compass_scores=current_scores,
-        current_phase=current_phase
+        current_phase=current_phase,
+        crisis_status=crisis_status
     )
 
     messages_payload = [{"role": "system", "content": system_content}]
