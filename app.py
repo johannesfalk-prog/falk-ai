@@ -16,7 +16,8 @@ load_dotenv()
 app = Flask(__name__, template_folder="templates")
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "falk_secret_fallback")
 
-CORS(app, supports_credentials=True, origins=["http://localhost:5001", "http://127.0.0.1:5001"])
+# Tillåt CORS för alla ursprung i produktion (Render SSL support)
+CORS(app, supports_credentials=True, origins="*")
 
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 openai_client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -36,7 +37,6 @@ def get_session_identity():
     return user_id, guest_uuid
 
 def load_compass_state(user_id, guest_uuid):
-    """Hämtar senast sparade kompassvärden från Supabase, eller returnerar standardvärden."""
     try:
         query = supabase.table("chat_sessions").select("metadata").order("created_at", desc=True).limit(1)
         if user_id:
@@ -57,7 +57,6 @@ def load_compass_state(user_id, guest_uuid):
     return DEFAULT_SCORES.copy()
 
 def get_guest_message_count(guest_uuid):
-    """Räknar antalet skickade meddelanden för en gäst i Supabase."""
     if not guest_uuid:
         return 0
     try:
@@ -68,7 +67,6 @@ def get_guest_message_count(guest_uuid):
         return 0
 
 def async_post_conversation_worker(user_id, guest_uuid, session_id, user_message, falk_response):
-    """Analyserar samtalet och persisterar uppdaterade Kompassvärden direkt till Supabase."""
     try:
         current_scores = load_compass_state(user_id, guest_uuid)
 
@@ -98,7 +96,6 @@ def async_post_conversation_worker(user_id, guest_uuid, session_id, user_message
             d = int(deltas.get(k, 0))
             current_scores[k] = max(0, min(100, current_scores[k] + d))
 
-        # Persistera uppdaterade kompassvärden i Supabase chat_sessions metadata
         if session_id:
             supabase.table("chat_sessions").update({
                 "metadata": json.dumps({"compass_scores": current_scores})
@@ -121,7 +118,7 @@ def async_post_conversation_worker(user_id, guest_uuid, session_id, user_message
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return jsonify({"status": "online", "service": "Falk AI Engine", "version": "1.0"}), 200
 
 @app.route('/api/gdpr/consent', methods=['POST'])
 def gdpr_consent():
@@ -132,7 +129,7 @@ def gdpr_consent():
     user_id, guest_uuid = get_session_identity()
     resp = make_response(jsonify({"status": "success", "message": "Samtycke registrerat."}))
     if guest_uuid and not request.cookies.get("guest_uuid"):
-        resp.set_cookie("guest_uuid", guest_uuid, httponly=True, max_age=31536000, samesite='Lax')
+        resp.set_cookie("guest_uuid", guest_uuid, httponly=True, max_age=31536000, samesite='None', secure=True)
     return resp, 200
 
 @app.route('/api/dashboard', methods=['GET'])
@@ -256,8 +253,9 @@ def chat():
         "guest_messages_left": guest_left
     }))
     if guest_uuid and not request.cookies.get("guest_uuid"):
-        resp.set_cookie("guest_uuid", guest_uuid, httponly=True, max_age=31536000, samesite='Lax')
+        resp.set_cookie("guest_uuid", guest_uuid, httponly=True, max_age=31536000, samesite='None', secure=True)
     return resp, 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001, debug=False)
+    port = int(os.environ.get("PORT", 5001))
+    app.run(host='0.0.0.0', port=port, debug=False)
