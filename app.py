@@ -127,7 +127,7 @@ def async_post_conversation_worker(user_id, guest_uuid, session_id, user_message
 
 @app.route('/')
 def index():
-    return jsonify({"status": "online", "service": "Falk AI Engine", "version": "1.1"}), 200
+    return jsonify({"status": "online", "service": "Falk AI Engine", "version": "1.2"}), 200
 
 @app.route('/api/gdpr/consent', methods=['POST'])
 def gdpr_consent():
@@ -181,6 +181,7 @@ def chat():
     data = request.json or {}
     user_message = data.get("message", "").strip()
     session_id = data.get("session_id")
+    raw_history = data.get("history", [])  # Förväntar sig en lista: [{"role": "user/assistant", "content": "..."}]
 
     if not user_message:
         return jsonify({"error": "Meddelande saknas."}), 400
@@ -213,8 +214,17 @@ def chat():
         except Exception as e:
             logger.error(f"⚠️ Supabase session error: {e}")
 
-    # Automatiskt fasklassificering och playbook-detektion
-    current_phase = detect_conversation_phase(groq_client, user_message)
+    # Formatera samtalshistoriken för fasdetektorn och LLM-prompten
+    history_str = ""
+    if isinstance(raw_history, list) and len(raw_history) > 0:
+        formatted_turns = []
+        for turn in raw_history[-6:]:  # Ta med de senaste 6 turerna för kontext
+            role = "Användare" if turn.get("role") == "user" else "Falk"
+            formatted_turns.append(f"{role}: {turn.get('content', '')}")
+        history_str = "\n".join(formatted_turns)
+
+    # Automatiskt fasklassificering med fullständig historik
+    current_phase = detect_conversation_phase(groq_client, user_message, conversation_history=history_str)
     active_playbook = detect_playbook_llm(groq_client, user_message)
 
     context_str = ""
@@ -241,7 +251,12 @@ def chat():
         current_phase=current_phase
     )
 
-    messages_payload = [{"role": "system", "content": system_content}, {"role": "user", "content": user_message}]
+    # Sätt ihop prompten inklusive historiken
+    messages_payload = [{"role": "system", "content": system_content}]
+    if isinstance(raw_history, list):
+        for turn in raw_history[-6:]:
+            messages_payload.append({"role": turn.get("role", "user"), "content": turn.get("content", "")})
+    messages_payload.append({"role": "user", "content": user_message})
 
     try:
         chat_completion = groq_client.chat.completions.create(
