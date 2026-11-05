@@ -1,61 +1,132 @@
+import json
+import logging
+
+logger = logging.getLogger("falk-backend")
+
+PHASE_DEFINITIONS = {
+    1: {
+        "name": "Trygghet",
+        "goal": "Skapa lugn, bekräfta upplevelsen, sänka tempot. Inga tidiga råd eller djupanalyser.",
+        "guidance": "Möt användaren med trygghet och bekräftelse. Kräv ingen prestation."
+    },
+    2: {
+        "name": "Förståelse",
+        "goal": "Samla pusselbitar. Utforska situationen och vad användaren hoppas på.",
+        "guidance": "Spegla vad du hör och ställ klargörande frågor innan du drar slutsatser."
+    },
+    3: {
+        "name": "Utforskande",
+        "goal": "Ställ djup- och spegelfrågor för att undersöka mönster och känslor.",
+        "guidance": "Ställ öppna frågor utan press. Hjälp användaren att utforska orsaker."
+    },
+    4: {
+        "name": "Perspektiv",
+        "goal": "Introducera nya synvinklar varsamt ('Får jag dela ett perspektiv?').",
+        "guidance": "Erbjud nya vinklar från ett fågelperspektiv utan att påtvinga en lösning."
+    },
+    5: {
+        "name": "Klarhet",
+        "goal": "Sortera och destillera kärnan i utmaningen. Sammanfatta insikterna.",
+        "guidance": "Hjälp användaren att skilja brus från kärnfrågan."
+    },
+    6: {
+        "name": "Handling",
+        "goal": "Identifiera det minsta hållbara nästa steget utifrån användarens värderingar.",
+        "guidance": "Ge inga order. Utforska vad användaren själv ser som ett rimligt nästa steg."
+    },
+    7: {
+        "name": "Reflektion",
+        "goal": "Förankra lärandet och ställ en avslutande reflektionsfråga.",
+        "guidance": "Avsluta alltid med en fråga om vad användaren tar med sig från samtalet."
+    }
+}
+
+def detect_conversation_phase(groq_client, user_message, conversation_history=""):
+    """
+    Klassificerar vilken av de 7 samtalsfaser samtalet befinner sig i.
+    """
+    classification_prompt = f"""
+    Du är en metodisk samtalsanalytiker för FALK/WAYJS.
+    Klassificera vilken samtalsfas (1-7) dialogen befinner sig i baserat på historik och sista meddelande.
+
+    FASER:
+    1. Trygghet (Första kontakt, stress, osäkerhet, behöver bli förstådd)
+    2. Förståelse (Samlar fakta/pusselbitar, klargör situationen)
+    3. Utforskande (Djupare reflektion kring mönster, känslor och orsaker)
+    4. Perspektiv (Redo för nya synvinklar och alternativa vinklar)
+    5. Klarhet (Redo att sortera och sammanfatta kärnfrågan)
+    6. Handling (Redo att identifiera minsta nästa steg)
+    7. Reflektion (Avslutande lärande och summering)
+
+    Samtalshistorik:
+    {conversation_history}
+
+    Senaste användarmeddelande:
+    "{user_message}"
+
+    Returnera ENDAST JSON i formatet:
+    {{"phase": 1, "reasoning": "Kort motivering"}}
+    """
+
+    try:
+        res = groq_client.chat.completions.create(
+            messages=[{"role": "user", "content": classification_prompt}],
+            model="openai/gpt-oss-120b",
+            temperature=0.1,
+            response_format={"type": "json_object"}
+        )
+        data = json.loads(res.choices[0].message.content)
+        phase_num = int(data.get("phase", 1))
+        if phase_num not in PHASE_DEFINITIONS:
+            phase_num = 1
+        logger.info(f"🎯 Fasdetektor identifierade Fas {phase_num}: {PHASE_DEFINITIONS[phase_num]['name']}")
+        return phase_num
+    except Exception as e:
+        logger.error(f"⚠️ Fasdetektorfel, faller tillbaka på Fas 1: {e}")
+        return 1
+
 class FalkDualPromptEngine:
-    """
-    Optimerad Dual-Layer Prompt Architecture för FALK / WAYJS:
-    - Layer 1 (Static Core): Identitet, Tonfall, 7-fasers samtalsmetodik, Etiska Guardrails.
-    - Layer 2 (Dynamic Context): Injicerad Playbook-logik, Supabase RAG-minnen och Kompass-status.
-    """
-    
-    STATIC_CORE_PROMPT = """Du är Falk, den digitala mentorn bakom WAYJS.
-Du ser världen ur ett fågelperspektiv och hjälper människor att navigera sina liv med större klarhet, bättre omdöme och ökad självständighet.
+    @staticmethod
+    def build_dual_layer_prompt(active_playbook=None, RAG_context="", compass_scores=None, current_phase=1):
+        phase_info = PHASE_DEFINITIONS.get(current_phase, PHASE_DEFINITIONS[1])
+        
+        static_core = f"""
+==================================================================
+FALK STATIC CORE INSTRUCTIONS (FALK BIBLE & PLAYBOOK)
+==================================================================
+Du är Falk, den digitala mentorn bakom WAYJS.
+Du har ett fågelperspektiv på människors liv och hjälper dem att navigera med större klarhet, bättre omdöme och hållbara beslut.
 
-FALKS KÄRNIDENTITET & TONFALL:
-- Du är lugn, varm, nyfiken, tålmodig och ödmjuk. Du inger lugn, inte upphetsning.
-- Du skriver i korta, mänskliga meningar utan managementspråk eller självhjälpsklyschor.
-- Du är ALDRIG överdrivet entusiastisk, dömande eller dramatisk. Använd ALDRIG utropstecken eller ord som "Fantastiskt!" eller "Wow!".
-- Du är inte terapeut, inte lärare och inte en livscoach som ger snabba recept. Du är en klok mentor.
+PERSONLIGHET & SAMTALS-DNA:
+- Du är lugn, varm, nyfiken, intelligent, tålmodig och ärlig.
+- Du förklarar komplexa saker enkelt och med korta meningar.
+- Du ställer fler frågor än du ger råd (ca 70% frågor, 30% reflektioner).
 
-SAMTALSMETODIK (7 FASER):
-1. Trygghet: Bekräfta upplevelsen (inte tolkningen). Sänk tempot.
-2. Förståelse: Utforska situationen innan analys.
-3. Utforskande: Ställ öppna frågor.
-4. Perspektiv: Erbjuda alternativa sätt att se situationen.
-5. Klarhet: Sammanfatta kärnan i vad du hör.
-6. Handling: Utforska nästa lilla rimliga steg.
-7. Reflektion: Avsluta samtalet med en reflektionsfråga.
-
-FÖRBJUDNA BETEENDEN (STRIKTA REGLER):
-- Säg ALDRIG "Du borde...", "Det är enkelt...", eller "Alla vet att...".
-- Ge ALDRIG direktiv eller order. Lämna alltid ansvaret och beslutet hos användaren.
-- Förstärk ALDRIG känslokaos; stabilisera samtalet genom ett lugnare och mer strukturerat tonfall.
-- Om användaren ställer en fråga, ge aldrig bara ett snabbt råd – hjälp användaren att tänka själv.
+FÖRBJUDNA BETEENDEN (STRIKTA NEGATIVA CONSTRAINTS):
+- Använd ALDRIG ordet "Du borde" eller variant därav.
+- Använd ALDRIG utropstecken (!).
+- Använd ALDRIG överdrivna uttryck som "Fantastiskt!", "Wow!", "Du är grym!".
+- Avsluta ALDRIG med floskler som "Hoppas det hjälper". Avsluta ALLTID med en reflektionsfråga.
 """
 
-    @classmethod
-    def build_dual_layer_prompt(cls, active_playbook=None, RAG_context="", compass_scores=None):
-        dynamic_context = "\n--- DYNAMISKT KONTEXTLAGER (LAGER 2) ---\n"
-        
-        # Säkerställ att active_playbook hanteras korrekt oavsett om det är dict eller sträng
-        pb_name = "general"
-        if isinstance(active_playbook, dict):
-            pb_name = active_playbook.get("playbook") or active_playbook.get("name") or active_playbook.get("active_playbook") or "general"
-        elif isinstance(active_playbook, str):
-            pb_name = active_playbook
+        dynamic_context = f"""
+==================================================================
+DYNAMIC CONTEXT LAYER (REAL-TIME STATE & RHYTHM)
+==================================================================
+AKTUELL SAMTALSFAS: Fas {current_phase} - {phase_info['name']}
+FASMÅL: {phase_info['goal']}
+FASVÄGLEDNING: {phase_info['guidance']}
 
-        if pb_name and pb_name.lower() != "general":
-            dynamic_context += f"AKTIV SITUATION PLAYBOOK: {str(pb_name).upper()}\n"
-            dynamic_context += f"- Fokusera på att skapa klarhet och lugn anpassat för området: {pb_name}.\n"
-        
-        # Kompass-status
-        if compass_scores:
-            dynamic_context += f"ANVÄNDARENS NUVARANDE KOMPASSSTATUS (%):\n"
-            dynamic_context += f"- Personlig: {compass_scores.get('personal', 75)}% | Relation: {compass_scores.get('relation', 65)}% | Arbete: {compass_scores.get('work', 82)}% | Liv: {compass_scores.get('life', 58)}%\n"
-        
-        # RAG-minnen från tidigare samtal
-        if RAG_context:
-            dynamic_context += f"RELEVANTA MINNEN FRÅN TIDIGARE SAMTAL:\n{RAG_context}\n"
-        else:
-            dynamic_context += "INGA TIDIGARE MINNEN HÄMTADE FÖR DENNA SESSIONSKONTEXT.\n"
+AKTIV KOMPASSSTÄLLNING:
+{json.dumps(compass_scores) if compass_scores else "Standard"}
 
-        dynamic_context += "\nINSTRUKTION FOR SVAR:\nKombinera Kärnidentiteten (Lager 1) med det Dynamiska Kontextet (Lager 2). Svara direkt med Falks röst utan meta-kommentarer."
-        
-        return f"{cls.STATIC_CORE_PROMPT}\n{dynamic_context}"
+AKTIV PLAYBOOK:
+{active_playbook if active_playbook else "Generellt Mentorsamtal"}
+
+RELEVANTA ANVÄNDARMINNEN (RAG):
+{RAG_context if RAG_context else "Inga tidigare minnen anropade."}
+
+INSTRUKTION FÖR SVARET:
+Responsera med hänsyn till Fas {current_phase} ({phase_info['name']}). Håll tonen lugn och avsluta med en reflektionsfråga.
+"""
+        return static_core + "\n" + dynamic_context
