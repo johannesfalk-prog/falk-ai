@@ -20,7 +20,7 @@ logger = logging.getLogger("falk-backend")
 app = Flask(__name__, template_folder="templates")
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "falk_secret_fallback")
 
-raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5001,http://127.0.0.1:5001,https://falk-backend.onrender.com")
+raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000,http://localhost:3000,http://127.0.0.1:3000,http://localhost:5001,http://127.0.0.1:5001,https://falk-backend.onrender.com")
 allowed_origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
 
 CORS(app, supports_credentials=True, origins=allowed_origins)
