@@ -23,7 +23,15 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "falk_secret_fallback")
 raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000,http://localhost:3000,http://127.0.0.1:3000,http://localhost:5001,http://127.0.0.1:5001,https://falk-backend.onrender.com")
 allowed_origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
 
-CORS(app, supports_credentials=True, origins=allowed_origins)
+CORS(app, supports_credentials=True, resources={r"/api/*": {
+    "origins": [
+        "https://wayjs.vercel.app",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ],
+    "allow_headers": ["Content-Type", "Authorization", "Cookie"],
+    "methods": ["GET", "POST", "OPTIONS"]
+}})
 
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 openai_client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
