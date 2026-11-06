@@ -11,6 +11,7 @@ from groq import Groq
 import openai
 from playbooks import detect_playbook_llm
 from prompt_engine import ModularPromptEngine, analyze_intent_and_phase_fast
+from state_machine import FalkStateMachine
 
 load_dotenv()
 
