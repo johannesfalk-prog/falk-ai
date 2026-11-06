@@ -336,6 +336,7 @@ def chat():
     resp = make_response(jsonify({
         "response": falk_response, 
         "session_id": session_id,
+        "guest_uuid": guest_uuid,
         "current_phase": current_phase,
         "guest_messages_left": guest_left
     }))
