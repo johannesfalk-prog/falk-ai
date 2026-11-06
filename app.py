@@ -44,10 +44,16 @@ MAX_GUEST_MESSAGES = 6
 DEFAULT_SCORES = {"personal": 75, "relation": 65, "work": 82, "life": 58}
 
 def get_session_identity():
-    user_id = request.headers.get("X-User-ID")
-    guest_uuid = data.get("guest_uuid") or request.cookies.get("guest_uuid")
-    if not guest_uuid and not user_id:
+    # 1. Kolla om inloggad användare finns i session/headers (framtida auth)
+    user_id = session.get("user_id")
+    
+    # 2. Dual-Layer för guest_uuid: JSON Payload (ITP-säker) -> Cookie -> Generera ny
+    req_data = request.get_json(silent=True) or {}
+    guest_uuid = req_data.get("guest_uuid") or request.cookies.get("guest_uuid")
+    
+    if not guest_uuid:
         guest_uuid = str(uuid.uuid4())
+        
     return user_id, guest_uuid
 
 def load_session_metadata(session_id):
