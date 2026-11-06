@@ -1,3 +1,13 @@
+import sys, os, locale
+os.environ["PYTHONUTF8"] = "1"
+os.environ["PYTHONIOENCODING"] = "utf-8"
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+locale.getpreferredencoding = lambda do_setlocale=True: "UTF-8"
+
 import os
 import uuid
 import json
