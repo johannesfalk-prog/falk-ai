@@ -5,3 +5,5 @@ __pycache__/
 .DS_Store
 falk_engine/
 *.log
+debug_render.py
+test_cors_browser.html
