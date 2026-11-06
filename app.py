@@ -45,7 +45,7 @@ DEFAULT_SCORES = {"personal": 75, "relation": 65, "work": 82, "life": 58}
 
 def get_session_identity():
     user_id = request.headers.get("X-User-ID")
-    guest_uuid = request.cookies.get("guest_uuid")
+    guest_uuid = data.get("guest_uuid") or request.cookies.get("guest_uuid")
     if not guest_uuid and not user_id:
         guest_uuid = str(uuid.uuid4())
     return user_id, guest_uuid
