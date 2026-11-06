@@ -3,7 +3,7 @@ import uuid
 import json
 import threading
 import logging
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, request, jsonify, make_response, session
 from flask_cors import CORS
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -44,10 +44,14 @@ MAX_GUEST_MESSAGES = 6
 DEFAULT_SCORES = {"personal": 75, "relation": 65, "work": 82, "life": 58}
 
 def get_session_identity():
-    # 1. Kolla om inloggad användare finns i session/headers (framtida auth)
-    user_id = session.get("user_id")
+    # Säker utläsning av session
+    user_id = None
+    try:
+        user_id = session.get("user_id")
+    except Exception:
+        pass
     
-    # 2. Dual-Layer för guest_uuid: JSON Payload (ITP-säker) -> Cookie -> Generera ny
+    # Dual-Layer för guest_uuid: JSON Payload (ITP-säker) -> Cookie -> Ny UUID
     req_data = request.get_json(silent=True) or {}
     guest_uuid = req_data.get("guest_uuid") or request.cookies.get("guest_uuid")
     
