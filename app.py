@@ -44,16 +44,14 @@ MAX_GUEST_MESSAGES = 6
 DEFAULT_SCORES = {"personal": 75, "relation": 65, "work": 82, "life": 58}
 
 def get_session_identity():
-    # Säker utläsning av session
     user_id = None
     try:
         user_id = session.get("user_id")
     except Exception:
         pass
     
-    # Dual-Layer för guest_uuid: JSON Payload (ITP-säker) -> Cookie -> Ny UUID
     req_data = request.get_json(silent=True) or {}
-    guest_uuid = req_data.get("guest_uuid") or request.cookies.get("guest_uuid")
+    guest_uuid = req_data.get("guest_uuid") or request.cookies.get("guest_uuid") or request.args.get("guest_uuid")
     
     if not guest_uuid:
         guest_uuid = str(uuid.uuid4())
