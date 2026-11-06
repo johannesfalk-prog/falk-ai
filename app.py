@@ -259,7 +259,11 @@ def chat():
         history_str = "\n".join(formatted_turns)
 
     # Detektera kris och säkerhetsgränser FÖRST
-    crisis_status = detect_crisis_llm(groq_client, user_message)
+    # Använd den snabba konsoliderade motorn (Kris, Fas & Playbook i 1 anrop)
+intent_data = analyze_intent_and_phase_fast(groq_client, user_message, session.get('history', ''))
+crisis_status = intent_data.get('crisis_status', 'NONE')
+current_phase = intent_data.get('phase', 1)
+active_playbook = intent_data.get('playbook', 'GENERELL')
 
     # Automatisk fasklassificering med garanterad historikkontext
     current_phase = detect_conversation_phase(groq_client, user_message, conversation_history=history_str)
