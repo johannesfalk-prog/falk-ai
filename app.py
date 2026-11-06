@@ -9,8 +9,7 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 from groq import Groq
 import openai
-from playbooks import detect_playbook_llm
-from prompt_engine import ModularPromptEngine, analyze_intent_and_phase_fast
+from prompt_engine import ModularPromptEngine as FalkPromptEngine, analyze_intent_and_phase_fast
 from state_machine import FalkStateMachine
 
 load_dotenv()
@@ -260,13 +259,12 @@ def chat():
 
     # Detektera kris och säkerhetsgränser FÖRST
     # Använd den snabba konsoliderade motorn (Kris, Fas & Playbook i 1 anrop)
-intent_data = analyze_intent_and_phase_fast(groq_client, user_message, session.get('history', ''))
-crisis_status = intent_data.get('crisis_status', 'NONE')
-current_phase = intent_data.get('phase', 1)
-active_playbook = intent_data.get('playbook', 'GENERELL')
+    intent_data = analyze_intent_and_phase_fast(groq_client, user_message, history_str)
+    crisis_status = intent_data.get('crisis_status', 'NONE')
+    current_phase = intent_data.get('phase', 1)
+    active_playbook = intent_data.get('playbook', 'GENERELL')
 
     # Automatisk fasklassificering med garanterad historikkontext
-    active_playbook = detect_playbook_llm(groq_client, user_message)
 
     context_str = ""
     try:
@@ -275,7 +273,9 @@ active_playbook = intent_data.get('playbook', 'GENERELL')
         rpc_res = supabase.rpc("match_user_memories", {
             "query_embedding": query_vector,
             "match_threshold": 0.3,
-            "match_count": 3
+            "match_count": 3,
+            "p_guest_uuid": guest_uuid,
+            "p_user_id": user_id if user_id else None
         }).execute()
         if rpc_res.data:
             memories = [m['content'] for m in rpc_res.data]
@@ -285,11 +285,11 @@ active_playbook = intent_data.get('playbook', 'GENERELL')
 
     current_scores = load_compass_state(user_id, guest_uuid)
 
-    system_content = FalkDualPromptEngine.build_dual_layer_prompt(
-        active_playbook=active_playbook,
-        RAG_context=context_str,
+    system_content = FalkPromptEngine.compile_5_layer_prompt(
         compass_scores=current_scores,
-        current_phase=current_phase,
+        playbook=active_playbook,
+        RAG_context=context_str,
+                phase=current_phase,
         crisis_status=crisis_status
     )
 
@@ -305,6 +305,7 @@ active_playbook = intent_data.get('playbook', 'GENERELL')
             temperature=0.2
         )
         falk_response = chat_completion.choices[0].message.content.strip()
+        falk_response = FalkPromptEngine.deterministic_post_processing(falk_response, user_message)
     except Exception as e:
         return jsonify({"error": f"Groq API Error: {str(e)}"}), 500
 
