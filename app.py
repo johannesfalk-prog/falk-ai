@@ -266,7 +266,6 @@ current_phase = intent_data.get('phase', 1)
 active_playbook = intent_data.get('playbook', 'GENERELL')
 
     # Automatisk fasklassificering med garanterad historikkontext
-    current_phase = detect_conversation_phase(groq_client, user_message, conversation_history=history_str)
     active_playbook = detect_playbook_llm(groq_client, user_message)
 
     context_str = ""
