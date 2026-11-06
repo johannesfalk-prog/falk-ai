@@ -10,7 +10,7 @@ from supabase import create_client, Client
 from groq import Groq
 import openai
 from playbooks import detect_playbook_llm
-from prompt_engine import FalkDualPromptEngine, detect_conversation_phase, detect_crisis_llm
+from prompt_engine import ModularPromptEngine, analyze_intent_and_phase_fast
 
 load_dotenv()
 
