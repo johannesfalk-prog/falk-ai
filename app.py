@@ -326,3 +326,15 @@ def chat():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5001))
     app.run(host='0.0.0.0', port=port, debug=False)
+
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    import traceback
+    logger.error(f"💥 UNHANDLED RUNTIME CRASH: {str(e)}")
+    logger.error(traceback.format_exc())
+    return jsonify({
+        "error": str(e),
+        "type": type(e).__name__,
+        "traceback": traceback.format_exc().splitlines()[-3:]
+    }), 500
