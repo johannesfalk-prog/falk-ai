@@ -9,44 +9,38 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
+supabase = None
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    except Exception as e:
+        print(f"[ERROR] Misslyckades att initiera Supabase-klient: {e}")
+
 openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
 def fetch_user_memories(user_id: str, limit: int = 5):
     """Hämtar de mest relevanta långtidsminnena för användaren från Supabase."""
     if not supabase:
-        return []
+        print("[WARN] fetch_user_memories: Supabase-klient är None (saknar ENV-variabler?)")
+        return [], "Supabase client not initialized (missing SUPABASE_URL/KEY on Render)"
     try:
         res = supabase.table("falk_memory").select("category, content, importance_score").eq("user_id", user_id).order("importance_score", desc=True).limit(limit).execute()
-        return res.data if res.data else []
+        data = res.data if res.data else []
+        return data, None
     except Exception as e:
-        print(f"[WARN] Kunde inte hämta minnen från Supabase: {e}")
-        return []
-
-def save_user_memory(user_id: str, category: str, content: str, importance_score: int = 3):
-    """Sparar ett nytt långtidsminne för användaren i Supabase."""
-    if not supabase:
-        return
-    try:
-        supabase.table("falk_memory").insert({
-            "user_id": user_id,
-            "category": category,
-            "content": content,
-            "importance_score": importance_score
-        }).execute()
-        print(f"✅ Minne sparat [{category}]: {content}")
-    except Exception as e:
-        print(f"[WARN] Kunde inte spara minne i Supabase: {e}")
+        err_msg = str(e)
+        print(f"[WARN] Kunde inte hämta minnen från Supabase: {err_msg}")
+        return [], err_msg
 
 def process_turn(user_id: str, user_message: str, session_id: str = None):
-    # 1. Hämta långtidsminnen för användaren
-    memories = fetch_user_memories(user_id)
+    # 1. Hämta långtidsminnen för användaren med felhantering
+    memories, db_error = fetch_user_memories(user_id)
     memory_context = ""
     if memories:
         memory_lines = [f"- [{m.get('category', 'Memory')}]: {m.get('content')}" for m in memories]
         memory_context = "\n\n[ANVÄNDARENS SPARADE LÅNGTIDSMINNEN (The Mentor Mind™)]\n" + "\n".join(memory_lines)
 
-    # 2. Konstruera Falk System Prompt enligt Falk Bible Kapitel 11
+    # 2. Konstruera Falk System Prompt enligt Falk Bible & Playbook
     system_prompt = (
         "Du är Falk, den digitala mentorn bakom WAYJS.\n"
         "Du har ett fågelperspektiv på människors liv och hjälper dem att navigera med större klarhet, bättre omdöme och hållbara beslut.\n"
@@ -72,7 +66,9 @@ def process_turn(user_id: str, user_message: str, session_id: str = None):
             "reply": reply_text,
             "stage": "TRYGGHET",
             "engine": "Falk Core Engine v1.0.0 (OpenAI GPT-4o)",
-            "user_id": user_id
+            "user_id": user_id,
+            "debug_memories_count": len(memories),
+            "debug_db_error": db_error
         }
     except Exception as e:
         return {
