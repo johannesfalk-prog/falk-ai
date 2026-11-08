@@ -28,7 +28,7 @@ def fetch_user_memories(user_id: str, limit: int = 5):
         print(f"[WARN] Kunde inte hämta minnen: {e}")
         return []
 
-def fetch_session_history(session_id: str, limit: int = 6):
+def fetch_session_history(session_id: str, limit: int = 10):
     if not supabase or not session_id:
         return []
     try:
@@ -100,7 +100,6 @@ def process_turn(user_id: str, message: str, session_id: str = None):
     if not session_id:
         session_id = str(uuid.uuid4())
 
-    # 1. Hämta långtidsminnen och sessionshistorik
     memories = fetch_user_memories(user_id)
     history = fetch_session_history(session_id)
 
@@ -109,7 +108,6 @@ def process_turn(user_id: str, message: str, session_id: str = None):
         memory_lines = [f"- [{m.get('category', 'Memory')}]: {m.get('content')}" for m in memories]
         memory_context = "\n\n[ANVÄNDARENS SPARADE LÅNGTIDSMINNEN (The Mentor Mind™)]\n" + "\n".join(memory_lines)
 
-    # 2. Falk System Prompt
     system_prompt = (
         "Du är Falk, den digitala mentorn bakom WAYJS.\n"
         "Du har ett fågelperspektiv på människors liv och hjälper dem att navigera med större klarhet, bättre omdöme och hållbara beslut.\n"
@@ -124,13 +122,11 @@ def process_turn(user_id: str, message: str, session_id: str = None):
         + memory_context
     )
 
-    # 3. Bygg meddelandestack med historik
     messages_payload = [{"role": "system", "content": system_prompt}]
     for msg in history:
         messages_payload.append({"role": msg["role"], "content": msg["content"]})
     messages_payload.append({"role": "user", "content": message})
 
-    # 4. Anropa OpenAI GPT-4o
     try:
         response = openai_client.chat.completions.create(
             model="gpt-4o",
@@ -142,11 +138,9 @@ def process_turn(user_id: str, message: str, session_id: str = None):
         reply_text = data.get("reply", "")
         stage_text = data.get("stage", "TRYGGHET")
 
-        # 5. Spara meddelanden i sessionshistoriken
         save_message_to_history(session_id, user_id, "user", message)
         save_message_to_history(session_id, user_id, "assistant", reply_text)
 
-        # 6. Asynkron minnesextraktion för långtidsminne
         extract_and_save_new_memories(user_id, message)
 
         return {
@@ -174,3 +168,16 @@ def dialogue_turn():
     if result.get("status") == "error":
         return jsonify(result), 500
     return jsonify(result), 200
+
+@dialogue_bp.route("/reset", methods=["POST"])
+def dialogue_reset():
+    """Rensar sessionshistoriken för en viss session."""
+    data = request.get_json() or {}
+    session_id = data.get("session_id")
+    if not session_id or not supabase:
+        return jsonify({"status": "error", "message": "Missing session_id or database connection"}), 400
+    try:
+        supabase.table("falk_messages").delete().eq("session_id", session_id).execute()
+        return jsonify({"status": "success", "message": f"Session {session_id} history cleared successfully"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
