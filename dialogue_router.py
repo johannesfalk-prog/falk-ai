@@ -6,6 +6,21 @@ from openai import OpenAI
 from supabase import create_client, Client
 from dotenv import load_dotenv, find_dotenv
 
+
+def get_supabase():
+    url = os.getenv("SUPABASE_URL", "")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "") or os.getenv("SUPABASE_KEY", "")
+    if not url or not key:
+        return None
+    return create_client(url, key)
+
+def get_openai_client():
+    key = os.getenv("OPENAI_API_KEY")
+    if not key:
+        raise ValueError("OPENAI_API_KEY saknas i miljövariablerna.")
+    return OpenAI(api_key=key)
+
+
 load_dotenv(find_dotenv())
 
 def get_openai_client() -> OpenAI:
@@ -14,14 +29,6 @@ def get_openai_client() -> OpenAI:
         raise ValueError("[Kritiskt] OPENAI_API_KEY saknas i miljövariablerna eller .env-filen.")
     return OpenAI(api_key=api_key)
 
-supabase_url = os.getenv("SUPABASE_URL", "")
-supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY", "")
-supabase: Any = None
-if supabase_url.startswith("http://") or supabase_url.startswith("https://"):
-    try:
-        supabase = create_client(supabase_url, supabase_key)
-    except Exception as e:
-        print(f"[Varning] Supabase kunde inte initieras i router: {e}")
 
 STAGES = [
     "TRYGGHET",
