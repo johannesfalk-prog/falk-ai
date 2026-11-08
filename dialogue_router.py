@@ -21,7 +21,7 @@ openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 def fetch_user_memories(user_id: str, limit: int = 5):
     """Hämtar de mest relevanta långtidsminnena för användaren från Supabase."""
     if not supabase:
-        print("[WARN] fetch_user_memories: Supabase-klient är None (saknar ENV-variabler?)")
+        print("[WARN] fetch_user_memories: Supabase-klient är None")
         return [], "Supabase client not initialized (missing SUPABASE_URL/KEY on Render)"
     try:
         res = supabase.table("falk_memory").select("category, content, importance_score").eq("user_id", user_id).order("importance_score", desc=True).limit(limit).execute()
@@ -32,7 +32,7 @@ def fetch_user_memories(user_id: str, limit: int = 5):
         print(f"[WARN] Kunde inte hämta minnen från Supabase: {err_msg}")
         return [], err_msg
 
-def process_turn(user_id: str, user_message: str, session_id: str = None):
+def process_turn(user_id: str, message: str, session_id: str = None):
     # 1. Hämta långtidsminnen för användaren med felhantering
     memories, db_error = fetch_user_memories(user_id)
     memory_context = ""
@@ -40,7 +40,7 @@ def process_turn(user_id: str, user_message: str, session_id: str = None):
         memory_lines = [f"- [{m.get('category', 'Memory')}]: {m.get('content')}" for m in memories]
         memory_context = "\n\n[ANVÄNDARENS SPARADE LÅNGTIDSMINNEN (The Mentor Mind™)]\n" + "\n".join(memory_lines)
 
-    # 2. Konstruera Falk System Prompt enligt Falk Bible & Playbook
+    # 2. Konstruera Falk System Prompt enligt Falk Bible
     system_prompt = (
         "Du är Falk, den digitala mentorn bakom WAYJS.\n"
         "Du har ett fågelperspektiv på människors liv och hjälper dem att navigera med större klarhet, bättre omdöme och hållbara beslut.\n"
@@ -56,7 +56,7 @@ def process_turn(user_id: str, user_message: str, session_id: str = None):
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message}
+                {"role": "user", "content": message}
             ],
             temperature=0.7
         )
@@ -83,7 +83,7 @@ def dialogue_turn():
     message = data.get("message", "")
     session_id = data.get("session_id")
     
-    result = process_turn(user_id, message, session_id)
+    result = process_turn(user_id=user_id, message=message, session_id=session_id)
     if result.get("status") == "error":
         return jsonify(result), 500
     return jsonify(result), 200
