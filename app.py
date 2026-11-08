@@ -13,7 +13,11 @@ app = Flask(__name__)
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
 
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+def get_openai_client():
+    key = os.getenv("OPENAI_API_KEY")
+    if not key:
+        raise ValueError("OPENAI_API_KEY saknas i miljövariablerna.")
+    return OpenAI(api_key=key)
 
 supabase_url = os.getenv("SUPABASE_URL", "")
 supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "") or os.getenv("SUPABASE_KEY", "")
@@ -138,7 +142,7 @@ def dialogue_turn():
         gpt_messages.append({"role": "user", "content": user_message})
 
         try:
-            response = openai_client.chat.completions.create(
+            response = get_openai_client().chat.completions.create(
                 model="gpt-4o",
                 messages=gpt_messages,
                 temperature=0.3,
