@@ -77,24 +77,29 @@ def extract_and_save_new_memories(user_id: str, user_message: str):
         print(f"[WARN] Minnesextraktion misslyckades: {e}")
 
 def process_turn(user_id: str, message: str, session_id: str = None):
-    # 1. Hämta befintliga långtidsminnen
+    # 1. Hämta långtidsminnen
     memories = fetch_user_memories(user_id)
     memory_context = ""
     if memories:
         memory_lines = [f"- [{m.get('category', 'Memory')}]: {m.get('content')}" for m in memories]
         memory_context = "\n\n[ANVÄNDARENS SPARADE LÅNGTIDSMINNEN (The Mentor Mind™)]\n" + "\n".join(memory_lines)
 
-    # 2. Falk System Prompt (Falk Bible Kap 11)
+    # 2. Falk System Prompt med stöd för dynamisk fasstegring (Wayjs Dialogue)
     system_prompt = (
         "Du är Falk, den digitala mentorn bakom WAYJS.\n"
         "Du har ett fågelperspektiv på människors liv och hjälper dem att navigera med större klarhet, bättre omdöme och hållbara beslut.\n"
         "Du är lugn, varm, nyfiken, intelligent, tålmodig och ärlig.\n"
-        "Följ Wayjs Dialogue: Trygghet -> Förståelse -> Utforskande -> Perspektiv -> Klarhet -> Handling -> Reflektion.\n"
-        "Bekräfta upplevelsen utan att ge snabba klyschiga råd eller föreläsningar."
+        "Du följer Wayjs Dialogue: TRYGGHET -> FÖRSTÅELSE -> UTFORSKANDE -> PERSPEKTIV -> KLARHET -> HANDLING -> REFLEKTION.\n"
+        "Din uppgift är att bedöma vilken fas i samtalet du befinner dig i utifrån användarens meddelande och svara i linje med den fasen.\n"
+        "Returnera ditt svar i ENDAST giltigt JSON-format enligt nedan:\n"
+        "{\n"
+        "  \"stage\": \"TRYGGHET|FÖRSTÅELSE|UTFORSKANDE|PERSPEKTIV|KLARHET|HANDLING|REFLEKTION\",\n"
+        "  \"reply\": \"Ditt mentorala svar här...\"\n"
+        "}"
         + memory_context
     )
 
-    # 3. Anropa OpenAI GPT-4o
+    # 3. Anropa OpenAI GPT-4o med JSON mode
     try:
         response = openai_client.chat.completions.create(
             model="gpt-4o",
@@ -102,17 +107,20 @@ def process_turn(user_id: str, message: str, session_id: str = None):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": message}
             ],
+            response_format={"type": "json_object"},
             temperature=0.7
         )
-        reply_text = response.choices[0].message.content
+        data = json.loads(response.choices[0].message.content)
+        reply_text = data.get("reply", "")
+        stage_text = data.get("stage", "TRYGGHET")
 
-        # 4. Asynkron/Bakgrundskörning för att utvärdera om nya minnen ska sparas
+        # 4. Asynkron minnesextraktion
         extract_and_save_new_memories(user_id, message)
 
         return {
             "status": "success",
             "reply": reply_text,
-            "stage": "TRYGGHET",
+            "stage": stage_text,
             "engine": "Falk Core Engine v1.0.0 (OpenAI GPT-4o)",
             "user_id": user_id
         }
