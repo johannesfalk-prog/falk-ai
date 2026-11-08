@@ -1,4 +1,4 @@
-import os, json
+import os, json, uuid
 from flask import Blueprint, request, jsonify
 from openai import OpenAI
 from supabase import create_client
@@ -19,7 +19,6 @@ if SUPABASE_URL and SUPABASE_KEY:
 openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
 def fetch_user_memories(user_id: str, limit: int = 5):
-    """Hämtar de mest relevanta långtidsminnena för användaren från Supabase."""
     if not supabase:
         return []
     try:
@@ -29,8 +28,30 @@ def fetch_user_memories(user_id: str, limit: int = 5):
         print(f"[WARN] Kunde inte hämta minnen: {e}")
         return []
 
+def fetch_session_history(session_id: str, limit: int = 6):
+    if not supabase or not session_id:
+        return []
+    try:
+        res = supabase.table("falk_messages").select("role, content").eq("session_id", session_id).order("created_at", desc=False).limit(limit).execute()
+        return res.data if res.data else []
+    except Exception as e:
+        print(f"[WARN] Kunde inte hämta sessionshistorik: {e}")
+        return []
+
+def save_message_to_history(session_id: str, user_id: str, role: str, content: str):
+    if not supabase or not session_id:
+        return
+    try:
+        supabase.table("falk_messages").insert({
+            "session_id": session_id,
+            "user_id": user_id,
+            "role": role,
+            "content": content
+        }).execute()
+    except Exception as e:
+        print(f"[WARN] Kunde inte spara meddelande i historik: {e}")
+
 def save_user_memory(user_id: str, category: str, content: str, importance_score: int = 3):
-    """Sparar ett nytt långtidsminne för användaren i Supabase."""
     if not supabase:
         return
     try:
@@ -45,7 +66,6 @@ def save_user_memory(user_id: str, category: str, content: str, importance_score
         print(f"[WARN] Kunde inte spara minne: {e}")
 
 def extract_and_save_new_memories(user_id: str, user_message: str):
-    """Analyserar om användarens meddelande innehåller viktig information att spara."""
     if not openai_client or not supabase:
         return
     try:
@@ -77,20 +97,25 @@ def extract_and_save_new_memories(user_id: str, user_message: str):
         print(f"[WARN] Minnesextraktion misslyckades: {e}")
 
 def process_turn(user_id: str, message: str, session_id: str = None):
-    # 1. Hämta långtidsminnen
+    if not session_id:
+        session_id = str(uuid.uuid4())
+
+    # 1. Hämta långtidsminnen och sessionshistorik
     memories = fetch_user_memories(user_id)
+    history = fetch_session_history(session_id)
+
     memory_context = ""
     if memories:
         memory_lines = [f"- [{m.get('category', 'Memory')}]: {m.get('content')}" for m in memories]
         memory_context = "\n\n[ANVÄNDARENS SPARADE LÅNGTIDSMINNEN (The Mentor Mind™)]\n" + "\n".join(memory_lines)
 
-    # 2. Falk System Prompt med stöd för dynamisk fasstegring (Wayjs Dialogue)
+    # 2. Falk System Prompt
     system_prompt = (
         "Du är Falk, den digitala mentorn bakom WAYJS.\n"
         "Du har ett fågelperspektiv på människors liv och hjälper dem att navigera med större klarhet, bättre omdöme och hållbara beslut.\n"
         "Du är lugn, varm, nyfiken, intelligent, tålmodig och ärlig.\n"
         "Du följer Wayjs Dialogue: TRYGGHET -> FÖRSTÅELSE -> UTFORSKANDE -> PERSPEKTIV -> KLARHET -> HANDLING -> REFLEKTION.\n"
-        "Din uppgift är att bedöma vilken fas i samtalet du befinner dig i utifrån användarens meddelande och svara i linje med den fasen.\n"
+        "Du bedömer vilken fas i samtalet du befinner dig i utifrån historiken och användarens meddelande, och svarar i linje med den fasen.\n"
         "Returnera ditt svar i ENDAST giltigt JSON-format enligt nedan:\n"
         "{\n"
         "  \"stage\": \"TRYGGHET|FÖRSTÅELSE|UTFORSKANDE|PERSPEKTIV|KLARHET|HANDLING|REFLEKTION\",\n"
@@ -99,14 +124,17 @@ def process_turn(user_id: str, message: str, session_id: str = None):
         + memory_context
     )
 
-    # 3. Anropa OpenAI GPT-4o med JSON mode
+    # 3. Bygg meddelandestack med historik
+    messages_payload = [{"role": "system", "content": system_prompt}]
+    for msg in history:
+        messages_payload.append({"role": msg["role"], "content": msg["content"]})
+    messages_payload.append({"role": "user", "content": message})
+
+    # 4. Anropa OpenAI GPT-4o
     try:
         response = openai_client.chat.completions.create(
             model="gpt-4o",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": message}
-            ],
+            messages=messages_payload,
             response_format={"type": "json_object"},
             temperature=0.7
         )
@@ -114,7 +142,11 @@ def process_turn(user_id: str, message: str, session_id: str = None):
         reply_text = data.get("reply", "")
         stage_text = data.get("stage", "TRYGGHET")
 
-        # 4. Asynkron minnesextraktion
+        # 5. Spara meddelanden i sessionshistoriken
+        save_message_to_history(session_id, user_id, "user", message)
+        save_message_to_history(session_id, user_id, "assistant", reply_text)
+
+        # 6. Asynkron minnesextraktion för långtidsminne
         extract_and_save_new_memories(user_id, message)
 
         return {
@@ -122,7 +154,8 @@ def process_turn(user_id: str, message: str, session_id: str = None):
             "reply": reply_text,
             "stage": stage_text,
             "engine": "Falk Core Engine v1.0.0 (OpenAI GPT-4o)",
-            "user_id": user_id
+            "user_id": user_id,
+            "session_id": session_id
         }
     except Exception as e:
         return {
