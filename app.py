@@ -175,3 +175,10 @@ def dialogue_reset():
     except Exception as e:
         print(f"[ERROR /api/dialogue/reset]: {e}")
         return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@app.route('/chat')
+def serve_chat():
+    from flask import render_template_string
+    with open("index.html" if os.path.exists("index.html") else "templates/index.html", "r", encoding="utf-8") as f:
+        return render_template_string(f.read())
