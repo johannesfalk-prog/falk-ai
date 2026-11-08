@@ -178,3 +178,29 @@ def dialogue_turn():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.getenv("PORT", 5001)), debug=False)
+
+
+# ==========================================
+# FALK BACKEND CHAT & INSIGHTS API
+# ==========================================
+from flask import request, jsonify
+import time
+
+@app.route('/api/chat', methods=['POST'])
+def api_chat():
+    data = request.get_json() or {}
+    user_message = data.get('message', '')
+    
+    # Simulera betänketid i backend
+    time.sleep(1.0)
+
+    reply_prefix = f"Jag hör vad du säger gällande: \"{user_message}\".\n\n"
+    reply_body = "När vi stannar upp och sorterar våra tankar framträder ofta en ny klarhet. Vad är det viktigaste steget för dig i denna stund?"
+    
+    return reply_prefix + reply_body, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+
+@app.route('/api/insights', methods=['POST'])
+def api_insights():
+    data = request.get_json() or {}
+    print(f"-> [BACKEND INSIGHT SAVED] {data}")
+    return jsonify({"status": "success", "received": data})
