@@ -66,19 +66,19 @@ def get_or_create_session(session_id: str, user_id: str) -> Dict[str, Any]:
         return {"session_id": safe_session_id, "user_id": safe_user_id, "current_stage": "TRYGGHET", "turn_count": 1}
 
 def save_message(session_id: str, user_id: str, role: str, content: str):
-    if not supabase:
-        return
-    safe_session_id = sanitize_uuid(session_id)
-    safe_user_id = sanitize_uuid(user_id)
     try:
-        supabase.table("dialogue_messages").insert({
-            "session_id": safe_session_id,
-            "user_id": safe_user_id,
+        data = {
+            "session_id": session_id,
+            "user_id": user_id,
             "role": role,
             "content": content
-        }).execute()
+        }
+        res = supabase.table("dialogue_messages").insert(data).execute()
+        return res
     except Exception as e:
-        print(f"[Fel] Kunde inte spara meddelande: {e}")
+        print(f"[KRITISKT DB-FEL i save_message]: {e}")
+        raise e
+
 
 def fetch_chat_history(session_id: str, limit: int = 14) -> Tuple[List[Dict[str, str]], str]:
     if not supabase:
@@ -113,7 +113,7 @@ KRITERIER FÖR FASÖVERGÅNGAR:
 3. UTFORSKANDE -> PERSPEKTIV: Användaren söker nya synvinklar, utmanar sina antaganden eller ber om vägledning om nästa steg.
 4. PERSPEKTIV -> KLARHET: Användaren sammanfattar sin egen insikt eller landar i sin Nordstjärna/värdering.
 5. KLARHET -> HANDLING: Användaren utformar eller efterfrågar en konkret handling.
-6. HANDLING -> REFLEKTION: Användaren utvärderar ett genomfört steg.
+6. HANDLING -> REFLEKTION: Användaren utvärderar ett genomfört steg, summerar sina insikter eller delar vad de tar med sig från samtalet.
 
 Regel: Skifta fas NÄR användarens meddelande uppfyller kriterierna för nästa nivå. Stå inte kvar i gammal fas om användaren börjar analyser mönster eller söka perspektiv.
 
@@ -147,8 +147,10 @@ Returnera ENDAST JSON:
         current_idx = STAGES.index(current_stage)
         target_idx = STAGES.index(target_stage)
 
-        stage_advanced = target_idx > current_idx
+        if target_idx < current_idx:
+            target_stage = current_stage
 
+        stage_advanced = target_idx > current_idx
         return target_stage, stage_advanced
     except Exception as e:
         print(f"[Fel] Utvärdering av fas misslyckades: {e}")
