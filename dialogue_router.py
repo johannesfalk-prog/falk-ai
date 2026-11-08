@@ -282,3 +282,28 @@ def process_turn(user_id, session_id, message):
         "user_id": user_id,
         "engine": "Falk Core Engine v1.0.0 (OpenAI GPT-4o)"
     }
+
+
+def fetch_user_memories(user_id: str, limit: int = 5):
+    """Hämtar de mest relevanta långtidsminnena för användaren från Supabase."""
+    try:
+        from dialogue_router import supabase
+        res = supabase.table("falk_memory").select("category, content, importance_score").eq("user_id", user_id).order("importance_score", desc=True).limit(limit).execute()
+        return res.data if res.data else []
+    except Exception as e:
+        print(f"[WARN] Kunde inte hämta minnen från Supabase: {e}")
+        return []
+
+def save_user_memory(user_id: str, category: str, content: str, importance_score: int = 3):
+    """Sparar ett nytt långtidsminne för användaren i Supabase."""
+    try:
+        from dialogue_router import supabase
+        supabase.table("falk_memory").insert({
+            "user_id": user_id,
+            "category": category,
+            "content": content,
+            "importance_score": importance_score
+        }).execute()
+        print(f"✅ Minne sparat [{category}]: {content}")
+    except Exception as e:
+        print(f"[WARN] Kunde inte spara minne i Supabase: {e}")
