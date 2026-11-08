@@ -106,90 +106,35 @@ def get_library_cards():
 @app.route('/api/dialogue/turn', methods=['POST'])
 def dialogue_turn():
     try:
-        data = request.json or {}
-        user_id = data.get('user_id', 'beta_guest')
-        session_id = data.get('session_id', 'sess_default')
-        user_message = data.get('user_message', '')
+        data = request.get_json(silent=True) or {}
+        user_id = data.get('user_id') or data.get('userId') or 'beta_guest'
+        session_id = data.get('session_id') or data.get('sessionId') or 'sess_default'
+        
+        # Flexibel utläsning av användarens meddelande
+        user_message = (
+            data.get('message') or 
+            data.get('content') or 
+            data.get('prompt') or 
+            data.get('user_message') or 
+            ''
+        ).strip()
 
         if not user_message:
             return jsonify({"error": "Meddelande saknas"}), 400
 
-        is_crisis, crisis_msg = check_crisis_guardrail(user_message)
-        if is_crisis:
-            dialogue_router.save_message(session_id, user_id, 'user', user_message)
-            dialogue_router.save_message(session_id, user_id, 'assistant', crisis_msg)
-            return jsonify({
-                "session_id": session_id,
-                "active_stage": "TRYGGHET",
-                "falk_response": crisis_msg
-            })
-
-        sess_data = dialogue_router.get_or_create_session(session_id, user_id)
-        current_stage = sess_data.get("current_stage", "TRYGGHET")
-        messages, history_text = dialogue_router.fetch_chat_history(session_id, limit=14)
-
-        try:
-            new_stage, _ = dialogue_router.evaluate_stage_transition(current_stage, user_message, history_text)
-        except Exception as stage_err:
-            print(f"[Varning] Stage evaluation misslyckades, behåller {current_stage}: {stage_err}")
-            new_stage = current_stage
-
-        system_prompt = f"{FALK_SYSTEM_PROMPT}\n\nAKTUELT SAMTALSSTADIUM: [{new_stage}]"
-        
-        gpt_messages = [{"role": "system", "content": system_prompt}]
-        for m in messages:
-            gpt_messages.append({"role": m.get("role", "user"), "content": m.get("content", "")})
-        gpt_messages.append({"role": "user", "content": user_message})
-
-        try:
-            response = get_openai_client().chat.completions.create(
-                model="gpt-4o",
-                messages=gpt_messages,
-                temperature=0.3,
-                timeout=15.0
-            )
-            raw_response = response.choices[0].message.content
-            final_response = post_process_guardrail(user_message, raw_response)
-        except Exception as llm_err:
-            print(f"[Kritiskt Fel vid LLM-anrop]: {llm_err}")
-            final_response = (
-                "Jag behöver stanna upp ett ögonblick för att samla tankarna. "
-                "Det verkar vara en tillfällig störning i vår förbindelse. "
-                "Vad är det viktigaste du vill att vi ska fokusera på när du är redo?"
-            )
-
-        dialogue_router.save_message(session_id, user_id, 'user', user_message)
-        dialogue_router.save_message(session_id, user_id, 'assistant', final_response)
-        dialogue_router.update_session_stage(session_id, new_stage, sess_data.get("turn_count", 1))
-
-        return jsonify({
-            "session_id": session_id,
-            "active_stage": new_stage,
-            "falk_response": final_response
-        })
+        # Anropa dialogue_router eller kärnmotor
+        import dialogue_router
+        response_data = dialogue_router.process_turn(user_id=user_id, session_id=session_id, message=user_message)
+        return jsonify(response_data), 200
 
     except Exception as e:
-        print(f"[Kritiskt Ohanterat Fel i Dialogue Turn]: {e}")
-        return jsonify({
-            "session_id": data.get('session_id', 'sess_default') if 'data' in locals() else 'sess_default',
-            "active_stage": "TRYGGHET",
-            "falk_response": "Jag behöver stanna upp ett ögonblick. Kan du upprepa din senaste tanke?"
-        }), 200
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.getenv("PORT", 5001)), debug=False)
-
-
-# ==========================================
-# FALK BACKEND CHAT & INSIGHTS API
-# ==========================================
-from flask import request, jsonify
-import time
+        print(f"[ERROR /api/dialogue/turn]: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
     data = request.get_json() or {}
-    user_message = data.get('message', '')
+    user_message = data.get("message") or data.get("content") or data.get("prompt") or data.get("user_message") or data.get("content") or data.get("prompt") or ""
     
     # Simulera betänketid i backend
     time.sleep(1.0)

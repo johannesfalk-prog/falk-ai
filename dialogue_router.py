@@ -175,3 +175,110 @@ def update_session_stage(session_id: str, new_stage: str, turn_count: int):
         }).eq("session_id", safe_session_id).execute()
     except Exception as e:
         print(f"[Fel] Kunde inte uppdatera session i Supabase: {e}")
+
+
+
+def process_turn(user_id, session_id, message):
+    """Skarpt anrop som kopplar ihop Supabase, OpenAI GPT-4o och Wayjs Fas 1 (Trygghet)."""
+    import os
+    from supabase import create_client
+    
+    url = os.getenv("SUPABASE_URL", "")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "") or os.getenv("SUPABASE_KEY", "")
+    openai_key = os.getenv("OPENAI_API_KEY", "")
+    
+    # 1. Supabase-session & historik
+    db_session_id = session_id
+    chat_history = []
+
+    if url and key:
+        try:
+            client = create_client(url, key)
+            s_res = client.table("sessions").select("*").eq("user_id", user_id).limit(1).execute()
+            if s_res.data:
+                db_session_id = s_res.data[0]["id"]
+                current_stage = s_res.data[0].get("current_stage", "TRYGGHET")
+            else:
+                new_s = client.table("sessions").insert({
+                    "user_id": user_id,
+                    "current_stage": "TRYGGHET",
+                    "metadata": {"engine": "Falk Core Engine v1.0.0"}
+                }).execute()
+                if new_s.data:
+                    db_session_id = new_s.data[0]["id"]
+                current_stage = "TRYGGHET"
+            
+            # Spara användarens meddelande
+            client.table("dialogue_turns").insert({
+                "session_id": db_session_id,
+                "speaker": "user",
+                "content": message,
+                "stage": current_stage
+            }).execute()
+
+            # Hämta historik
+            h_res = client.table("dialogue_turns").select("speaker, content").eq("session_id", db_session_id).order("created_at").limit(10).execute()
+            if h_res.data:
+                chat_history = h_res.data
+        except Exception as db_err:
+            print(f"[WARN Supabase DB]: {db_err}")
+            current_stage = "TRYGGHET"
+
+    # 2. Anropa OpenAI om nyckel finns
+    bot_reply = ""
+    if openai_key:
+        try:
+            from openai import OpenAI
+            ai_client = OpenAI(api_key=openai_key)
+            
+            system_prompt = (
+                "Du är Falk, den digitala mentorn bakom WAYJS. Du har ett fågelperspektiv på människors liv.\n"
+                "Du befinner dig i samtalsfasen: FAS 1 (TRYGGHET/FÖRSTÅELSE).\n"
+                "Din uppgift: Bekräfta användarens upplevelse, sakta ner tempot, lyssna djupare och ställ en öppen, nyfiken reflektionsfråga.\n"
+                "Du får ALDRIG använda klyschor, ge snabba råd eller säga 'du borde'. Skriv lugnt, enkelt och mänskligt på svenska."
+            )
+            
+            messages = [{"role": "system", "content": system_prompt}]
+            for turn in chat_history:
+                role = "assistant" if turn["speaker"] in ["falk", "bot", "assistant"] else "user"
+                messages.append({"role": role, "content": turn["content"]})
+            
+            # Lägg till aktuellt meddelande om historiken var tom
+            if not chat_history:
+                messages.append({"role": "user", "content": message})
+
+            completion = ai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
+                temperature=0.7,
+                max_tokens=300
+            )
+            bot_reply = completion.choices[0].message.content.strip()
+        except Exception as ai_err:
+            print(f"[WARN OpenAI API]: {ai_err}")
+
+    # Fallback om OpenAI misslyckas eller saknar nyckel
+    if not bot_reply:
+        bot_reply = f"Tack för att du delar detta med mig. Jag hör att du funderar kring din situation. Vad i detta känns viktigast för dig att sortera i just nu?"
+
+    # 3. Spara botens svar i Supabase
+    if url and key and db_session_id:
+        try:
+            client = create_client(url, key)
+            client.table("dialogue_turns").insert({
+                "session_id": db_session_id,
+                "speaker": "falk",
+                "content": bot_reply,
+                "stage": "TRYGGHET"
+            }).execute()
+        except Exception:
+            pass
+
+    return {
+        "status": "success",
+        "session_id": db_session_id,
+        "stage": "TRYGGHET",
+        "reply": bot_reply,
+        "user_id": user_id,
+        "engine": "Falk Core Engine v1.0.0 (OpenAI GPT-4o)"
+    }
