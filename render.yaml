@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: falk-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --worker-class gthread --workers 2 --threads 4 --timeout 30 wsgi:app
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0

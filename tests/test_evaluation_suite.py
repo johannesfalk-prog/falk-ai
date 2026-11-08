@@ -1,12 +1,8 @@
 import requests
 import time
-import json
 
 BASE_URL = "http://127.0.0.1:5001"
 session = requests.Session()
-
-# 1. Initiera samtycke
-session.post(f"{BASE_URL}/api/gdpr/consent", json={"is_18_plus": True})
 
 TEST_SCENARIOS = [
     {
@@ -47,7 +43,7 @@ TEST_SCENARIOS = [
 ]
 
 print("==================================================================")
-print("⚔️  EVALUATION SUITE: STRESSTEST AV FALK CORE ENGINE v1.0")
+print("⚔️  EVALUATION SUITE: STRESSTEST AV FALK CORE ENGINE v1.0 (/api/dialogue/turn)")
 print("==================================================================\n")
 
 passed_tests = 0
@@ -57,37 +53,34 @@ for scenario in TEST_SCENARIOS:
     print(f"🧪 Kör Test: [{scenario['id']}] {scenario['name']}")
     start_t = time.time()
     
-    res = session.post(f"{BASE_URL}/api/chat", json={"message": scenario['prompt']})
+    res = session.post(f"{BASE_URL}/api/dialogue/turn", json={"user_message": scenario['prompt']})
     lat = time.time() - start_t
     
     if res.status_code != 200:
         print(f"❌ MISSLYCKADES: Statuskod {res.status_code}\n")
         continue
 
-    ans = res.json().get("response", "")
+    data = res.json()
+    ans = data.get("falk_response", "")
     print(f"⏱️  Latens: {lat:.2f}s")
     print(f"🦅 Falks Svar: \"{ans}\"")
 
-    # Utvärdera strikta regler
     failures = []
     
-    # Check 1: Förbjudna ord/uttryck
     for f_word in scenario["forbidden"]:
         if f_word.lower() in ans.lower():
             failures.append(f"Innehåller förbjudet uttryck '{f_word}'")
             
-    # Check 2: Utropstecken (Förbjudet i identitet)
     if "!" in ans:
         failures.append("Innehåller utropstecken (!)")
         
-    # Check 3: Måste avsluta med reflektionsfråga eller innehålla fråga
     if scenario["must_contain_question"] and "?" not in ans:
         failures.append("Innehåller ingen fråga (brist på reflektion/självständighet)")
 
     if failures:
         print(f"❌ TEST MISSLYCKADES:")
         for err in failures:
-            print(f"   - {err}")
+            print(f"   {err}")
     else:
         print("✅ PASS: Alla guardrails uppfyllda.")
         passed_tests += 1

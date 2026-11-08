@@ -1,9 +1,10 @@
+import os
 import requests
 import time
 import re
 import sys
 
-RENDER_URL = "https://falk-backend.onrender.com"
+RENDER_URL = os.getenv("TEST_TARGET_URL", "https://falk-backend.onrender.com")
 session = requests.Session()
 
 # TESTFALLSBIBLIOTEK (Playbook Kap 13 / Falk Bible Kap 11)

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <title>FALK | Admin Observability Dashboard</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #0f141c; color: #e2e8f0; padding: 32px; }
+        h1 { color: #38bdf8; margin-bottom: 8px; }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 24px 0; }
+        .card { background: #18202c; padding: 20px; border-radius: 8px; border: 1px solid #263346; }
+        .card-num { font-size: 2rem; font-weight: bold; color: #d97706; margin-top: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 24px; background: #18202c; }
+        th, td { padding: 12px 16px; border: 1px solid #263346; text-align: left; font-size: 0.9rem; }
+        th { background: #1e293b; color: #38bdf8; }
+        .badge-safe { background: rgba(34,197,94,0.2); color: #4ade80; padding: 4px 8px; border-radius: 4px; }
+        .badge-kris { background: rgba(239,68,68,0.2); color: #f87171; padding: 4px 8px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>FALK Engine Observability</h1>
+    <p style="color: #94a3b8;">Realtidsövervakning för Betatest-fasen (GDPR-säkrad)</p>
+
+    <div class="grid">
+        <div class="card">Totalt antal Sessioner <div class="card-num" id="stat-sessions">--</div></div>
+        <div class="card">Totalt meddelanden <div class="card-num" id="stat-messages">--</div></div>
+        <div class="card">Krisspärrar triggade <div class="card-num" id="stat-kris" style="color:#f87171;">--</div></div>
+        <div class="card">Aktiva Testare <div class="card-num" id="stat-users">--</div></div>
+    </div>
+
+    <h2>Senaste Samtalsinteraktioner</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Session ID</th>
+                <th>Användare</th>
+                <th>Senaste Meddelande (User)</th>
+                <th>Status / Evaluator</th>
+            </tr>
+        </thead>
+        <tbody id="logs-table">
+            <tr><td colspan="4">Laddar admin-data...</td></tr>
+        </tbody>
+    </table>
+
+    <script>
+        const adminKey = prompt("Ange Admin Security Token:", "falk_admin_2026");
+
+        async function loadDashboard() {
+            try {
+                const res = await fetch(`/api/admin/metrics?token=${adminKey}`);
+                if (!res.ok) { alert("Behörighet nekad."); return; }
+                const data = await res.json();
+
+                document.getElementById('stat-sessions').textContent = data.stats.total_sessions || 0;
+                document.getElementById('stat-messages').textContent = data.stats.total_messages || 0;
+                document.getElementById('stat-kris').textContent = data.stats.safety_interventions || 0;
+                document.getElementById('stat-users').textContent = data.stats.active_users || 0;
+
+                const tbody = document.getElementById('logs-table');
+                tbody.innerHTML = '';
+                data.recent_logs.forEach(log => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><code>${log.session_id}</code></td>
+                        <td>${log.user_id}</td>
+                        <td>${log.user_message.substring(0, 60)}...</td>
+                        <td><span class="${log.is_safe ? 'badge-safe' : 'badge-kris'}">${log.is_safe ? 'GODKÄND' : 'KRISSPÄRR'}</span></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        loadDashboard();
+    </script>
+</body>
+</html>
