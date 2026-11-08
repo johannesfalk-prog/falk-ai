@@ -149,3 +149,29 @@ def api_insights():
     data = request.get_json() or {}
     print(f"-> [BACKEND INSIGHT SAVED] {data}")
     return jsonify({"status": "success", "received": data})
+
+
+@app.route('/api/dialogue/reset', methods=['POST'])
+def dialogue_reset():
+    try:
+        data = request.get_json() or {}
+        session_id = data.get("session_id")
+        user_id = data.get("user_id")
+        
+        if not session_id and not user_id:
+            return jsonify({"status": "error", "message": "Missing session_id or user_id"}), 400
+            
+        import dialogue_router
+        if hasattr(dialogue_router, 'supabase') and dialogue_router.supabase:
+            query = dialogue_router.supabase.table("falk_messages").delete()
+            if session_id:
+                query = query.eq("session_id", session_id)
+            elif user_id:
+                query = query.eq("user_id", user_id)
+            query.execute()
+            return jsonify({"status": "success", "message": "Session history cleared successfully"}), 200
+        else:
+            return jsonify({"status": "error", "message": "Database connection not initialized"}), 500
+    except Exception as e:
+        print(f"[ERROR /api/dialogue/reset]: {e}")
+        return jsonify({"status": "error", "error": str(e)}), 500
