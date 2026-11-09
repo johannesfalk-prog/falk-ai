@@ -342,6 +342,37 @@ def chat_page():
             }
         }
 
+        
+        window.addEventListener('DOMContentLoaded', loadUserState);
+
+        async function loadUserState() {
+            try {
+                const res = await fetch(`/api/dialogue/state/${userId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.compass_score) {
+                        updateScore('dir', data.compass_score.direction);
+                        updateScore('bal', data.compass_score.balance);
+                        updateScore('act', data.compass_score.action);
+                        updateScore('ref', data.compass_score.reflection);
+                    }
+                    if (data.journal && data.journal.length > 0) {
+                        const jContainer = document.getElementById('journal-list');
+                        jContainer.innerHTML = '';
+                        data.journal.forEach(ch => {
+                            jContainer.innerHTML += `
+                                <div class="journal-item">
+                                    <h4>Kapitel ${ch.chapter_number} - ${ch.chapter_title}</h4>
+                                    <p>${ch.summary}</p>
+                                </div>`;
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load user state:", err);
+            }
+        }
+
         function updateScore(id, val) {
             if (val === undefined) return;
             document.getElementById(`score-${id}`).innerText = val + '%';

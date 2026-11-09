@@ -221,3 +221,32 @@ def dialogue_reset():
         return jsonify({"status": "success", "message": f"Session {session_id} history cleared successfully"}), 200
     except Exception as e:
         return jsonify({"status": "error", "error": str(e)}), 500
+
+
+@dialogue_bp.route("/state/<user_id>", methods=["GET"])
+def get_user_wos_state(user_id):
+    if not supabase:
+        return jsonify({"status": "error", "message": "Supabase connection missing"}), 500
+    try:
+        # Hämta senast sparade score
+        score_res = supabase.table("falk_compass_score").select("*").eq("user_id", user_id).execute()
+        score_data = score_res.data[0] if score_res.data and len(score_res.data) > 0 else {
+            "direction_score": 50, "balance_score": 50, "action_score": 50, "reflection_score": 50
+        }
+
+        # Hämta journal-kapitel
+        journal_res = supabase.table("falk_compass_journal").select("*").eq("user_id", user_id).order("chapter_number", desc=False).execute()
+        journal_data = journal_res.data if journal_res.data else []
+
+        return jsonify({
+            "status": "success",
+            "compass_score": {
+                "direction": score_data.get("direction_score", 50),
+                "balance": score_data.get("balance_score", 50),
+                "action": score_data.get("action_score", 50),
+                "reflection": score_data.get("reflection_score", 50)
+            },
+            "journal": journal_data
+        }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
