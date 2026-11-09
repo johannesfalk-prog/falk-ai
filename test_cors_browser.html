@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <title>Falk AI - Browser CORS & Cookie Test Bench</title>
+    <style>
+        body { font-family: monospace; background: #111; color: #0f0; padding: 20px; }
+        .log { background: #222; padding: 10px; border-radius: 5px; margin-top: 10px; white-space: pre-wrap; }
+        .pass { color: #0f0; } .fail { color: #f00; }
+        button { background: #0f0; color: #000; font-weight: bold; padding: 10px 20px; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h2>🦅 FALK AI BROWSER CORS & COOKIE TEST BENCH</h2>
+    <p>Mål-URL: <code>https://falk-backend.onrender.com</code></p>
+    <button onclick="runBrowserTest()">KÖR SKARPT WEBBELÄSARTEST</button>
+    <div id="output" class="log">Klicka på knappen ovan för att starta testet...</div>
+
+    <script>
+        const RENDER_URL = "https://falk-backend.onrender.com";
+        const log = (msg, isError = false) => {
+            const out = document.getElementById("output");
+            out.innerHTML += `<div class="${isError ? 'fail' : 'pass'}">${msg}</div>`;
+        };
+
+        async function runBrowserTest() {
+            document.getElementById("output").innerHTML = "";
+            log("🚀 Startar klientvalidering i webbläsare...");
+
+            try {
+                // 1. GDPR Consent (Sätter cookie via credentials)
+                log("\n1️⃣ Skickar POST /api/gdpr/consent med credentials: 'include'...");
+                const r1 = await fetch(`${RENDER_URL}/api/gdpr/consent`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ is_18_plus: true }),
+                    credentials: "include"
+                });
+                
+                if (!r1.ok) throw new Error(`GDPR status ${r1.status}`);
+                const d1 = await r1.json();
+                log(`✅ GDPR Godkänt: ${JSON.stringify(d1)}`);
+
+                // 2. Chat Call (Verifierar om cookies eller sessioner skickas med)
+                log("\n2️⃣ Skickar POST /api/chat...");
+                const r2 = await fetch(`${RENDER_URL}/api/chat`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: "Testar webbläsarsäkerhet och CORS." }),
+                    credentials: "include"
+                });
+
+                if (!r2.ok) throw new Error(`Chat status ${r2.status}`);
+                const d2 = await r2.json();
+                log(`✅ Chat Svar mottaget!`);
+                log(`   - Current Phase: ${d2.current_phase}`);
+                log(`   - Session ID: ${d2.session_id}`);
+                log(`   - Messages Left: ${d2.guest_messages_left}`);
+
+                // 3. Dashboard fetch
+                log("\n3️⃣ Skickar GET /api/dashboard...");
+                const r3 = await fetch(`${RENDER_URL}/api/dashboard`, {
+                    method: "GET",
+                    credentials: "include"
+                });
+
+                if (!r3.ok) throw new Error(`Dashboard status ${r3.status}`);
+                const d3 = await r3.json();
+                log(`✅ Dashboard Data: ${JSON.stringify(d3.compass_scores)}`);
+
+                log("\n==================================================================");
+                log("🏆 [ALL PASS] Webbläsaren godkände CORS, Cookies och Preflight!");
+                log("==================================================================");
+
+            } catch (err) {
+                log(`\n❌ TEST MISSLYCKADES I WEBBELÄSAREN: ${err.message}`, true);
+                log("⚠️ Detta tyder på CORS-blockering, ogiltiga origins eller Cookie-spärr i webbläsaren.", true);
+            }
+        }
+    </script>
+</body>
+</html>
