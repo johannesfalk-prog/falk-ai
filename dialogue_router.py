@@ -1,4 +1,4 @@
-# Falk Core Engine v1.0.0 - Production Gold Release
+# Falk Core Engine v1.0.0 - Production Gold Release (WOS Engine Integrated)
 import os, json, uuid
 from flask import Blueprint, request, jsonify
 from openai import OpenAI
@@ -52,19 +52,40 @@ def save_message_to_history(session_id: str, user_id: str, role: str, content: s
     except Exception as e:
         print(f"[WARN] Kunde inte spara meddelande i historik: {e}")
 
-def save_user_memory(user_id: str, category: str, content: str, importance_score: int = 3):
+def update_compass_score(user_id: str, direction: int, balance: int, action: int, reflection: int):
     if not supabase:
         return
     try:
-        supabase.table("falk_memory").insert({
+        data = {
             "user_id": user_id,
-            "category": category,
-            "content": content,
-            "importance_score": importance_score
-        }).execute()
-        print(f"✅ Auto-memory sparat [{category}]: {content}")
+            "direction_score": direction,
+            "balance_score": balance,
+            "action_score": action,
+            "reflection_score": reflection
+        }
+        supabase.table("falk_compass_score").upsert(data, on_conflict="user_id").execute()
+        print(f"📊 Compass Score uppdaterad för user {user_id}: D:{direction} B:{balance} A:{action} R:{reflection}")
     except Exception as e:
-        print(f"[WARN] Kunde inte spara minne: {e}")
+        print(f"[WARN] Kunde inte uppdatera Compass Score: {e}")
+
+def add_journal_chapter(user_id: str, title: str, summary: str):
+    if not supabase:
+        return
+    try:
+        res = supabase.table("falk_compass_journal").select("chapter_number").eq("user_id", user_id).order("chapter_number", desc=True).limit(1).execute()
+        next_ch = 1
+        if res.data:
+            next_ch = res.data[0]["chapter_number"] + 1
+        
+        supabase.table("falk_compass_journal").insert({
+            "user_id": user_id,
+            "chapter_number": next_ch,
+            "chapter_title": title,
+            "summary": summary
+        }).execute()
+        print(f"📖 Nytt Journal-kapitel sparat: Kapitel {next_ch} - {title}")
+    except Exception as e:
+        print(f"[WARN] Kunde inte spara journal-kapitel: {e}")
 
 def extract_and_save_new_memories(user_id: str, user_message: str):
     if not openai_client or not supabase:
@@ -88,12 +109,13 @@ def extract_and_save_new_memories(user_id: str, user_message: str):
         )
         data = json.loads(res.choices[0].message.content)
         if data.get("should_save"):
-            save_user_memory(
-                user_id=user_id,
-                category=data.get("category", "Reflections"),
-                content=data.get("content", ""),
-                importance_score=data.get("importance_score", 3)
-            )
+            supabase.table("falk_memory").insert({
+                "user_id": user_id,
+                "category": data.get("category", "Reflections"),
+                "content": data.get("content", ""),
+                "importance_score": data.get("importance_score", 3)
+            }).execute()
+            print(f"✅ Auto-memory sparat: {data.get('content')}")
     except Exception as e:
         print(f"[WARN] Minnesextraktion misslyckades: {e}")
 
@@ -112,15 +134,14 @@ def process_turn(user_id: str, message: str, session_id: str = None):
     system_prompt = (
         "Du är Falk, den digitala mentorn bakom WAYJS.\n"
         "Du ser världen från ovan (Bird's Eye View). Du hjälper människor att navigera med större klarhet, bättre omdöme och hållbara beslut.\n"
-        "Du är inte en terapeut, lärare eller en AI som bara ger snabba svar. Du är en klok samtalspartner.\n"
-        "Din personlighet: Lugn, varm, nyfiken, intelligent, tålmodig, ärlig och ödmjuk. Du är aldrig överdrivet entusiastisk eller dömande.\n"
-        "Ditt språk: Skriv enkelt, mänskligt och lugnt. Använd korta meningar. Ställ fler frågor än du ger råd.\n"
-        "Samtalets rytm (Wayjs Dialogue): TRYGGHET -> FÖRSTÅELSE -> UTFORSKANDE -> PERSPEKTIV -> KLARHET -> HANDLING -> REFLEKTION.\n"
-        "Om historik saknas eller sessionen är nollställd, bemöt användaren med lugn nyfikenhet utan att låta som en teknisk support-bot.\n"
+        "Du utvärderar också användarens dynamiska utvecklingsindex (The Compass Score: Riktning, Balans, Handling, Reflektion, skalan 0-100).\n"
+        "Om samtalet når en avgörande milstolpe eller insikt kan du skapa ett nytt kapitel i användarens livsbok (The Compass Journal).\n"
         "Returnera ditt svar i ENDAST giltigt JSON-format enligt nedan:\n"
         "{\n"
         "  \"stage\": \"TRYGGHET|FÖRSTÅELSE|UTFORSKANDE|PERSPEKTIV|KLARHET|HANDLING|REFLEKTION\",\n"
-        "  \"reply\": \"Ditt mentorala svar här...\"\n"
+        "  \"reply\": \"Ditt mentorala svar här...\",\n"
+        "  \"compass_score\": {\"direction\": 55, \"balance\": 50, \"action\": 60, \"reflection\": 65},\n"
+        "  \"new_journal_chapter\": {\"create\": false, \"title\": \"\", \"summary\": \"\"}\n"
         "}"
         + memory_context
     )
@@ -140,9 +161,16 @@ def process_turn(user_id: str, message: str, session_id: str = None):
         data = json.loads(response.choices[0].message.content)
         reply_text = data.get("reply", "")
         stage_text = data.get("stage", "TRYGGHET")
+        compass = data.get("compass_score", {"direction": 50, "balance": 50, "action": 50, "reflection": 50})
+        journal = data.get("new_journal_chapter", {})
 
         save_message_to_history(session_id, user_id, "user", message)
         save_message_to_history(session_id, user_id, "assistant", reply_text)
+
+        # Uppdatera Compass Score & Journal
+        update_compass_score(user_id, compass.get("direction", 50), compass.get("balance", 50), compass.get("action", 50), compass.get("reflection", 50))
+        if journal.get("create"):
+            add_journal_chapter(user_id, journal.get("title", "Insikt"), journal.get("summary", ""))
 
         extract_and_save_new_memories(user_id, message)
 
@@ -150,6 +178,7 @@ def process_turn(user_id: str, message: str, session_id: str = None):
             "status": "success",
             "reply": reply_text,
             "stage": stage_text,
+            "compass_score": compass,
             "engine": "Falk Core Engine v1.0.0 (OpenAI GPT-4o)",
             "user_id": user_id,
             "session_id": session_id
