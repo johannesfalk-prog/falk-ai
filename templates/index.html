@@ -24,7 +24,6 @@
 
         .dashboard-container { display: flex; flex: 1; overflow: hidden; }
         
-        /* Left: Chat Column */
         .chat-section { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border-color); }
         .chat-header { padding: 12px 20px; background: rgba(30, 41, 59, 0.5); border-bottom: 1px solid var(--border-color); font-size: 0.85rem; color: var(--text-sub); display: flex; justify-content: space-between; }
         .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
@@ -39,7 +38,6 @@
         button { background: var(--accent-gold); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         button:hover { opacity: 0.9; }
 
-        /* Right: WOS Sidebar */
         .wos-sidebar { width: 380px; background: #090d16; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 25px; }
         .sidebar-title { font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-sub); margin-bottom: 10px; }
         
@@ -69,7 +67,6 @@
     </header>
 
     <div class="dashboard-container">
-        <!-- Left Column: Dialogue -->
         <div class="chat-section">
             <div class="chat-header">
                 <span>Samtalsfas: <strong id="current-stage" style="color: var(--accent-gold);">TRYGGHET</strong></span>
@@ -87,7 +84,6 @@
             </div>
         </div>
 
-        <!-- Right Column: WOS State -->
         <div class="wos-sidebar">
             <div>
                 <div class="sidebar-title">The Compass Score™</div>
@@ -132,7 +128,6 @@
             const msg = input.value.trim();
             if (!msg) return;
 
-            // Add user message to UI
             const container = document.getElementById('chat-messages');
             container.innerHTML += `<div class="message user">${msg}</div>`;
             input.value = '';
@@ -156,7 +151,6 @@
                         </div>`;
                     container.scrollTop = container.scrollHeight;
 
-                    // Update Compass Score UI
                     if (data.compass_score) {
                         updateScore('dir', data.compass_score.direction);
                         updateScore('bal', data.compass_score.balance);
