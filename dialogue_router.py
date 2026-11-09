@@ -57,7 +57,6 @@ Utvärdera samtalet och svara i JSON-format med följande nycklar:
         # 1. Uppdatera falk_compass_score i Supabase
         if supabase:
             try:
-                # Kolla om score finns
                 existing_score = supabase.table("falk_compass_score").select("*").eq("user_id", user_id).execute()
                 score_payload = {
                     "user_id": user_id,
@@ -88,6 +87,7 @@ Utvärdera samtalet och svara i JSON-format med följande nycklar:
                 print(f"⚠️ Warning: Journal insert failed: {e}")
 
         # 3. FALK HUMAN GROWTH FRAMEWORK (falk_capabilities)
+        cap_errors = []
         if supabase:
             capabilities = ["Självinsikt", "Mod", "Resiliens", "Kommunikation"]
             for cap in capabilities:
@@ -96,7 +96,9 @@ Utvärdera samtalet och svara i JSON-format med följande nycklar:
                     if cap_res.data and len(cap_res.data) > 0:
                         current_score = cap_res.data[0].get("score_level", 50)
                         new_score = min(100, current_score + 2)
-                        supabase.table("falk_capabilities").update({"score_level": new_score, "last_updated": "now()"}).eq("user_id", user_id).eq("capability_name", cap).execute()
+                        supabase.table("falk_capabilities").update({
+                            "score_level": new_score
+                        }).eq("user_id", user_id).eq("capability_name", cap).execute()
                     else:
                         supabase.table("falk_capabilities").insert({
                             "user_id": user_id,
@@ -104,14 +106,17 @@ Utvärdera samtalet och svara i JSON-format med följande nycklar:
                             "score_level": 52
                         }).execute()
                 except Exception as cap_err:
-                    print(f"⚠️ Warning: Could not save capability {cap}: {cap_err}")
+                    err_msg = str(cap_err)
+                    print(f"⚠️ Could not save capability {cap}: {err_msg}")
+                    cap_errors.append(f"{cap}: {err_msg}")
 
         return {
             "status": "success",
             "reply": reply,
             "stage": stage,
             "compass_score": compass_score,
-            "journal_created": journal_created
+            "journal_created": journal_created,
+            "cap_errors": cap_errors
         }
 
     except Exception as e:
