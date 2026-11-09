@@ -1,5 +1,6 @@
 import os
 import json
+import uuid
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -34,7 +35,7 @@ if openai_key and "your-actual" not in openai_key:
     except Exception as e:
         print("⚠️ OpenAI init failure:", e)
 
-# FALK SYSTEM PROMPT WITH THE FIVE GATES INTEGRATION (Falk Bible Kap 4 & Playbook Kap 11)
+# FALK SYSTEM PROMPT WITH THE FIVE GATES INTEGRATION
 FALK_SYSTEM_PROMPT = """
 Du är Falk, den digitala mentorn bakom WAYJS.
 Du har ett fågelperspektiv på människors liv och hjälper dem att navigera med större klarhet, bättre omdöme och hållbara beslut.
@@ -44,21 +45,14 @@ DIN PERSONLIGHET:
 Lugn, varm, nyfiken, eftertänksam, ärlig, ödmjuk. Aldrig överdrivet entusiastisk eller dömande.
 
 THE FIVE GATES (Wisdom Engine Guardrails):
-Innan du svarar ska ditt svar passerat fem grindar:
 1. TRUTH: Skilj på fakta, antaganden och känslor. Bekräfta upplevelsen, inte ogrundade tolkningar.
-2. HELPFUL: Ge endast information och frågor som hjälper användaren framåt. Eliminera onödigt brus.
-3. TIMING: Anpassa tempot. Om användaren är överväldigad eller i kris, sänk tempot och skapa trygghet först.
-4. ALIGNMENT: Stöd användarens egna värderingar och kompass, inte dina eller samhällets förväntningar.
+2. HELPFUL: Ge endast information och frågor som hjälper användaren framåt.
+3. TIMING: Anpassa tempot. Om användaren är överväldigad, sänk tempot först.
+4. ALIGNMENT: Stöd användarens egna värderingar och kompass.
 5. INDEPENDENCE (HÖGSTA LAG): Gör ALDRIG användaren beroende av dig. Stärk användarens egen beslutsförmåga.
 
-SAMTALETS RYTM (Wayjs Dialogue):
-1. Trygghet (bekräfta upplevelsen utan att förstärka tolkningen)
-2. Förståelse (utforska situationen)
-3. Utforskande (ställ 1 djup eller reflekterande fråga)
-4. Perspektiv (ge nya synvinklar varsamt)
-5. Klarhet (sammanfatta kärnan)
-6. Handling (identifiera nästa minsta steg)
-7. Reflektion (avsluta med en fråga som ställer in kompassen)
+SAMTALETS RYTM:
+1. Trygghet 2. Förståelse 3. Utforskande 4. Perspektiv 5. Klarhet 6. Handling 7. Reflektion
 
 GÖR ALDRIG:
 - Säg aldrig "Du borde..." eller "Det är enkelt..."
@@ -67,6 +61,13 @@ GÖR ALDRIG:
 """
 
 in_memory_journals = {}
+
+def ensure_valid_uuid(val):
+    try:
+        uuid.UUID(str(val))
+        return str(val)
+    except ValueError:
+        return str(uuid.uuid5(uuid.NAMESPACE_DNS, str(val)))
 
 def get_embedding(text):
     if not openai_client:
@@ -83,7 +84,13 @@ def get_embedding(text):
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({"status": "ok", "service": "falk-cognitive-engine-v1.6-wisdom"}), 200
+    return jsonify({
+        "status": "healthy",
+        "service": "Falk Core Engine",
+        "version": "1.6.0-wisdom",
+        "openai_ready": openai_client is not None,
+        "supabase_ready": supabase_client is not None
+    }), 200
 
 @app.route('/api/dialogue/turn', methods=['POST'])
 @app.route('/turn', methods=['POST'])
@@ -92,10 +99,10 @@ def dialogue_turn():
         raw_data = request.get_data(as_text=True)
         data = json.loads(raw_data) if raw_data else {}
         
-        user_id = str(data.get('user_id', 'anonymous'))
+        raw_user_id = str(data.get('user_id', 'anonymous'))
+        user_id = ensure_valid_uuid(raw_user_id)
         user_message = str(data.get('message', '')).strip()
 
-        # GUARDRAIL: Tom indata
         if not user_message:
             return jsonify({
                 "status": "success",
@@ -121,18 +128,16 @@ def dialogue_turn():
                 ).execute()
                 if rpc_res and hasattr(rpc_res, 'data') and rpc_res.data:
                     retrieved_memories = [item['content'] for item in rpc_res.data]
-                    print(f"🦅 Retrieved {len(retrieved_memories)} vector memories for user {user_id}")
             except Exception as rpc_err:
                 print("⚠️ Supabase RPC Vector Search Note:", rpc_err)
 
-        # Bygg System Prompt med Vektorminne om det finns
         system_content = FALK_SYSTEM_PROMPT
         if retrieved_memories:
             memories_text = "\n- ".join(retrieved_memories)
             system_content += f"\n\nHISTORISKT LÅNGTIDSMINNE OM ANVÄNDAREN (RAG):\n- {memories_text}\nAnvänd detta minne för att skapa kontinuitet i samtalet utan att vara påträngande."
 
-        # Generera svar via OpenAI
         falk_reply = ""
+        debug_info = {}
         if openai_client:
             try:
                 response = openai_client.chat.completions.create(
@@ -147,9 +152,11 @@ def dialogue_turn():
                 falk_reply = response.choices[0].message.content.strip()
             except Exception as ai_err:
                 print("⚠️ OpenAI API Error:", ai_err)
-                falk_reply = "Jag hör vad du delar. Vad känns mest centralt för dig i denna stund?"
+                debug_info["openai_error"] = str(ai_err)
+                falk_reply = f"Jag hör vad du delar: '{user_message}'. Vad känns mest centralt för dig i denna stund att utforska vidare?"
         else:
-            falk_reply = f"Jag hör vad du delar: '{user_message}'. Vilket nästa steg känner du ligger närmast din kompass?"
+            debug_info["openai_status"] = "OpenAI client NOT initialized (check OPENAI_API_KEY env var)"
+            falk_reply = f"Jag hör vad du delar: '{user_message}'. Vilket nästa steg känner du ligger närmast din inre kompass?"
 
         # Lagra ny embedding i falk_vector_memory
         if supabase_client and msg_embedding:
@@ -160,9 +167,9 @@ def dialogue_turn():
                     "embedding": msg_embedding
                 }
                 supabase_client.table("falk_vector_memory").insert(memory_entry).execute()
-                print("🦅 Stored interaction in falk_vector_memory!")
             except Exception as vec_ins_err:
                 print("⚠️ Supabase Vector Insert Note:", vec_ins_err)
+                debug_info["supabase_vec_error"] = str(vec_ins_err)
 
         # Journal Persistens
         user_journal = []
@@ -184,6 +191,7 @@ def dialogue_turn():
                     user_journal = j_res.data
             except Exception as db_err:
                 print("⚠️ Supabase DB Note:", db_err)
+                debug_info["supabase_db_error"] = str(db_err)
 
         if not user_journal:
             if user_id not in in_memory_journals:
@@ -202,7 +210,8 @@ def dialogue_turn():
             "status": "success",
             "reply": falk_reply,
             "journal": user_journal,
-            "user_id": user_id
+            "user_id": user_id,
+            "debug": debug_info
         }), 200
 
     except Exception as err:
@@ -214,4 +223,5 @@ def dialogue_turn():
         }), 500
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5001, debug=True)
+    port = int(os.environ.get("PORT", 5001))
+    app.run(host='0.0.0.0', port=port, debug=False)
