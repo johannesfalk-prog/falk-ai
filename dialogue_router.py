@@ -1,4 +1,4 @@
-# Falk Core Engine v1.0.0 - Production Gold Release (WOS Engine Integrated)
+# Falk Core Engine v1.0.0 - Production Gold Release (Hardened WOS Logic)
 import os, json, uuid
 from flask import Blueprint, request, jsonify
 from openai import OpenAI
@@ -54,7 +54,8 @@ def save_message_to_history(session_id: str, user_id: str, role: str, content: s
 
 def update_compass_score(user_id: str, direction: int, balance: int, action: int, reflection: int):
     if not supabase:
-        return
+        print("[WARN] Supabase saknas för update_compass_score")
+        return False
     try:
         data = {
             "user_id": user_id,
@@ -63,18 +64,21 @@ def update_compass_score(user_id: str, direction: int, balance: int, action: int
             "action_score": action,
             "reflection_score": reflection
         }
-        supabase.table("falk_compass_score").upsert(data, on_conflict="user_id").execute()
+        res = supabase.table("falk_compass_score").upsert(data, on_conflict="user_id").execute()
         print(f"📊 Compass Score uppdaterad för user {user_id}: D:{direction} B:{balance} A:{action} R:{reflection}")
+        return True
     except Exception as e:
-        print(f"[WARN] Kunde inte uppdatera Compass Score: {e}")
+        print(f"[ERROR] Kunde inte uppdatera Compass Score i Supabase: {e}")
+        return False
 
 def add_journal_chapter(user_id: str, title: str, summary: str):
     if not supabase:
-        return
+        print("[WARN] Supabase saknas för add_journal_chapter")
+        return False
     try:
         res = supabase.table("falk_compass_journal").select("chapter_number").eq("user_id", user_id).order("chapter_number", desc=True).limit(1).execute()
         next_ch = 1
-        if res.data:
+        if res.data and len(res.data) > 0:
             next_ch = res.data[0]["chapter_number"] + 1
         
         supabase.table("falk_compass_journal").insert({
@@ -84,8 +88,10 @@ def add_journal_chapter(user_id: str, title: str, summary: str):
             "summary": summary
         }).execute()
         print(f"📖 Nytt Journal-kapitel sparat: Kapitel {next_ch} - {title}")
+        return True
     except Exception as e:
-        print(f"[WARN] Kunde inte spara journal-kapitel: {e}")
+        print(f"[ERROR] Kunde inte spara journal-kapitel i Supabase: {e}")
+        return False
 
 def extract_and_save_new_memories(user_id: str, user_message: str):
     if not openai_client or not supabase:
@@ -135,13 +141,13 @@ def process_turn(user_id: str, message: str, session_id: str = None):
         "Du är Falk, den digitala mentorn bakom WAYJS.\n"
         "Du ser världen från ovan (Bird's Eye View). Du hjälper människor att navigera med större klarhet, bättre omdöme och hållbara beslut.\n"
         "Du utvärderar också användarens dynamiska utvecklingsindex (The Compass Score: Riktning, Balans, Handling, Reflektion, skalan 0-100).\n"
-        "Om samtalet når en avgörande milstolpe eller insikt kan du skapa ett nytt kapitel i användarens livsbok (The Compass Journal).\n"
+        "Du SKALL också identifiera om användaren gör ett framsteg, fattar ett viktiga livsbeslut eller sätter en ny riktning. Om så är fallet, sätter du new_journal_chapter.create till true och ger ett kapitelnamn och sammanfattning.\n"
         "Returnera ditt svar i ENDAST giltigt JSON-format enligt nedan:\n"
         "{\n"
         "  \"stage\": \"TRYGGHET|FÖRSTÅELSE|UTFORSKANDE|PERSPEKTIV|KLARHET|HANDLING|REFLEKTION\",\n"
         "  \"reply\": \"Ditt mentorala svar här...\",\n"
-        "  \"compass_score\": {\"direction\": 55, \"balance\": 50, \"action\": 60, \"reflection\": 65},\n"
-        "  \"new_journal_chapter\": {\"create\": false, \"title\": \"\", \"summary\": \"\"}\n"
+        "  \"compass_score\": {\"direction\": 60, \"balance\": 55, \"action\": 65, \"reflection\": 70},\n"
+        "  \"new_journal_chapter\": {\"create\": true, \"title\": \"Kapitelns titel\", \"summary\": \"Kort sammanfattning av framsteget\"}\n"
         "}"
         + memory_context
     )
@@ -167,10 +173,12 @@ def process_turn(user_id: str, message: str, session_id: str = None):
         save_message_to_history(session_id, user_id, "user", message)
         save_message_to_history(session_id, user_id, "assistant", reply_text)
 
-        # Uppdatera Compass Score & Journal
+        # Skriv exekvering till Supabase
         update_compass_score(user_id, compass.get("direction", 50), compass.get("balance", 50), compass.get("action", 50), compass.get("reflection", 50))
-        if journal.get("create"):
-            add_journal_chapter(user_id, journal.get("title", "Insikt"), journal.get("summary", ""))
+        
+        # Om skapa journal om create är True eller om titeln är angiven
+        if journal.get("create") or journal.get("title"):
+            add_journal_chapter(user_id, journal.get("title", "Ett nytt steg"), journal.get("summary", "Insikt under samtalet."))
 
         extract_and_save_new_memories(user_id, message)
 
@@ -179,6 +187,7 @@ def process_turn(user_id: str, message: str, session_id: str = None):
             "reply": reply_text,
             "stage": stage_text,
             "compass_score": compass,
+            "journal_created": bool(journal.get("create") or journal.get("title")),
             "engine": "Falk Core Engine v1.0.0 (OpenAI GPT-4o)",
             "user_id": user_id,
             "session_id": session_id
