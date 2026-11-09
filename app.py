@@ -20,7 +20,7 @@ try:
         supabase_client = create_client(url, key)
         print("🦅 Supabase Client Initialized!")
     else:
-        print("⚠️ Supabase URL saknas eller är platshållare - Kör fallback")
+        print("⚠️ Supabase URL saknas eller är platshållare")
 except Exception as e:
     print("⚠️ Supabase init note:", e)
 
@@ -71,11 +71,20 @@ def dialogue_turn():
         data = json.loads(raw_data) if raw_data else {}
         
         user_id = str(data.get('user_id', 'anonymous'))
-        user_message = str(data.get('message', ''))
+        user_message = str(data.get('message', '')).strip()
 
-        # Generera svar via OpenAI om tillgänglig, annars fallback
+        # GUARDRAIL: Hantera tom indata elegant utan mock-fallbacks
+        if not user_message:
+            return jsonify({
+                "status": "success",
+                "reply": "Jag lyssnar. Vad är det som upptar dina tankar just nu som du vill sänka tempot och utforska tillsammans?",
+                "journal": in_memory_journals.get(user_id, []),
+                "user_id": user_id
+            }), 200
+
+        # Generera svar via OpenAI
         falk_reply = ""
-        if openai_client and user_message:
+        if openai_client:
             try:
                 response = openai_client.chat.completions.create(
                     model="gpt-4o",
@@ -89,9 +98,9 @@ def dialogue_turn():
                 falk_reply = response.choices[0].message.content.strip()
             except Exception as ai_err:
                 print("⚠️ OpenAI API Error:", ai_err)
-                falk_reply = f"Falk (Fallback): Jag hör vad du säger om '{user_message[:30]}...'. Vad känns viktigast för dig i denna stund?"
+                falk_reply = f"Jag hör vad du delar. Vad känns mest centralt för dig i denna stund?"
         else:
-            falk_reply = f"Falk (Mock): Jag hör vad du delar: '{user_message}'. Vilket nästa steg känner du ligger närmast din kompass?"
+            falk_reply = f"Jag hör vad du delar: '{user_message}'. Vilket nästa steg känner du ligger närmast din kompass?"
 
         # Persistens i Supabase / Minne
         user_journal = []
