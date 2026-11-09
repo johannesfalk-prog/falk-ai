@@ -1,9 +1,16 @@
 services:
   - type: web
     name: falk-backend
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    env: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.9.18
+      - key: PORT
+        value: 5001
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
