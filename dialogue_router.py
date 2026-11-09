@@ -1,4 +1,4 @@
-import os
+import os, json
 from flask import Blueprint, request, jsonify
 from supabase import create_client, Client
 import openai
@@ -20,13 +20,11 @@ if OPENAI_API_KEY:
     openai.api_key = OPENAI_API_KEY
 
 def process_turn(user_id=None, session_id=None, message=None, user_message=None, **kwargs):
-    """Kärnfunktion för dialogbearbetning, kompasspoäng, journal och capabilities.
-    Hanterar flexibelt både 'message' och 'user_message' som keyword-argument.
-    """
+    """Kärnfunktion för dialogbearbetning, kompasspoäng, journal och capabilities."""
     actual_message = (message or user_message or "").strip()
     
     if not user_id or not actual_message:
-        return {"status": "error", "message": "Missing user_id or message"}, 400
+        return {"status": "error", "message": "Missing user_id or message"}
 
     system_prompt = """Du är Falk, den digitala mentorn bakom WAYJS.
 Du har ett fågelperspektiv på människors liv och hjälper dem att navigera med större klarhet, bättre omdöme och hållbara beslut.
@@ -34,7 +32,7 @@ Utvärdera samtalet och svara i JSON-format med följande nycklar:
 - reply: Ditt svar till användaren (lugn, varm, nyfiken, eftertänksam röst).
 - stage: Aktuell samtalsfas (TRYGGHET, FÖRSTÅELSE, UTFORSKANDE, PERSPEKTIV, KLARHET, HANDLING, REFLEKTION).
 - compass_score: Ett objekt med direction, balance, action, reflection (heltal 0-100).
-- new_chapter: Ett objekt med chapter_number, chapter_title, summary (om en ny insikt eller beslut nåtts, annars null).
+- new_chapter: Ett objekt med chapter_number, chapter_title, summary (skapa ALLTID ett kapitel vid nya insikter, annars null).
 """
 
     messages = [
@@ -49,7 +47,6 @@ Utvärdera samtalet och svara i JSON-format med följande nycklar:
             response_format={"type": "json_object"},
             temperature=0.7
         )
-        import json
         res_json = json.loads(response.choices[0].message.content)
 
         reply = res_json.get("reply", "Jag lyssnar. Berätta mer.")
@@ -108,10 +105,10 @@ Utvärdera samtalet och svara i JSON-format med följande nycklar:
             "stage": stage,
             "compass_score": compass_score,
             "journal_created": journal_created
-        }, 200
+        }
 
     except Exception as e:
-        return {"status": "error", "error": str(e)}, 500
+        return {"status": "error", "error": str(e)}
 
 @dialogue_bp.route("/turn", methods=["POST"])
 def dialogue_turn():
@@ -119,7 +116,8 @@ def dialogue_turn():
     user_id = data.get("user_id")
     session_id = data.get("session_id")
     msg = data.get("message") or data.get("user_message", "")
-    res, status_code = process_turn(user_id=user_id, session_id=session_id, message=msg)
+    res = process_turn(user_id=user_id, session_id=session_id, message=msg)
+    status_code = 200 if res.get("status") == "success" else 500
     return jsonify(res), status_code
 
 @dialogue_bp.route("/state/<user_id>", methods=["GET"])
