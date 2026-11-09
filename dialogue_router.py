@@ -138,8 +138,7 @@ Du SKALL returnera ett giltigt JSON-objekt med följande nycklar:
                 supabase.table("falk_capabilities").insert({
                     "user_id": user_id,
                     "capability_name": cap_name,
-                    "capability_category": "Personal",
-                    "score_level": initial_score,
+                                        "score_level": initial_score,
                     "created_at": datetime.now(timezone.utc).isoformat(),
                     "updated_at": datetime.now(timezone.utc).isoformat()
                 }).execute()
