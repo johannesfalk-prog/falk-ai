@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import os, json
 from flask import Blueprint, request, jsonify
 from supabase import create_client, Client
@@ -154,6 +155,7 @@ Du SKALL returnera ett giltigt JSON-objekt med följande nycklar:
         }
 
     except Exception as e:
+        print(f"❌ ERROR IN DIALOGUE ROUTER: {e}")
         return {"status": "error", "error": str(e)}
 
 @dialogue_bp.route("/turn", methods=["POST"])
