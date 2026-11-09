@@ -33,6 +33,28 @@ Utvärdera samtalet och svara i JSON-format med följande nycklar:
 - stage: Aktuell samtalsfas (TRYGGHET, FÖRSTÅELSE, UTFORSKANDE, PERSPEKTIV, KLARHET, HANDLING, REFLEKTION).
 - compass_score: Ett objekt med direction, balance, action, reflection (heltal 0-100).
 - new_chapter: Ett objekt med chapter_number, chapter_title, summary (skapa ALLTID ett kapitel vid nya insikter, annars null).
+
+
+Du MÅSTE utvärdera följande 4 mänskliga förmågor utifrån användarens meddelande:
+- Självinsikt (0-3 poäng)
+- Mod (0-3 poäng)
+- Resiliens (0-3 poäng)
+- Kommunikation (0-3 poäng)
+
+Ge höga poäng (2-3) ENDAST till förmågor som tydligt tränades eller uppvisades. Ge 0 poäng till de som inte berördes.
+
+Du SKALL returnera ett giltigt JSON-objekt med följande nycklar:
+{
+  "stage": "UTFORSKANDE",
+  "reply": "Ditt mentorssvar här...",
+  "compass_score": {"direction": 50, "balance": 50, "action": 50, "reflection": 50},
+  "capabilities_trained": {
+    "Självinsikt": 0,
+    "Mod": 0,
+    "Resiliens": 0,
+    "Kommunikation": 0
+  }
+}
 """
 
     messages = [
