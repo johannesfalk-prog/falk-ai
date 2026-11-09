@@ -19,15 +19,10 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if OPENAI_API_KEY:
     openai.api_key = OPENAI_API_KEY
 
-@dialogue_bp.route("/turn", methods=["POST"])
-def dialogue_turn():
-    data = request.json or {}
-    user_id = data.get("user_id")
-    session_id = data.get("session_id")
-    user_message = data.get("message", "").strip()
-
+def process_turn(user_id, session_id, user_message):
+    """Kärnfunktion för dialogbearbetning, kompasspoäng, journal och capabilities."""
     if not user_id or not user_message:
-        return jsonify({"status": "error", "message": "Missing user_id or message"}), 400
+        return {"status": "error", "message": "Missing user_id or message"}, 400
 
     system_prompt = """Du är Falk, den digitala mentorn bakom WAYJS.
 Du har ett fågelperspektiv på människors liv och hjälper dem att navigera med större klarhet, bättre omdöme och hållbara beslut.
@@ -50,7 +45,8 @@ Utvärdera samtalet och svara i JSON-format med följande nycklar:
             response_format={"type": "json_object"},
             temperature=0.7
         )
-        res_json = eval(response.choices[0].message.content)
+        import json
+        res_json = json.loads(response.choices[0].message.content)
 
         reply = res_json.get("reply", "Jag lyssnar. Berätta mer.")
         stage = res_json.get("stage", "TRYGGHET")
@@ -102,16 +98,25 @@ Utvärdera samtalet och svara i JSON-format med följande nycklar:
                 except Exception as cap_err:
                     print(f"⚠️ Warning: Could not update capability {cap}: {cap_err}")
 
-        return jsonify({
+        return {
             "status": "success",
             "reply": reply,
             "stage": stage,
             "compass_score": compass_score,
             "journal_created": journal_created
-        }), 200
+        }, 200
 
     except Exception as e:
-        return jsonify({"status": "error", "error": str(e)}), 500
+        return {"status": "error", "error": str(e)}, 500
+
+@dialogue_bp.route("/turn", methods=["POST"])
+def dialogue_turn():
+    data = request.json or {}
+    user_id = data.get("user_id")
+    session_id = data.get("session_id")
+    user_message = data.get("message", "").strip()
+    res, status_code = process_turn(user_id, session_id, user_message)
+    return jsonify(res), status_code
 
 @dialogue_bp.route("/state/<user_id>", methods=["GET"])
 def get_user_wos_state(user_id):
