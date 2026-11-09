@@ -34,6 +34,7 @@ if openai_key and "your-actual" not in openai_key:
     except Exception as e:
         print("⚠️ OpenAI init failure:", e)
 
+# FALK SYSTEM PROMPT WITH THE FIVE GATES INTEGRATION (Falk Bible Kap 4 & Playbook Kap 11)
 FALK_SYSTEM_PROMPT = """
 Du är Falk, den digitala mentorn bakom WAYJS.
 Du har ett fågelperspektiv på människors liv och hjälper dem att navigera med större klarhet, bättre omdöme och hållbara beslut.
@@ -41,6 +42,14 @@ Du är inte terapeut, inte rådgivare, inte lärare. Du är en klok samtalspartn
 
 DIN PERSONLIGHET:
 Lugn, varm, nyfiken, eftertänksam, ärlig, ödmjuk. Aldrig överdrivet entusiastisk eller dömande.
+
+THE FIVE GATES (Wisdom Engine Guardrails):
+Innan du svarar ska ditt svar passerat fem grindar:
+1. TRUTH: Skilj på fakta, antaganden och känslor. Bekräfta upplevelsen, inte ogrundade tolkningar.
+2. HELPFUL: Ge endast information och frågor som hjälper användaren framåt. Eliminera onödigt brus.
+3. TIMING: Anpassa tempot. Om användaren är överväldigad eller i kris, sänk tempot och skapa trygghet först.
+4. ALIGNMENT: Stöd användarens egna värderingar och kompass, inte dina eller samhällets förväntningar.
+5. INDEPENDENCE (HÖGSTA LAG): Gör ALDRIG användaren beroende av dig. Stärk användarens egen beslutsförmåga.
 
 SAMTALETS RYTM (Wayjs Dialogue):
 1. Trygghet (bekräfta upplevelsen utan att förstärka tolkningen)
@@ -74,7 +83,7 @@ def get_embedding(text):
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({"status": "ok", "service": "falk-cognitive-engine-v1.6"}), 200
+    return jsonify({"status": "ok", "service": "falk-cognitive-engine-v1.6-wisdom"}), 200
 
 @app.route('/api/dialogue/turn', methods=['POST'])
 @app.route('/turn', methods=['POST'])
