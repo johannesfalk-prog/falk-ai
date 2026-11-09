@@ -177,8 +177,177 @@ def dialogue_reset():
         return jsonify({"status": "error", "error": str(e)}), 500
 
 
+
+from flask import render_template_string
+
 @app.route('/chat')
-def serve_chat():
-    from flask import render_template_string
-    with open("index.html" if os.path.exists("index.html") else "templates/index.html", "r", encoding="utf-8") as f:
-        return render_template_string(f.read())
+def chat_page():
+    html_content = """<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WAYJS | Falk Core Engine v1.0.0 (WOS Beta)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-gold: #d97706;
+            --accent-blue: #3b82f6;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --border-color: #334155;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg-color); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; }
+        
+        header { background: #020617; border-bottom: 1px solid var(--border-color); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-weight: 700; font-size: 1.2rem; letter-spacing: 1px; color: var(--accent-gold); display: flex; align-items: center; gap: 8px; }
+        .badge { background: rgba(217, 119, 6, 0.2); color: var(--accent-gold); font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; border: 1px solid var(--accent-gold); }
+
+        .dashboard-container { display: flex; flex: 1; overflow: hidden; }
+        
+        .chat-section { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border-color); }
+        .chat-header { padding: 12px 20px; background: rgba(30, 41, 59, 0.5); border-bottom: 1px solid var(--border-color); font-size: 0.85rem; color: var(--text-sub); display: flex; justify-content: space-between; }
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .message { max-width: 80%; padding: 12px 16px; border-radius: 12px; font-size: 0.95rem; line-height: 1.5; }
+        .message.user { align-self: flex-end; background: var(--accent-blue); color: white; border-bottom-right-radius: 2px; }
+        .message.assistant { align-self: flex-start; background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-color); border-bottom-left-radius: 2px; }
+        .stage-tag { font-size: 0.7rem; color: var(--accent-gold); text-transform: uppercase; margin-bottom: 4px; font-weight: 600; display: block; }
+        
+        .chat-input-container { padding: 15px 20px; background: #020617; border-top: 1px solid var(--border-color); display: flex; gap: 10px; }
+        input[type="text"] { flex: 1; background: var(--card-bg); border: 1px solid var(--border-color); color: white; padding: 12px 16px; border-radius: 8px; outline: none; font-size: 0.95rem; }
+        input[type="text"]:focus { border-color: var(--accent-gold); }
+        button { background: var(--accent-gold); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        button:hover { opacity: 0.9; }
+
+        .wos-sidebar { width: 380px; background: #090d16; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 25px; }
+        .sidebar-title { font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-sub); margin-bottom: 10px; }
+        
+        .compass-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; }
+        .score-row { margin-bottom: 12px; }
+        .score-row:last-child { margin-bottom: 0; }
+        .score-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px; }
+        .progress-bar { height: 6px; background: #334155; border-radius: 3px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #d97706, #f59e0b); width: 50%; transition: width 0.5s ease; }
+
+        .journal-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; }
+        .journal-item { border-left: 2px solid var(--accent-gold); padding-left: 10px; margin-bottom: 12px; }
+        .journal-item:last-child { margin-bottom: 0; }
+        .journal-item h4 { font-size: 0.85rem; color: var(--text-main); margin-bottom: 2px; }
+        .journal-item p { font-size: 0.75rem; color: var(--text-sub); line-height: 1.4; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">🦅 FALK CORE ENGINE <span class="badge">WOS v1.0.0</span></div>
+        <div style="font-size: 0.8rem; color: var(--text-sub);" id="user-display">ID: 11111111</div>
+    </header>
+
+    <div class="dashboard-container">
+        <div class="chat-section">
+            <div class="chat-header">
+                <span>Samtalsfas: <strong id="current-stage" style="color: var(--accent-gold);">TRYGGHET</strong></span>
+                <span>Mentor Mind™: Aktiverad</span>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <div class="message assistant">
+                    <span class="stage-tag">TRYGGHET</span>
+                    Välkommen. Jag finns här från ett fågelperspektiv för att hjälpa dig navigera dina tankar och beslut. Vad funderar du på just nu?
+                </div>
+            </div>
+            <div class="chat-input-container">
+                <input type="text" id="user-input" placeholder="Skriv ditt meddelande till Falk..." onkeydown="if(event.key==='Enter') sendMessage()">
+                <button onclick="sendMessage()">Skicka</button>
+            </div>
+        </div>
+
+        <div class="wos-sidebar">
+            <div>
+                <div class="sidebar-title">The Compass Score™</div>
+                <div class="compass-card">
+                    <div class="score-row">
+                        <div class="score-label"><span>Riktning</span><span id="score-dir">50%</span></div>
+                        <div class="progress-bar"><div class="progress-fill" id="bar-dir" style="width: 50%;"></div></div>
+                    </div>
+                    <div class="score-row">
+                        <div class="score-label"><span>Balans</span><span id="score-bal">50%</span></div>
+                        <div class="progress-bar"><div class="progress-fill" id="bar-bal" style="width: 50%;"></div></div>
+                    </div>
+                    <div class="score-row">
+                        <div class="score-label"><span>Handling</span><span id="score-act">50%</span></div>
+                        <div class="progress-bar"><div class="progress-fill" id="bar-act" style="width: 50%;"></div></div>
+                    </div>
+                    <div class="score-row">
+                        <div class="score-label"><span>Reflektion</span><span id="score-ref">50%</span></div>
+                        <div class="progress-bar"><div class="progress-fill" id="bar-ref" style="width: 50%;"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="sidebar-title">The Compass Journal™</div>
+                <div class="journal-card" id="journal-list">
+                    <div class="journal-item">
+                        <h4>Kapitel 1 - Startpunkten</h4>
+                        <p>Första kontakten med Falk Core Engine och påbörjan av hjälteresan.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const userId = '11111111-2222-3333-4444-555555555555';
+        let sessionId = 'session_' + Math.random().toString(36).substring(2, 9);
+
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            const container = document.getElementById('chat-messages');
+            container.innerHTML += `<div class="message user">${msg}</div>`;
+            input.value = '';
+            container.scrollTop = container.scrollHeight;
+
+            try {
+                const res = await fetch('/api/dialogue/turn', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, session_id: sessionId, message: msg })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('current-stage').innerText = data.stage || 'TRYGGHET';
+                    
+                    container.innerHTML += `
+                        <div class="message assistant">
+                            <span class="stage-tag">${data.stage || 'MENTOR'}</span>
+                            ${data.reply}
+                        </div>`;
+                    container.scrollTop = container.scrollHeight;
+
+                    if (data.compass_score) {
+                        updateScore('dir', data.compass_score.direction);
+                        updateScore('bal', data.compass_score.balance);
+                        updateScore('act', data.compass_score.action);
+                        updateScore('ref', data.compass_score.reflection);
+                    }
+                }
+            } catch (err) {
+                console.error("Turn error:", err);
+            }
+        }
+
+        function updateScore(id, val) {
+            if (val === undefined) return;
+            document.getElementById(`score-${id}`).innerText = val + '%';
+            document.getElementById(`bar-${id}`).style.width = val + '%';
+        }
+    </script>
+</body>
+</html>"""
+    return render_template_string(html_content)
