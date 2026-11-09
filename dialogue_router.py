@@ -131,7 +131,7 @@ Du SKALL returnera ett giltigt JSON-objekt med följande nycklar:
                 new_score = min(100, current_score + inc_val)
                 supabase.table("falk_capabilities").update({
                     "score_level": new_score,
-                    "updated_at": datetime.now(timezone.utc).isoformat()
+                    
                 }).eq("id", cap_res.data[0]["id"]).execute()
             else:
                 initial_score = 50 + inc_val
@@ -139,8 +139,7 @@ Du SKALL returnera ett giltigt JSON-objekt med följande nycklar:
                     "user_id": user_id,
                     "capability_name": cap_name,
                                         "score_level": initial_score,
-                    "created_at": datetime.now(timezone.utc).isoformat(),
-                    "updated_at": datetime.now(timezone.utc).isoformat()
+                                        
                 }).execute()
         
 
