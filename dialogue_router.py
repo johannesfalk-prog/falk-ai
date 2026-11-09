@@ -215,18 +215,102 @@ def dialogue_reset():
     data = request.get_json() or {}
     session_id = data.get("session_id")
     if not session_id or not supabase:
-        return jsonify({"status": "error", "message": "Missing session_id or database connection"}), 400
+        
+            # --- FALK HUMAN GROWTH FRAMEWORK (falk_capabilities) ---
+            capabilities = ["Självinsikt", "Mod", "Resiliens", "Kommunikation"]
+            for cap in capabilities:
+                try:
+                    # Hämta eller skapa startvärde
+                    cap_res = supabase.table("falk_capabilities").select("*").eq("user_id", user_id).eq("capability_name", cap).execute()
+                    current_score = 50
+                    if cap_res.data and len(cap_res.data) > 0:
+                        current_score = cap_res.data[0].get("score_level", 50)
+                    
+                    # Höj förmåga baserat på kompass-utveckling
+                    new_score = min(100, current_score + 2)
+                    supabase.table("falk_capabilities").upsert({
+                        "user_id": user_id,
+                        "capability_name": cap,
+                        "score_level": new_score
+                    }, on_conflict="user_id,capability_name").execute()
+                except Exception as cap_err:
+                    print(f"⚠️ Warning: Could not update capability {cap}: {cap_err}")
+
+            return jsonify({"status": "error", "message": "Missing session_id or database connection"}), 400
     try:
         supabase.table("falk_messages").delete().eq("session_id", session_id).execute()
-        return jsonify({"status": "success", "message": f"Session {session_id} history cleared successfully"}), 200
+        
+            # --- FALK HUMAN GROWTH FRAMEWORK (falk_capabilities) ---
+            capabilities = ["Självinsikt", "Mod", "Resiliens", "Kommunikation"]
+            for cap in capabilities:
+                try:
+                    # Hämta eller skapa startvärde
+                    cap_res = supabase.table("falk_capabilities").select("*").eq("user_id", user_id).eq("capability_name", cap).execute()
+                    current_score = 50
+                    if cap_res.data and len(cap_res.data) > 0:
+                        current_score = cap_res.data[0].get("score_level", 50)
+                    
+                    # Höj förmåga baserat på kompass-utveckling
+                    new_score = min(100, current_score + 2)
+                    supabase.table("falk_capabilities").upsert({
+                        "user_id": user_id,
+                        "capability_name": cap,
+                        "score_level": new_score
+                    }, on_conflict="user_id,capability_name").execute()
+                except Exception as cap_err:
+                    print(f"⚠️ Warning: Could not update capability {cap}: {cap_err}")
+
+            return jsonify({"status": "success", "message": f"Session {session_id} history cleared successfully"}), 200
     except Exception as e:
-        return jsonify({"status": "error", "error": str(e)}), 500
+        
+            # --- FALK HUMAN GROWTH FRAMEWORK (falk_capabilities) ---
+            capabilities = ["Självinsikt", "Mod", "Resiliens", "Kommunikation"]
+            for cap in capabilities:
+                try:
+                    # Hämta eller skapa startvärde
+                    cap_res = supabase.table("falk_capabilities").select("*").eq("user_id", user_id).eq("capability_name", cap).execute()
+                    current_score = 50
+                    if cap_res.data and len(cap_res.data) > 0:
+                        current_score = cap_res.data[0].get("score_level", 50)
+                    
+                    # Höj förmåga baserat på kompass-utveckling
+                    new_score = min(100, current_score + 2)
+                    supabase.table("falk_capabilities").upsert({
+                        "user_id": user_id,
+                        "capability_name": cap,
+                        "score_level": new_score
+                    }, on_conflict="user_id,capability_name").execute()
+                except Exception as cap_err:
+                    print(f"⚠️ Warning: Could not update capability {cap}: {cap_err}")
+
+            return jsonify({"status": "error", "error": str(e)}), 500
 
 
 @dialogue_bp.route("/state/<user_id>", methods=["GET"])
 def get_user_wos_state(user_id):
     if not supabase:
-        return jsonify({"status": "error", "message": "Supabase connection missing"}), 500
+        
+            # --- FALK HUMAN GROWTH FRAMEWORK (falk_capabilities) ---
+            capabilities = ["Självinsikt", "Mod", "Resiliens", "Kommunikation"]
+            for cap in capabilities:
+                try:
+                    # Hämta eller skapa startvärde
+                    cap_res = supabase.table("falk_capabilities").select("*").eq("user_id", user_id).eq("capability_name", cap).execute()
+                    current_score = 50
+                    if cap_res.data and len(cap_res.data) > 0:
+                        current_score = cap_res.data[0].get("score_level", 50)
+                    
+                    # Höj förmåga baserat på kompass-utveckling
+                    new_score = min(100, current_score + 2)
+                    supabase.table("falk_capabilities").upsert({
+                        "user_id": user_id,
+                        "capability_name": cap,
+                        "score_level": new_score
+                    }, on_conflict="user_id,capability_name").execute()
+                except Exception as cap_err:
+                    print(f"⚠️ Warning: Could not update capability {cap}: {cap_err}")
+
+            return jsonify({"status": "error", "message": "Supabase connection missing"}), 500
     try:
         # Hämta senast sparade score
         score_res = supabase.table("falk_compass_score").select("*").eq("user_id", user_id).execute()
@@ -238,7 +322,28 @@ def get_user_wos_state(user_id):
         journal_res = supabase.table("falk_compass_journal").select("*").eq("user_id", user_id).order("chapter_number", desc=False).execute()
         journal_data = journal_res.data if journal_res.data else []
 
-        return jsonify({
+        
+            # --- FALK HUMAN GROWTH FRAMEWORK (falk_capabilities) ---
+            capabilities = ["Självinsikt", "Mod", "Resiliens", "Kommunikation"]
+            for cap in capabilities:
+                try:
+                    # Hämta eller skapa startvärde
+                    cap_res = supabase.table("falk_capabilities").select("*").eq("user_id", user_id).eq("capability_name", cap).execute()
+                    current_score = 50
+                    if cap_res.data and len(cap_res.data) > 0:
+                        current_score = cap_res.data[0].get("score_level", 50)
+                    
+                    # Höj förmåga baserat på kompass-utveckling
+                    new_score = min(100, current_score + 2)
+                    supabase.table("falk_capabilities").upsert({
+                        "user_id": user_id,
+                        "capability_name": cap,
+                        "score_level": new_score
+                    }, on_conflict="user_id,capability_name").execute()
+                except Exception as cap_err:
+                    print(f"⚠️ Warning: Could not update capability {cap}: {cap_err}")
+
+            return jsonify({
             "status": "success",
             "compass_score": {
                 "direction": score_data.get("direction_score", 50),
@@ -249,4 +354,25 @@ def get_user_wos_state(user_id):
             "journal": journal_data
         }), 200
     except Exception as e:
-        return jsonify({"status": "error", "error": str(e)}), 500
+        
+            # --- FALK HUMAN GROWTH FRAMEWORK (falk_capabilities) ---
+            capabilities = ["Självinsikt", "Mod", "Resiliens", "Kommunikation"]
+            for cap in capabilities:
+                try:
+                    # Hämta eller skapa startvärde
+                    cap_res = supabase.table("falk_capabilities").select("*").eq("user_id", user_id).eq("capability_name", cap).execute()
+                    current_score = 50
+                    if cap_res.data and len(cap_res.data) > 0:
+                        current_score = cap_res.data[0].get("score_level", 50)
+                    
+                    # Höj förmåga baserat på kompass-utveckling
+                    new_score = min(100, current_score + 2)
+                    supabase.table("falk_capabilities").upsert({
+                        "user_id": user_id,
+                        "capability_name": cap,
+                        "score_level": new_score
+                    }, on_conflict="user_id,capability_name").execute()
+                except Exception as cap_err:
+                    print(f"⚠️ Warning: Could not update capability {cap}: {cap_err}")
+
+            return jsonify({"status": "error", "error": str(e)}), 500
