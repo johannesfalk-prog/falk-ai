@@ -21,6 +21,7 @@ if OPENAI_API_KEY:
     openai.api_key = OPENAI_API_KEY
 
 def process_turn(user_id=None, session_id=None, message=None, user_message=None, **kwargs):
+    cap_errors = []
     """Kärnfunktion för dialogbearbetning, kompasspoäng, journal och capabilities."""
     actual_message = (message or user_message or "").strip()
     
@@ -153,6 +154,7 @@ Du SKALL returnera ett giltigt JSON-objekt med följande nycklar:
         }
 
     except Exception as e:
+        cap_errors.append(str(e))
         print(f"❌ ERROR IN DIALOGUE ROUTER: {e}")
         return {"status": "error", "error": str(e)}
 
