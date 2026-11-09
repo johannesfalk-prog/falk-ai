@@ -90,7 +90,6 @@ def post_process_guardrail(user_message: str, response_text: str) -> str:
         
     return cleaned
 
-@app.route('/', methods=['GET'])
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({
@@ -98,6 +97,11 @@ def health_check():
         "service": "Falk Core Engine",
         "version": "1.0.0"
     }), 200
+
+@app.route('/', methods=['GET'])
+def index():
+    from flask import render_template
+    return render_template('index.html')
 
 @app.route('/api/library/cards', methods=['GET'])
 def get_library_cards():
