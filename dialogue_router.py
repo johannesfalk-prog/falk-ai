@@ -19,9 +19,13 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if OPENAI_API_KEY:
     openai.api_key = OPENAI_API_KEY
 
-def process_turn(user_id, session_id, user_message):
-    """Kärnfunktion för dialogbearbetning, kompasspoäng, journal och capabilities."""
-    if not user_id or not user_message:
+def process_turn(user_id=None, session_id=None, message=None, user_message=None, **kwargs):
+    """Kärnfunktion för dialogbearbetning, kompasspoäng, journal och capabilities.
+    Hanterar flexibelt både 'message' och 'user_message' som keyword-argument.
+    """
+    actual_message = (message or user_message or "").strip()
+    
+    if not user_id or not actual_message:
         return {"status": "error", "message": "Missing user_id or message"}, 400
 
     system_prompt = """Du är Falk, den digitala mentorn bakom WAYJS.
@@ -35,7 +39,7 @@ Utvärdera samtalet och svara i JSON-format med följande nycklar:
 
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_message}
+        {"role": "user", "content": actual_message}
     ]
 
     try:
@@ -114,8 +118,8 @@ def dialogue_turn():
     data = request.json or {}
     user_id = data.get("user_id")
     session_id = data.get("session_id")
-    user_message = data.get("message", "").strip()
-    res, status_code = process_turn(user_id, session_id, user_message)
+    msg = data.get("message") or data.get("user_message", "")
+    res, status_code = process_turn(user_id=user_id, session_id=session_id, message=msg)
     return jsonify(res), status_code
 
 @dialogue_bp.route("/state/<user_id>", methods=["GET"])
