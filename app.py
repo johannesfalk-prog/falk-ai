@@ -391,7 +391,7 @@ def get_user_wos_state_explicit(user_id):
         from dialogue_router import supabase
     except ImportError:
         supabase = None
-        
+
     if not supabase:
         return jsonify({"status": "error", "message": "Supabase connection missing"}), 500
     try:
@@ -403,6 +403,9 @@ def get_user_wos_state_explicit(user_id):
         journal_res = supabase.table("falk_compass_journal").select("*").eq("user_id", user_id).order("chapter_number", desc=False).execute()
         journal_data = journal_res.data if journal_res.data else []
 
+        cap_res = supabase.table("falk_capabilities").select("*").eq("user_id", user_id).execute()
+        cap_data = cap_res.data if cap_res.data else []
+
         return jsonify({
             "status": "success",
             "compass_score": {
@@ -411,7 +414,8 @@ def get_user_wos_state_explicit(user_id):
                 "action": score_data.get("action_score", 50),
                 "reflection": score_data.get("reflection_score", 50)
             },
-            "journal": journal_data
+            "journal": journal_data,
+            "capabilities": cap_data
         }), 200
     except Exception as e:
         return jsonify({"status": "error", "error": str(e)}), 500
