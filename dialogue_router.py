@@ -57,15 +57,21 @@ Utvärdera samtalet och svara i JSON-format med följande nycklar:
         # 1. Uppdatera falk_compass_score i Supabase
         if supabase:
             try:
-                supabase.table("falk_compass_score").upsert({
+                # Kolla om score finns
+                existing_score = supabase.table("falk_compass_score").select("*").eq("user_id", user_id).execute()
+                score_payload = {
                     "user_id": user_id,
                     "direction_score": compass_score.get("direction", 50),
                     "balance_score": compass_score.get("balance", 50),
                     "action_score": compass_score.get("action", 50),
                     "reflection_score": compass_score.get("reflection", 50)
-                }, on_conflict="user_id").execute()
+                }
+                if existing_score.data and len(existing_score.data) > 0:
+                    supabase.table("falk_compass_score").update(score_payload).eq("user_id", user_id).execute()
+                else:
+                    supabase.table("falk_compass_score").insert(score_payload).execute()
             except Exception as e:
-                print(f"⚠️ Warning: Compass score upsert failed: {e}")
+                print(f"⚠️ Warning: Compass score save failed: {e}")
 
         # 2. Uppdatera falk_compass_journal i Supabase
         journal_created = False
@@ -87,17 +93,18 @@ Utvärdera samtalet och svara i JSON-format med följande nycklar:
             for cap in capabilities:
                 try:
                     cap_res = supabase.table("falk_capabilities").select("*").eq("user_id", user_id).eq("capability_name", cap).execute()
-                    current_score = 50
                     if cap_res.data and len(cap_res.data) > 0:
                         current_score = cap_res.data[0].get("score_level", 50)
-                    new_score = min(100, current_score + 2)
-                    supabase.table("falk_capabilities").upsert({
-                        "user_id": user_id,
-                        "capability_name": cap,
-                        "score_level": new_score
-                    }, on_conflict="user_id,capability_name").execute()
+                        new_score = min(100, current_score + 2)
+                        supabase.table("falk_capabilities").update({"score_level": new_score, "last_updated": "now()"}).eq("user_id", user_id).eq("capability_name", cap).execute()
+                    else:
+                        supabase.table("falk_capabilities").insert({
+                            "user_id": user_id,
+                            "capability_name": cap,
+                            "score_level": 52
+                        }).execute()
                 except Exception as cap_err:
-                    print(f"⚠️ Warning: Could not update capability {cap}: {cap_err}")
+                    print(f"⚠️ Warning: Could not save capability {cap}: {cap_err}")
 
         return {
             "status": "success",
