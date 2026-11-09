@@ -59,9 +59,22 @@ GÖR ALDRIG:
 
 in_memory_journals = {}
 
+def get_embedding(text):
+    if not openai_client:
+        return None
+    try:
+        res = openai_client.embeddings.create(
+            model="text-embedding-3-small",
+            input=text
+        )
+        return res.data[0].embedding
+    except Exception as e:
+        print("⚠️ Embedding generation error:", e)
+        return None
+
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({"status": "ok", "service": "falk-cognitive-engine"}), 200
+    return jsonify({"status": "ok", "service": "falk-cognitive-engine-v1.6"}), 200
 
 @app.route('/api/dialogue/turn', methods=['POST'])
 @app.route('/turn', methods=['POST'])
@@ -73,7 +86,7 @@ def dialogue_turn():
         user_id = str(data.get('user_id', 'anonymous'))
         user_message = str(data.get('message', '')).strip()
 
-        # GUARDRAIL: Hantera tom indata elegant utan mock-fallbacks
+        # GUARDRAIL: Tom indata
         if not user_message:
             return jsonify({
                 "status": "success",
@@ -82,6 +95,33 @@ def dialogue_turn():
                 "user_id": user_id
             }), 200
 
+        # RAG / Vektorminne Sökning
+        retrieved_memories = []
+        msg_embedding = get_embedding(user_message)
+        
+        if supabase_client and msg_embedding:
+            try:
+                rpc_res = supabase_client.rpc(
+                    'match_falk_memory',
+                    {
+                        'query_embedding': msg_embedding,
+                        'match_threshold': 0.3,
+                        'match_count': 3,
+                        'p_user_id': user_id
+                    }
+                ).execute()
+                if rpc_res and hasattr(rpc_res, 'data') and rpc_res.data:
+                    retrieved_memories = [item['content'] for item in rpc_res.data]
+                    print(f"🦅 Retrieved {len(retrieved_memories)} vector memories for user {user_id}")
+            except Exception as rpc_err:
+                print("⚠️ Supabase RPC Vector Search Note:", rpc_err)
+
+        # Bygg System Prompt med Vektorminne om det finns
+        system_content = FALK_SYSTEM_PROMPT
+        if retrieved_memories:
+            memories_text = "\n- ".join(retrieved_memories)
+            system_content += f"\n\nHISTORISKT LÅNGTIDSMINNE OM ANVÄNDAREN (RAG):\n- {memories_text}\nAnvänd detta minne för att skapa kontinuitet i samtalet utan att vara påträngande."
+
         # Generera svar via OpenAI
         falk_reply = ""
         if openai_client:
@@ -89,7 +129,7 @@ def dialogue_turn():
                 response = openai_client.chat.completions.create(
                     model="gpt-4o",
                     messages=[
-                        {"role": "system", "content": FALK_SYSTEM_PROMPT},
+                        {"role": "system", "content": system_content},
                         {"role": "user", "content": user_message}
                     ],
                     temperature=0.7,
@@ -98,11 +138,24 @@ def dialogue_turn():
                 falk_reply = response.choices[0].message.content.strip()
             except Exception as ai_err:
                 print("⚠️ OpenAI API Error:", ai_err)
-                falk_reply = f"Jag hör vad du delar. Vad känns mest centralt för dig i denna stund?"
+                falk_reply = "Jag hör vad du delar. Vad känns mest centralt för dig i denna stund?"
         else:
             falk_reply = f"Jag hör vad du delar: '{user_message}'. Vilket nästa steg känner du ligger närmast din kompass?"
 
-        # Persistens i Supabase / Minne
+        # Lagra ny embedding i falk_vector_memory
+        if supabase_client and msg_embedding:
+            try:
+                memory_entry = {
+                    "user_id": user_id,
+                    "content": f"Användare sa: '{user_message}' | Falk svarade: '{falk_reply}'",
+                    "embedding": msg_embedding
+                }
+                supabase_client.table("falk_vector_memory").insert(memory_entry).execute()
+                print("🦅 Stored interaction in falk_vector_memory!")
+            except Exception as vec_ins_err:
+                print("⚠️ Supabase Vector Insert Note:", vec_ins_err)
+
+        # Journal Persistens
         user_journal = []
         if supabase_client:
             try:
