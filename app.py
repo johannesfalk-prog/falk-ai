@@ -861,6 +861,7 @@ def export_user_data():
         "insights": [],
         "goals": [],
         "reminders": [],
+        "promo_redemptions": [],
     }
     try:
         prof = supabase.table("user_profiles").select("*").eq("id", auth_uid).execute()
@@ -875,6 +876,7 @@ def export_user_data():
         ins = supabase.table("user_insights").select("*").eq("user_id", auth_uid).execute()
         goals = supabase.table("user_goals").select("*").eq("user_id", auth_uid).execute()
         rems = supabase.table("user_reminders").select("*").eq("user_id", auth_uid).execute()
+        promos = supabase.table("promo_redemptions").select("*").eq("user_id", auth_uid).execute()
 
         export_payload["profile"] = prof.data[0] if prof.data else {}
         export_payload["compass_scores"] = comp.data or []
@@ -886,6 +888,7 @@ def export_user_data():
         export_payload["insights"] = ins.data or []
         export_payload["goals"] = goals.data or []
         export_payload["reminders"] = rems.data or []
+        export_payload["promo_redemptions"] = promos.data or []
     except Exception as e:
         logging.error(f"GDPR-exportfel för {auth_uid}: {e}")
         return jsonify({"status": "error", "message": f"Exportfel: {e}"}), 500
@@ -956,6 +959,7 @@ def delete_user_account():
             "compass_calibrations",
             "compass_scores",
             "user_compass_states",
+            "promo_redemptions",
         ):
             supabase.table(table_name).delete().eq("user_id", auth_uid).execute()
 
@@ -1167,6 +1171,91 @@ def stripe_webhook():
     except Exception as e:
         logging.error(f"Stripe webhook-fel: {e}")
         return jsonify({"status": "error", "message": str(e)}), 400
+
+
+
+_PROMO_REDEEM_ATTEMPTS: dict[str, list[float]] = {}
+
+
+@app.route("/api/billing/redeem-promo", methods=["POST", "OPTIONS"])
+def redeem_promo_code_route():
+    if request.method == "OPTIONS":
+        return "", 200
+
+    auth_uid, _, _ = _resolve_auth_user()
+    if not auth_uid:
+        return jsonify({
+            "status": "error",
+            "code": "AUTH_REQUIRED",
+            "message": "Du måste vara inloggad och ha bekräftat 18+ innan du aktiverar en rabattkod.",
+        }), 401
+
+    if not _verify_adult_and_terms(auth_uid):
+        return jsonify({
+            "status": "error",
+            "code": "AGE_AND_TERMS_REQUIRED",
+            "message": "Bekräftelse av 18+ och godkända villkor krävs före aktivering av FALK Premium.",
+        }), 403
+
+    if not supabase:
+        return jsonify({"status": "error", "message": "Databasanslutning saknas."}), 500
+
+    # Brute-force-skydd: max 5 försök per 10 minuter och användare
+    import time as _time
+    now_ts = _time.time()
+    recent = [ts for ts in _PROMO_REDEEM_ATTEMPTS.get(auth_uid, []) if now_ts - ts < 600]
+    if len(recent) >= 5:
+        _PROMO_REDEEM_ATTEMPTS[auth_uid] = recent
+        return jsonify({
+            "status": "error",
+            "code": "RATE_LIMITED",
+            "message": "För många försök. Vänta en stund och försök igen.",
+        }), 429
+    recent.append(now_ts)
+    _PROMO_REDEEM_ATTEMPTS[auth_uid] = recent
+
+    data = request.get_json(silent=True) or {}
+    raw_code = str(data.get("code", "")).strip()
+    if not raw_code or len(raw_code) > 64:
+        return jsonify({
+            "status": "error",
+            "code": "INVALID_CODE",
+            "message": "Ange en giltig rabattkod.",
+        }), 400
+
+    try:
+        rpc_res = supabase.rpc(
+            "redeem_promo_code",
+            {"p_user_id": auth_uid, "p_code": raw_code},
+        ).execute()
+        payload = rpc_res.data
+        if isinstance(payload, list):
+            payload = payload[0] if payload else {}
+        if not isinstance(payload, dict):
+            payload = {}
+
+        if payload.get("ok") is True:
+            return jsonify({
+                "status": "success",
+                "code": payload.get("code", "REDEEMED"),
+                "message": payload.get("message", "Premium har aktiverats!"),
+                "is_premium": True,
+            }), 200
+
+        err_code = str(payload.get("code") or "INVALID_CODE")
+        err_msg = str(payload.get("message") or "Ogiltig eller inaktiv rabattkod.")
+        http_status = 409 if err_code == "ALREADY_REDEEMED" else 400
+        return jsonify({
+            "status": "error",
+            "code": err_code,
+            "message": err_msg,
+        }), http_status
+    except Exception as e:
+        logging.error(f"Promo-inlösenfel för {auth_uid}: {e}")
+        return jsonify({
+            "status": "error",
+            "message": "Kunde inte verifiera rabattkoden just nu. Försök igen.",
+        }), 500
 
 
 if __name__ == "__main__":
