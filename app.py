@@ -1006,28 +1006,44 @@ def _verify_adult_and_terms(auth_uid: str) -> bool:
     if not supabase or not auth_uid:
         return False
     try:
-        prof = supabase.table("user_profiles").select("age_verified_18_plus,terms_accepted").eq("id", auth_uid).limit(1).execute()
+        prof = (
+            supabase.table("user_profiles")
+            .select("is_adult_confirmed,terms_accepted_at,privacy_accepted_at")
+            .eq("id", auth_uid)
+            .limit(1)
+            .execute()
+        )
         if prof.data:
             row = prof.data[0]
-            if row.get("age_verified_18_plus") and row.get("terms_accepted"):
+            if row.get("is_adult_confirmed") and row.get("terms_accepted_at"):
                 return True
     except Exception as e:
         logging.warning(f"Kunde inte läsa 18+/villkor från user_profiles för {auth_uid}: {e}")
 
     if SUPABASE_SERVICE_ROLE_KEY:
         try:
+            from datetime import datetime, timezone
             user_resp = supabase.auth.admin.get_user_by_id(auth_uid)
             user_obj = getattr(user_resp, "user", None)
             meta = getattr(user_obj, "user_metadata", None) or {}
-            if meta.get("age_verified_18_plus") and meta.get("terms_accepted"):
+            adult_ok = bool(meta.get("age_verified_18_plus") or meta.get("is_adult_confirmed"))
+            terms_ok = bool(meta.get("terms_accepted") or meta.get("terms_accepted_at"))
+            if adult_ok and terms_ok:
+                now_iso = datetime.now(timezone.utc).isoformat()
+                payload = {
+                    "id": auth_uid,
+                    "user_id": str(auth_uid),
+                    "is_adult_confirmed": True,
+                    "terms_accepted_at": meta.get("terms_accepted_at") or now_iso,
+                    "privacy_accepted_at": meta.get("privacy_accepted_at") or now_iso,
+                }
+                user_email = getattr(user_obj, "email", None)
+                if user_email:
+                    payload["email"] = user_email
                 try:
-                    supabase.table("user_profiles").upsert({
-                        "id": auth_uid,
-                        "age_verified_18_plus": True,
-                        "terms_accepted": True,
-                    }).execute()
-                except Exception:
-                    pass
+                    supabase.table("user_profiles").upsert(payload, on_conflict="id").execute()
+                except Exception as upsert_err:
+                    logging.warning(f"Kunde inte synka user_profiles för {auth_uid}: {upsert_err}")
                 return True
         except Exception as e:
             logging.warning(f"Kunde inte läsa user_metadata för {auth_uid}: {e}")
