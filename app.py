@@ -15,8 +15,10 @@ from state_machine import FalkStateMachine
 from prompt_builder import build_falk_system_prompt
 from gate_checker import validate_response_against_gates
 from exercise_library import FALK_15_EXERCISE_CARDS, get_library_cards
+from dotenv import load_dotenv
 from pdf_exporter import generate_session_pdf_html
 
+load_dotenv()
 logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
@@ -207,6 +209,10 @@ FORBIDDEN_FALK_PHRASES = (
     "du borde",
     "du måste",
     "det enda du behöver göra",
+    "det är enkelt",
+    "jag vet exakt hur du känner",
+    "så här måste du göra",
+    "det finns bara ett rätt svar",
     "du är grym",
     "fantastiskt!",
     "wow!",
@@ -262,7 +268,8 @@ def _apply_gate_filter(
 
 def _fetch_user_continuity(uid: str) -> Tuple[List[str], Optional[str]]:
     """
-    Hämtar sparade insikter och senaste kompasskalibrering för inloggad användare.
+    Hämtar sparade insikter, aktiva mål, påminnelser och senaste kompasskalibrering
+    för inloggad användare (The Wayjs Continuity System™).
     """
     memories: List[str] = []
     compass_summary: Optional[str] = None
@@ -279,9 +286,42 @@ def _fetch_user_continuity(uid: str) -> Tuple[List[str], Optional[str]]:
             .execute()
         )
         if ins.data:
-            memories = [row["content"] for row in ins.data if row.get("content")]
+            memories.extend([f"Insikt: {row['content']}" for row in ins.data if row.get("content")])
     except Exception as e:
         logging.warning(f"Kunde inte hämta kontinuitetsinsikter: {e}")
+
+    try:
+        goals = (
+            supabase.table("user_goals")
+            .select("title, status")
+            .eq("user_id", uid)
+            .order("created_at", desc=True)
+            .limit(3)
+            .execute()
+        )
+        if goals.data:
+            for g in goals.data:
+                if g.get("title") and g.get("status") != "completed":
+                    memories.append(f"Aktivt mål: {g['title']}")
+    except Exception as e:
+        logging.warning(f"Kunde inte hämta kontinuitetsmål: {e}")
+
+    try:
+        rems = (
+            supabase.table("user_reminders")
+            .select("content, remind_at")
+            .eq("user_id", uid)
+            .eq("is_active", True)
+            .order("created_at", desc=True)
+            .limit(3)
+            .execute()
+        )
+        if rems.data:
+            for r in rems.data:
+                if r.get("content"):
+                    memories.append(f"Påminnelse: {r['content']}")
+    except Exception as e:
+        logging.warning(f"Kunde inte hämta kontinuitetspåminnelser: {e}")
 
     try:
         comp = (
@@ -293,7 +333,11 @@ def _fetch_user_continuity(uid: str) -> Tuple[List[str], Optional[str]]:
             .execute()
         )
         if comp.data and comp.data[0].get("scores"):
-            compass_summary = str(comp.data[0]["scores"])
+            raw_scores = comp.data[0]["scores"]
+            if isinstance(raw_scores, dict):
+                compass_summary = ", ".join(f"{k}: {v}" for k, v in raw_scores.items())
+            else:
+                compass_summary = str(raw_scores)
     except Exception as e:
         logging.warning(f"Kunde inte hämta kompassläge: {e}")
 
@@ -653,19 +697,27 @@ def handle_insights():
         )
         return jsonify({"status": "success", "insights": res.data or []}), 200
 
-    if request.method == "POST":
-        data = request.get_json(silent=True) or {}
-        text = str(data.get("content") or data.get("text", "")).strip()
-        insight_type = str(data.get("type", "insikt")).strip()
-        source_context = str(data.get("source_context", "")).strip()
-        if not text:
-            return jsonify({"status": "error", "message": "Insiktstext saknas."}), 400
+    try:
+        if request.method == "POST":
+            data = request.get_json(silent=True) or {}
+            text = str(data.get("content") or data.get("text", "")).strip()
+            insight_type = str(data.get("type", "insikt")).strip()
+            source_context = str(data.get("source_context", "")).strip()
+            if not text:
+                return jsonify({"status": "error", "message": "Insiktstext saknas."}), 400
 
-        payload = {"user_id": auth_uid, "content": text, "type": insight_type}
-        if source_context:
-            payload["source_context"] = source_context
-        res = supabase.table("user_insights").insert(payload).execute()
-        return jsonify({"status": "success", "insight": res.data[0] if res.data else payload}), 201
+            payload = {"user_id": auth_uid, "content": text, "type": insight_type}
+            if source_context:
+                payload["source_context"] = source_context
+            try:
+                res = supabase.table("user_insights").insert(payload).execute()
+                return jsonify({"status": "success", "insight": res.data[0] if res.data else payload}), 201
+            except Exception as e:
+                logging.error(f"Fel vid sparande av insikt för {auth_uid}: {e}")
+                return jsonify({"status": "error", "message": f"Kunde inte spara insikt: {str(e)}"}), 500
+    except Exception as e:
+        print(f"[ERROR] /api/insights insert misslyckades: {e}", flush=True)
+        return jsonify({"error": f"Kunde inte spara insikt: {str(e)}"}), 500
 
     if request.method == "DELETE":
         insight_id = request.args.get("id") or (request.get_json(silent=True) or {}).get("id")
