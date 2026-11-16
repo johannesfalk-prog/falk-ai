@@ -88,27 +88,45 @@ def _resolve_auth_user() -> Tuple[Optional[str], Optional[str], bool]:
     if not token or token in ("null", "undefined", "guest"):
         return None, None, False
 
+    uid = None
+    email = None
     try:
         user_resp = supabase.auth.get_user(token)
         user_obj = getattr(user_resp, "user", None)
-        if not user_obj or not getattr(user_obj, "id", None):
-            return None, None, False
-
-        uid = str(user_obj.id)
-        email = getattr(user_obj, "email", None)
-        is_premium = False
-
-        try:
-            prof = supabase.table("user_profiles").select("is_premium").eq("id", uid).limit(1).execute()
-            if prof.data and len(prof.data) > 0:
-                is_premium = bool(prof.data[0].get("is_premium", False))
-        except Exception as pe:
-            logging.warning(f"Kunde inte läsa user_profiles för {uid}: {pe}")
-
-        return uid, email, is_premium
+        if user_obj and getattr(user_obj, "id", None):
+            uid = str(user_obj.id)
+            email = getattr(user_obj, "email", None)
     except Exception as e:
-        logging.warning(f"JWT-verifiering misslyckades: {e}")
+        logging.warning(f"supabase.auth.get_user misslyckades, testar lokal JWT: {e}")
+
+    if not uid:
+        jwt_secret = os.getenv("SUPABASE_JWT_SECRET", "").strip()
+        if jwt_secret:
+            try:
+                import jwt as pyjwt
+                decoded = pyjwt.decode(
+                    token,
+                    jwt_secret,
+                    algorithms=["HS256"],
+                    options={"verify_aud": False},
+                )
+                uid = str(decoded.get("sub") or "").strip() or None
+                email = decoded.get("email")
+            except Exception as je:
+                logging.warning(f"Lokal JWT-verifiering misslyckades: {je}")
+
+    if not uid:
         return None, None, False
+
+    is_premium = False
+    try:
+        prof = supabase.table("user_profiles").select("is_premium").eq("id", uid).limit(1).execute()
+        if prof.data and len(prof.data) > 0:
+            is_premium = bool(prof.data[0].get("is_premium", False))
+    except Exception as pe:
+        logging.warning(f"Kunde inte läsa user_profiles för {uid}: {pe}")
+
+    return uid, email, is_premium
 
 
 def _get_client_ip() -> str:
@@ -483,8 +501,8 @@ def handle_chat():
                     conversation_id = conv_res.data[0].get("id")
 
             msg_rows = [
-                {"user_id": auth_uid, "role": "user", "content": message},
-                {"user_id": auth_uid, "role": "assistant", "content": final_reply},
+                {"user_id": auth_uid, "sender": "user", "content": message},
+                {"user_id": auth_uid, "sender": "falk", "content": final_reply},
             ]
             if conversation_id:
                 msg_rows[0]["conversation_id"] = conversation_id
@@ -615,6 +633,37 @@ def api_get_library_cards():
     return jsonify({"status": "success", "count": len(cards), "cards": cards}), 200
 
 
+@app.route("/api/conversations/<conv_id>/messages", methods=["GET", "OPTIONS"])
+def get_conversation_messages(conv_id):
+    if request.method == "OPTIONS":
+        return "", 200
+    auth_uid, _, _ = _resolve_auth_user()
+    if not auth_uid:
+        return jsonify({"status": "error", "message": "Inloggning krävs."}), 401
+    if not supabase:
+        return jsonify({"status": "error", "message": "Databasanslutning saknas."}), 500
+    try:
+        res = (
+            supabase.table("messages")
+            .select("id, sender, content, created_at")
+            .eq("conversation_id", str(conv_id).strip())
+            .eq("user_id", auth_uid)
+            .order("created_at", desc=False)
+            .execute()
+        )
+        rows = sorted(
+            res.data or [],
+            key=lambda m: (
+                m.get("created_at") or "",
+                0 if m.get("sender") == "user" else 1,
+                str(m.get("id") or ""),
+            ),
+        )
+        return jsonify({"status": "success", "messages": rows}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route("/api/export/pdf", methods=["POST", "OPTIONS"])
 def export_session_pdf():
     if request.method == "OPTIONS":
@@ -644,7 +693,7 @@ def export_session_pdf():
             session_label = str(db_title).strip()
         msg_res = (
             supabase.table("messages")
-            .select("role,content")
+            .select("sender,content")
             .eq("conversation_id", conv_id)
             .eq("user_id", auth_uid)
             .order("id", desc=False)
@@ -657,7 +706,7 @@ def export_session_pdf():
 
     sanitized_messages = [
         {
-            "role": "assistant" if m.get("role") == "assistant" else "user",
+            "role": "assistant" if (m.get("sender") or m.get("role")) in ("falk", "assistant") else "user",
             "content": _html.escape(str(m.get("content", ""))),
         }
         for m in raw_messages
@@ -677,7 +726,8 @@ def export_session_pdf():
 # INSIKTER, MÅL, PÅMINNELSER, KOMPASSKALIBRERING & FEEDBACK
 # ---------------------------------------------------------------------------
 @app.route("/api/insights", methods=["GET", "POST", "DELETE", "OPTIONS"])
-def handle_insights():
+@app.route("/api/insights/<item_id>", methods=["DELETE", "OPTIONS"])
+def handle_insights(item_id=None):
     if request.method == "OPTIONS":
         return "", 200
 
@@ -700,27 +750,52 @@ def handle_insights():
     try:
         if request.method == "POST":
             data = request.get_json(silent=True) or {}
-            text = str(data.get("content") or data.get("text", "")).strip()
-            insight_type = str(data.get("type", "insikt")).strip()
-            source_context = str(data.get("source_context", "")).strip()
+            text = str(data.get("content") or data.get("text") or data.get("title", "")).strip()
+            raw_type = str(data.get("type") or "insight").strip().lower()
+            type_map = {"insikt": "insight", "reflektion": "reflection", "mönster": "pattern", "milstolpe": "milestone"}
+            insight_type = type_map.get(raw_type, raw_type or "insight")
+            source_context = str(data.get("source_context") or "").strip()
+            session_id = str(data.get("session_id") or "").strip()
             if not text:
                 return jsonify({"status": "error", "message": "Insiktstext saknas."}), 400
+
+            recent = (
+                supabase.table("user_insights")
+                .select("*")
+                .eq("user_id", auth_uid)
+                .eq("content", text)
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            if recent.data:
+                try:
+                    created_dt = datetime.fromisoformat(recent.data[0]["created_at"].replace("Z", "+00:00"))
+                    if (datetime.now(timezone.utc) - created_dt).total_seconds() < 5:
+                        return jsonify({"status": "success", "insight": recent.data[0]}), 200
+                except Exception:
+                    pass
 
             payload = {"user_id": auth_uid, "content": text, "type": insight_type}
             if source_context:
                 payload["source_context"] = source_context
+            if session_id:
+                payload["session_id"] = session_id
             try:
                 res = supabase.table("user_insights").insert(payload).execute()
                 return jsonify({"status": "success", "insight": res.data[0] if res.data else payload}), 201
             except Exception as e:
-                logging.error(f"Fel vid sparande av insikt för {auth_uid}: {e}")
-                return jsonify({"status": "error", "message": f"Kunde inte spara insikt: {str(e)}"}), 500
+                logging.warning(f"Första insert i user_insights misslyckades ({e}), testar fallback type='insight'")
+                payload["type"] = "insight"
+                payload.pop("session_id", None)
+                res = supabase.table("user_insights").insert(payload).execute()
+                return jsonify({"status": "success", "insight": res.data[0] if res.data else payload}), 201
     except Exception as e:
         print(f"[ERROR] /api/insights insert misslyckades: {e}", flush=True)
-        return jsonify({"error": f"Kunde inte spara insikt: {str(e)}"}), 500
+        return jsonify({"status": "error", "message": f"Kunde inte spara insikt: {str(e)}"}), 500
 
     if request.method == "DELETE":
-        insight_id = request.args.get("id") or (request.get_json(silent=True) or {}).get("id")
+        insight_id = item_id or request.args.get("id") or (request.get_json(silent=True) or {}).get("id")
         if not insight_id:
             return jsonify({"status": "error", "message": "id saknas."}), 400
         supabase.table("user_insights").delete().eq("id", insight_id).eq("user_id", auth_uid).execute()
@@ -746,18 +821,39 @@ def handle_goals():
             .order("created_at", desc=True)
             .execute()
         )
-        return jsonify({"status": "success", "goals": res.data or []}), 200
+        clean_goals = []
+        for g in (res.data or []):
+            raw_prog = g.get("progress")
+            try:
+                prog = max(0, min(100, int(raw_prog))) if raw_prog is not None else 0
+            except (ValueError, TypeError):
+                prog = 0
+            title_val = str(g.get("title") or g.get("content") or "Namnlöst mål").strip()
+            status_val = g.get("status") or ("completed" if prog >= 100 else "active")
+            clean_goals.append({
+                **g,
+                "title": title_val,
+                "area": str(g.get("area") or "Personlig utveckling").strip(),
+                "progress": prog,
+                "status": status_val,
+            })
+        return jsonify({"status": "success", "goals": clean_goals}), 200
 
     if request.method == "POST":
         data = request.get_json(silent=True) or {}
-        title = str(data.get("title", "Nytt mål")).strip()
-        area = str(data.get("area", "Personlig utveckling")).strip()
-        progress = max(0, min(100, int(data.get("progress", 0))))
+        title = str(data.get("title") or "Nytt mål").strip()
+        area = str(data.get("area") or "Personlig utveckling").strip()
+        try:
+            progress = max(0, min(100, int(data.get("progress", 0))))
+        except (ValueError, TypeError):
+            progress = 0
+        status = str(data.get("status") or ("completed" if progress >= 100 else "active")).strip()
         res = supabase.table("user_goals").insert({
             "user_id": auth_uid,
             "title": title,
             "area": area,
             "progress": progress,
+            "status": status,
         }).execute()
         return jsonify({"status": "success", "goal": res.data[0] if res.data else {}}), 201
 
@@ -783,7 +879,8 @@ def handle_goals():
 
 
 @app.route("/api/reminders", methods=["GET", "POST", "DELETE", "OPTIONS"])
-def handle_reminders():
+@app.route("/api/reminders/<item_id>", methods=["DELETE", "OPTIONS"])
+def handle_reminders(item_id=None):
     if request.method == "OPTIONS":
         return "", 200
 
@@ -804,21 +901,50 @@ def handle_reminders():
         return jsonify({"status": "success", "reminders": res.data or []}), 200
 
     if request.method == "POST":
-        data = request.get_json(silent=True) or {}
-        content = str(data.get("content", "")).strip()
-        freq = str(data.get("frequency", "daily")).strip()
-        remind_at = data.get("remind_at")
-        if not content:
-            return jsonify({"status": "error", "message": "Påminnelsetext saknas."}), 400
+        try:
+            data = request.get_json(silent=True) or {}
+            content = str(data.get("content") or data.get("text") or data.get("title", "")).strip()
+            freq = str(data.get("frequency") or "daily").strip() or "daily"
+            raw_remind = data.get("remind_at") or data.get("reminder_at")
+            remind_at = str(raw_remind).strip() if raw_remind not in (None, "", "null", "None") else None
+            if not content:
+                return jsonify({"status": "error", "message": "Påminnelsetext saknas."}), 400
 
-        payload: Dict[str, Any] = {"user_id": auth_uid, "content": content, "frequency": freq}
-        if remind_at:
-            payload["remind_at"] = remind_at
-        res = supabase.table("user_reminders").insert(payload).execute()
-        return jsonify({"status": "success", "reminder": res.data[0] if res.data else payload}), 201
+            recent = (
+                supabase.table("user_reminders")
+                .select("*")
+                .eq("user_id", auth_uid)
+                .eq("content", content)
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            if recent.data:
+                try:
+                    created_dt = datetime.fromisoformat(recent.data[0]["created_at"].replace("Z", "+00:00"))
+                    if (datetime.now(timezone.utc) - created_dt).total_seconds() < 5:
+                        return jsonify({"status": "success", "reminder": recent.data[0]}), 200
+                except Exception:
+                    pass
+
+            payload: Dict[str, Any] = {"user_id": auth_uid, "content": content, "frequency": freq}
+            if remind_at:
+                payload["remind_at"] = remind_at
+                payload["reminder_at"] = remind_at
+            try:
+                res = supabase.table("user_reminders").insert(payload).execute()
+                return jsonify({"status": "success", "reminder": res.data[0] if res.data else payload}), 201
+            except Exception as e:
+                logging.warning(f"Första insert i user_reminders misslyckades ({e}), testar minimal payload")
+                minimal_payload: Dict[str, Any] = {"user_id": auth_uid, "content": content, "frequency": freq}
+                res = supabase.table("user_reminders").insert(minimal_payload).execute()
+                return jsonify({"status": "success", "reminder": res.data[0] if res.data else minimal_payload}), 201
+        except Exception as e:
+            print(f"[ERROR] /api/reminders insert misslyckades: {e}", flush=True)
+            return jsonify({"status": "error", "message": f"Kunde inte spara påminnelse: {str(e)}"}), 500
 
     if request.method == "DELETE":
-        rem_id = request.args.get("id") or (request.get_json(silent=True) or {}).get("id")
+        rem_id = item_id or request.args.get("id") or (request.get_json(silent=True) or {}).get("id")
         if not rem_id:
             return jsonify({"status": "error", "message": "id saknas."}), 400
         supabase.table("user_reminders").delete().eq("id", rem_id).eq("user_id", auth_uid).execute()
@@ -831,23 +957,46 @@ def handle_calibration():
         return "", 200
 
     auth_uid, _, is_premium = _resolve_auth_user()
+    def _sanitize_scores(raw_scores):
+        if not isinstance(raw_scores, dict):
+            return {}
+        cleaned = {}
+        for k, v in raw_scores.items():
+            try:
+                num = float(v)
+                if num == num:  # ej NaN
+                    cleaned[str(k)] = max(0, min(100, round(num)))
+            except (ValueError, TypeError):
+                continue
+        return cleaned
+
     if request.method == "GET":
         if not auth_uid or not supabase:
             return jsonify({"status": "success", "calibrations": []}), 200
         if not is_premium:
             return jsonify({"status": "error", "code": "PREMIUM_REQUIRED", "message": "Min utveckling kräver FALK Premium."}), 403
-        res = (
-            supabase.table("compass_scores")
-            .select("*")
-            .eq("user_id", auth_uid)
-            .order("created_at", desc=True)
-            .limit(30)
-            .execute()
-        )
-        return jsonify({"status": "success", "calibrations": res.data or []}), 200
+        rows = []
+        for tbl in ("compass_scores", "compass_calibrations"):
+            try:
+                r = (
+                    supabase.table(tbl)
+                    .select("*")
+                    .eq("user_id", auth_uid)
+                    .order("created_at", desc=True)
+                    .limit(30)
+                    .execute()
+                )
+                for item in (r.data or []):
+                    clean_s = _sanitize_scores(item.get("scores"))
+                    if clean_s:
+                        rows.append({**item, "scores": clean_s})
+            except Exception as e:
+                logging.warning(f"Kunde inte läsa {tbl} för {auth_uid}: {e}")
+        rows.sort(key=lambda x: str(x.get("created_at") or ""), reverse=True)
+        return jsonify({"status": "success", "calibrations": rows[:30]}), 200
 
     data = request.get_json(silent=True) or {}
-    scores = data.get("scores", {})
+    scores = _sanitize_scores(data.get("scores", {}))
     if auth_uid and supabase:
         try:
             res = supabase.table("compass_scores").insert({
