@@ -1071,6 +1071,7 @@ def export_user_data():
         "goals": [],
         "reminders": [],
         "promo_redemptions": [],
+        "organization_members": [],
     }
     try:
         prof = supabase.table("user_profiles").select("*").eq("id", auth_uid).execute()
@@ -1086,6 +1087,7 @@ def export_user_data():
         goals = supabase.table("user_goals").select("*").eq("user_id", auth_uid).execute()
         rems = supabase.table("user_reminders").select("*").eq("user_id", auth_uid).execute()
         promos = supabase.table("promo_redemptions").select("*").eq("user_id", auth_uid).execute()
+        org_members = supabase.table("organization_members").select("*").eq("user_id", auth_uid).execute()
 
         export_payload["profile"] = prof.data[0] if prof.data else {}
         export_payload["compass_scores"] = comp.data or []
@@ -1098,6 +1100,7 @@ def export_user_data():
         export_payload["goals"] = goals.data or []
         export_payload["reminders"] = rems.data or []
         export_payload["promo_redemptions"] = promos.data or []
+        export_payload["organization_members"] = org_members.data or []
     except Exception as e:
         logging.error(f"GDPR-exportfel för {auth_uid}: {e}")
         return jsonify({"status": "error", "message": f"Exportfel: {e}"}), 500
