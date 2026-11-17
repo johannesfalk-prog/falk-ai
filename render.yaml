@@ -2,7 +2,7 @@ services:
   - type: web
     name: falk-backend
     env: docker
-    plan: free
+    plan: starter
     region: frankfurt
     dockerfilePath: ./Dockerfile
     envVars:
