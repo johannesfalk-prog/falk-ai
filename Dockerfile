@@ -19,4 +19,4 @@ EXPOSE 5001
 ENV PORT=5001
 ENV PYTHONUNBUFFERED=1
 
-CMD ["python", "app.py"]
+CMD ["sh", "-c", "exec gunicorn --bind 0.0.0.0:${PORT:-5001} --workers 2 --threads 2 --timeout 120 app:app"]
