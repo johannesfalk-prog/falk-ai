@@ -126,6 +126,14 @@ def _resolve_auth_user() -> Tuple[Optional[str], Optional[str], bool]:
     except Exception as pe:
         logging.warning(f"Kunde inte läsa user_profiles för {uid}: {pe}")
 
+    if not is_premium:
+        try:
+            b2b_rpc = supabase.rpc("user_has_active_b2b_seat", {"p_user_id": uid}).execute()
+            if b2b_rpc.data is True or (isinstance(b2b_rpc.data, list) and len(b2b_rpc.data) > 0 and b2b_rpc.data[0] is True):
+                is_premium = True
+        except Exception as b2b_err:
+            logging.warning(f"Kunde inte kontrollera B2B-säte för {uid}: {b2b_err}")
+
     return uid, email, is_premium
 
 
@@ -1165,6 +1173,10 @@ def delete_user_account():
         ):
             supabase.table(table_name).delete().eq("user_id", auth_uid).execute()
 
+        supabase.table("organization_members").delete().eq("user_id", auth_uid).execute()
+        supabase.table("organization_invites").update({"created_by": None}).eq("created_by", auth_uid).execute()
+        supabase.table("organization_invites").update({"redeemed_by": None}).eq("redeemed_by", auth_uid).execute()
+
         supabase.table("user_profiles").delete().eq("id", auth_uid).execute()
         supabase.table("user_profiles").delete().eq("user_id", auth_uid).execute()
 
@@ -1578,6 +1590,580 @@ def redeem_promo_code_route():
             "status": "error",
             "message": "Kunde inte verifiera rabattkoden just nu. Försök igen.",
         }), 500
+
+
+# ---------------------------------------------------------------------------
+# B2B MULTI-TENANCY (HR / FÖRSÄKRING — STRIKT K-ANONYMITET >= 5)
+# ---------------------------------------------------------------------------
+_B2B_JOIN_ATTEMPTS: dict[str, list[float]] = {}
+_B2B_ADMIN_ROLES = ("hr_admin", "insurer_admin", "org_admin", "admin")
+_B2B_VALID_ROLES = ("member", "hr_admin", "insurer_admin")
+
+
+def _get_active_b2b_admin_membership(auth_uid: str, requested_org_id: Optional[str] = None) -> Tuple[Optional[dict], Optional[dict]]:
+    if not supabase or not auth_uid:
+        return None, None
+    try:
+        query = (
+            supabase.table("organization_members")
+            .select("id,org_id,user_id,role,department,status,joined_at")
+            .eq("user_id", auth_uid)
+            .eq("status", "active")
+            .in_("role", list(_B2B_ADMIN_ROLES))
+        )
+        if requested_org_id:
+            query = query.eq("org_id", requested_org_id)
+        mem_res = query.limit(10).execute()
+        memberships = mem_res.data or []
+        for mem in memberships:
+            oid = mem.get("org_id")
+            if not oid:
+                continue
+            org_res = (
+                supabase.table("organizations")
+                .select("id,name,org_type,seat_limit,status,allowed_domains")
+                .eq("id", oid)
+                .eq("status", "active")
+                .limit(1)
+                .execute()
+            )
+            if org_res.data:
+                return mem, org_res.data[0]
+    except Exception as e:
+        logging.warning(f"B2B admin-kontroll misslyckades för {auth_uid}: {e}")
+    return None, None
+
+
+@app.route("/api/b2b/join", methods=["POST", "OPTIONS"])
+def b2b_join_organization():
+    if request.method == "OPTIONS":
+        return "", 200
+
+    auth_uid, auth_email, _ = _resolve_auth_user()
+    if not auth_uid:
+        return jsonify({
+            "status": "error",
+            "code": "AUTH_REQUIRED",
+            "message": "Du måste vara inloggad för att ansluta till en organisation.",
+        }), 401
+
+    if not _verify_adult_and_terms(auth_uid):
+        return jsonify({
+            "status": "error",
+            "code": "AGE_AND_TERMS_REQUIRED",
+            "message": "Bekräftelse av 18+ och godkända villkor krävs före aktivering av organisationslicens.",
+        }), 403
+
+    if not supabase:
+        return jsonify({"status": "error", "message": "Databasanslutning saknas."}), 500
+
+    import time as _time
+    from datetime import datetime, timezone
+
+    now_ts = _time.time()
+    recent = [ts for ts in _B2B_JOIN_ATTEMPTS.get(auth_uid, []) if now_ts - ts < 600]
+    if len(recent) >= 10:
+        _B2B_JOIN_ATTEMPTS[auth_uid] = recent
+        return jsonify({
+            "status": "error",
+            "code": "RATE_LIMITED",
+            "message": "För många försök. Vänta en stund och försök igen.",
+        }), 429
+    recent.append(now_ts)
+    _B2B_JOIN_ATTEMPTS[auth_uid] = recent
+
+    data = request.get_json(silent=True) or {}
+    raw_code = str(data.get("invite_code") or data.get("code") or "").strip()
+    requested_org_id = str(data.get("org_id") or "").strip() or None
+
+    now_dt = datetime.now(timezone.utc)
+    now_iso = now_dt.isoformat()
+
+    try:
+        invite_row = None
+        org_row = None
+        target_role = "member"
+        target_department = None
+
+        if raw_code:
+            if len(raw_code) > 64 or "%" in raw_code or "_" in raw_code:
+                return jsonify({
+                    "status": "error",
+                    "code": "INVALID_INVITE_CODE",
+                    "message": "Ogiltig inbjudningskod.",
+                }), 400
+
+            inv_res = (
+                supabase.table("organization_invites")
+                .select("id,org_id,invite_code,email,role,department,max_uses,used_count,is_active,expires_at")
+                .eq("invite_code", raw_code)
+                .limit(1)
+                .execute()
+            )
+            if not inv_res.data and raw_code != raw_code.upper():
+                inv_res = (
+                    supabase.table("organization_invites")
+                    .select("id,org_id,invite_code,email,role,department,max_uses,used_count,is_active,expires_at")
+                    .eq("invite_code", raw_code.upper())
+                    .limit(1)
+                    .execute()
+                )
+            if not inv_res.data:
+                return jsonify({
+                    "status": "error",
+                    "code": "INVALID_INVITE_CODE",
+                    "message": "Inbjudningskoden hittades inte.",
+                }), 404
+
+            invite_row = inv_res.data[0]
+            if not invite_row.get("is_active"):
+                return jsonify({
+                    "status": "error",
+                    "code": "INVITE_INACTIVE",
+                    "message": "Inbjudningskoden är inte längre aktiv.",
+                }), 400
+
+            expires_at_raw = invite_row.get("expires_at")
+            if expires_at_raw:
+                exp_dt = datetime.fromisoformat(str(expires_at_raw).replace("Z", "+00:00"))
+                if exp_dt <= now_dt:
+                    return jsonify({
+                        "status": "error",
+                        "code": "INVITE_EXPIRED",
+                        "message": "Inbjudningskoden har gått ut.",
+                    }), 400
+
+            max_uses = int(invite_row.get("max_uses") or 0)
+            used_count = int(invite_row.get("used_count") or 0)
+            if max_uses > 0 and used_count >= max_uses:
+                return jsonify({
+                    "status": "error",
+                    "code": "INVITE_EXHAUSTED",
+                    "message": "Inbjudningskoden har redan förbrukats.",
+                }), 409
+
+            locked_email = (invite_row.get("email") or "").strip().lower()
+            if locked_email and (not auth_email or auth_email.strip().lower() != locked_email):
+                return jsonify({
+                    "status": "error",
+                    "code": "INVITE_EMAIL_MISMATCH",
+                    "message": "Den här inbjudningskoden är knuten till en annan e-postadress.",
+                }), 403
+
+            org_res = (
+                supabase.table("organizations")
+                .select("id,name,org_type,seat_limit,status,allowed_domains")
+                .eq("id", invite_row["org_id"])
+                .limit(1)
+                .execute()
+            )
+            if not org_res.data or org_res.data[0].get("status") != "active":
+                return jsonify({
+                    "status": "error",
+                    "code": "ORG_INACTIVE",
+                    "message": "Organisationen är inte aktiv.",
+                }), 403
+
+            org_row = org_res.data[0]
+            candidate_role = str(invite_row.get("role") or "member").strip()
+            target_role = candidate_role if candidate_role in _B2B_VALID_ROLES else "member"
+            target_department = (invite_row.get("department") or "").strip() or None
+
+        else:
+            if not auth_email or "@" not in auth_email:
+                return jsonify({
+                    "status": "error",
+                    "code": "INVITE_CODE_REQUIRED",
+                    "message": "Ange en inbjudningskod från din arbetsgivare eller försäkringsgivare.",
+                }), 400
+
+            email_domain = auth_email.split("@", 1)[1].strip().lower()
+            dom_query = (
+                supabase.table("organizations")
+                .select("id,name,org_type,seat_limit,status,allowed_domains")
+                .eq("status", "active")
+                .contains("allowed_domains", [email_domain])
+            )
+            if requested_org_id:
+                dom_query = dom_query.eq("id", requested_org_id)
+            dom_res = dom_query.limit(1).execute()
+            if not dom_res.data:
+                return jsonify({
+                    "status": "error",
+                    "code": "DOMAIN_NOT_ENROLLED",
+                    "message": "Din e-postdomän är inte kopplad till någon aktiv organisation. Ange en giltig inbjudningskod.",
+                }), 404
+
+            org_row = dom_res.data[0]
+            target_role = "member"
+            target_department = str(data.get("department") or "").strip() or None
+
+        org_id = org_row["id"]
+
+        existing_res = (
+            supabase.table("organization_members")
+            .select("id,role,department,status,joined_at")
+            .eq("org_id", org_id)
+            .eq("user_id", auth_uid)
+            .limit(1)
+            .execute()
+        )
+        existing_member = existing_res.data[0] if existing_res.data else None
+
+        if existing_member and existing_member.get("status") == "active":
+            return jsonify({
+                "status": "success",
+                "already_member": True,
+                "is_premium": True,
+                "organization": {
+                    "id": org_id,
+                    "name": org_row.get("name"),
+                    "org_type": org_row.get("org_type"),
+                },
+                "membership": {
+                    "id": existing_member.get("id"),
+                    "role": existing_member.get("role"),
+                    "department": existing_member.get("department"),
+                    "status": "active",
+                },
+            }), 200
+
+        active_seats_res = (
+            supabase.table("organization_members")
+            .select("id", count="exact")
+            .eq("org_id", org_id)
+            .eq("status", "active")
+            .execute()
+        )
+        active_seats = active_seats_res.count if active_seats_res.count is not None else len(active_seats_res.data or [])
+        seat_limit = int(org_row.get("seat_limit") or 0)
+        if seat_limit > 0 and active_seats >= seat_limit:
+            return jsonify({
+                "status": "error",
+                "code": "SEAT_LIMIT_REACHED",
+                "message": "Organisationens licenstak är uppnått. Kontakta er administratör.",
+            }), 409
+
+        if existing_member:
+            upd_res = (
+                supabase.table("organization_members")
+                .update({
+                    "role": target_role,
+                    "department": target_department,
+                    "status": "active",
+                    "joined_at": now_iso,
+                    "revoked_at": None,
+                })
+                .eq("id", existing_member["id"])
+                .execute()
+            )
+            member_row = (upd_res.data or [existing_member])[0]
+        else:
+            ins_res = (
+                supabase.table("organization_members")
+                .insert({
+                    "org_id": org_id,
+                    "user_id": auth_uid,
+                    "role": target_role,
+                    "department": target_department,
+                    "status": "active",
+                    "joined_at": now_iso,
+                })
+                .execute()
+            )
+            member_row = (ins_res.data or [{}])[0]
+
+        if invite_row:
+            new_used = int(invite_row.get("used_count") or 0) + 1
+            max_u = int(invite_row.get("max_uses") or 0)
+            still_active = False if (max_u > 0 and new_used >= max_u) else True
+            supabase.table("organization_invites").update({
+                "used_count": new_used,
+                "redeemed_by": auth_uid,
+                "redeemed_at": now_iso,
+                "is_active": still_active,
+            }).eq("id", invite_row["id"]).execute()
+
+        return jsonify({
+            "status": "success",
+            "already_member": False,
+            "is_premium": True,
+            "message": f"Välkommen! Ditt organisationssäte hos {org_row.get('name')} är nu aktivt.",
+            "organization": {
+                "id": org_id,
+                "name": org_row.get("name"),
+                "org_type": org_row.get("org_type"),
+            },
+            "membership": {
+                "id": member_row.get("id"),
+                "role": member_row.get("role", target_role),
+                "department": member_row.get("department", target_department),
+                "status": "active",
+            },
+        }), 200
+    except Exception as e:
+        logging.error(f"B2B join-fel för {auth_uid}: {e}")
+        return jsonify({"status": "error", "message": "Kunde inte aktivera organisationssätet just nu."}), 500
+
+
+@app.route("/api/b2b/org/analytics", methods=["GET", "OPTIONS"])
+def b2b_org_analytics():
+    if request.method == "OPTIONS":
+        return "", 200
+
+    auth_uid, _, _ = _resolve_auth_user()
+    if not auth_uid:
+        return jsonify({"status": "error", "code": "AUTH_REQUIRED", "message": "Inloggning krävs."}), 401
+
+    if not _verify_adult_and_terms(auth_uid):
+        return jsonify({
+            "status": "error",
+            "code": "AGE_AND_TERMS_REQUIRED",
+            "message": "Bekräftelse av 18+ och godkända villkor krävs.",
+        }), 403
+
+    if not supabase:
+        return jsonify({"status": "error", "message": "Databasanslutning saknas."}), 500
+
+    requested_org_id = request.args.get("org_id", "").strip() or None
+    department = request.args.get("department", "").strip() or None
+
+    admin_mem, org_row = _get_active_b2b_admin_membership(auth_uid, requested_org_id)
+    if not admin_mem or not org_row:
+        return jsonify({
+            "status": "error",
+            "code": "ORG_ADMIN_REQUIRED",
+            "message": "Behörighet som HR- eller organisationsadministratör krävs.",
+        }), 403
+
+    org_id = org_row["id"]
+    try:
+        rpc_res = supabase.rpc(
+            "get_b2b_org_analytics",
+            {"p_org_id": org_id, "p_department": department},
+        ).execute()
+        payload = rpc_res.data
+        if isinstance(payload, list):
+            payload = payload[0] if payload else {}
+        if not isinstance(payload, dict):
+            payload = {}
+
+        return jsonify({
+            "status": "success",
+            "organization": {
+                "id": org_id,
+                "name": org_row.get("name"),
+                "org_type": org_row.get("org_type"),
+                "seat_limit": org_row.get("seat_limit"),
+            },
+            "department": department,
+            "analytics": payload,
+        }), 200
+    except Exception as e:
+        logging.error(f"B2B analytics-fel för org {org_id}: {e}")
+        return jsonify({"status": "error", "message": "Kunde inte hämta anonymiserad organisationsanalys."}), 500
+
+
+@app.route("/api/b2b/org/members", methods=["GET", "POST", "DELETE", "OPTIONS"])
+def b2b_org_members():
+    if request.method == "OPTIONS":
+        return "", 200
+
+    auth_uid, _, _ = _resolve_auth_user()
+    if not auth_uid:
+        return jsonify({"status": "error", "code": "AUTH_REQUIRED", "message": "Inloggning krävs."}), 401
+
+    if not _verify_adult_and_terms(auth_uid):
+        return jsonify({
+            "status": "error",
+            "code": "AGE_AND_TERMS_REQUIRED",
+            "message": "Bekräftelse av 18+ och godkända villkor krävs.",
+        }), 403
+
+    if not supabase:
+        return jsonify({"status": "error", "message": "Databasanslutning saknas."}), 500
+
+    data = request.get_json(silent=True) or {}
+    requested_org_id = (
+        request.args.get("org_id", "").strip()
+        or str(data.get("org_id") or "").strip()
+        or None
+    )
+
+    admin_mem, org_row = _get_active_b2b_admin_membership(auth_uid, requested_org_id)
+    if not admin_mem or not org_row:
+        return jsonify({
+            "status": "error",
+            "code": "ORG_ADMIN_REQUIRED",
+            "message": "Behörighet som HR- eller organisationsadministratör krävs.",
+        }), 403
+
+    org_id = org_row["id"]
+    seat_limit = int(org_row.get("seat_limit") or 0)
+
+    try:
+        if request.method == "GET":
+            members_res = (
+                supabase.table("organization_members")
+                .select("id,user_id,role,department,status,joined_at,revoked_at")
+                .eq("org_id", org_id)
+                .order("joined_at", desc=True)
+                .execute()
+            )
+            raw_members = members_res.data or []
+            active_count = sum(1 for m in raw_members if m.get("status") == "active")
+
+            sanitized_members = []
+            for m in raw_members:
+                uid_m = m.get("user_id")
+                member_email = None
+                if SUPABASE_SERVICE_ROLE_KEY and uid_m:
+                    try:
+                        u_resp = supabase.auth.admin.get_user_by_id(uid_m)
+                        u_obj = getattr(u_resp, "user", None)
+                        member_email = getattr(u_obj, "email", None)
+                    except Exception:
+                        member_email = None
+                sanitized_members.append({
+                    "id": m.get("id"),
+                    "user_id": uid_m,
+                    "email": member_email,
+                    "role": m.get("role"),
+                    "department": m.get("department"),
+                    "status": m.get("status"),
+                    "joined_at": m.get("joined_at"),
+                    "revoked_at": m.get("revoked_at"),
+                })
+
+            invites_res = (
+                supabase.table("organization_invites")
+                .select("id,invite_code,email,role,department,max_uses,used_count,is_active,expires_at,created_at")
+                .eq("org_id", org_id)
+                .order("created_at", desc=True)
+                .limit(50)
+                .execute()
+            )
+
+            return jsonify({
+                "status": "success",
+                "organization": {
+                    "id": org_id,
+                    "name": org_row.get("name"),
+                    "org_type": org_row.get("org_type"),
+                    "seat_limit": seat_limit,
+                    "active_seats": active_count,
+                    "available_seats": max(0, seat_limit - active_count) if seat_limit > 0 else None,
+                },
+                "members": sanitized_members,
+                "invites": invites_res.data or [],
+            }), 200
+
+        if request.method == "POST":
+            action = str(data.get("action") or "create_invite").strip().lower()
+
+            if action == "update_member":
+                member_id = str(data.get("member_id") or "").strip()
+                if not member_id:
+                    return jsonify({"status": "error", "message": "member_id krävs."}), 400
+                updates = {}
+                if "department" in data:
+                    updates["department"] = str(data.get("department") or "").strip() or None
+                if "role" in data:
+                    new_role = str(data.get("role") or "").strip()
+                    if new_role not in _B2B_VALID_ROLES:
+                        return jsonify({"status": "error", "message": "Ogiltig organisationsroll."}), 400
+                    updates["role"] = new_role
+                if not updates:
+                    return jsonify({"status": "error", "message": "Inga fält att uppdatera."}), 400
+
+                upd_res = (
+                    supabase.table("organization_members")
+                    .update(updates)
+                    .eq("id", member_id)
+                    .eq("org_id", org_id)
+                    .execute()
+                )
+                return jsonify({
+                    "status": "success",
+                    "member": (upd_res.data or [{}])[0],
+                }), 200
+
+            import secrets
+            from datetime import datetime, timedelta, timezone
+
+            role = str(data.get("role") or "member").strip()
+            if role not in _B2B_VALID_ROLES:
+                return jsonify({"status": "error", "message": "Ogiltig roll för inbjudan."}), 400
+
+            max_uses = int(data.get("max_uses") or 1)
+            if max_uses < 1 or max_uses > 500:
+                return jsonify({"status": "error", "message": "max_uses måste vara mellan 1 och 500."}), 400
+
+            department = str(data.get("department") or "").strip() or None
+            target_email = str(data.get("email") or "").strip().lower() or None
+            expires_days = int(data.get("expires_in_days") or 30)
+            expires_at = (datetime.now(timezone.utc) + timedelta(days=max(1, min(365, expires_days)))).isoformat()
+            invite_code = f"FALK-{secrets.token_hex(4).upper()}"
+
+            inv_insert = (
+                supabase.table("organization_invites")
+                .insert({
+                    "org_id": org_id,
+                    "invite_code": invite_code,
+                    "email": target_email,
+                    "role": role,
+                    "department": department,
+                    "max_uses": max_uses,
+                    "used_count": 0,
+                    "is_active": True,
+                    "expires_at": expires_at,
+                    "created_by": auth_uid,
+                })
+                .execute()
+            )
+            return jsonify({
+                "status": "success",
+                "invite": (inv_insert.data or [{}])[0],
+            }), 201
+
+        # DELETE: Återkalla säte
+        from datetime import datetime, timezone
+
+        target_member_id = request.args.get("member_id", "").strip() or str(data.get("member_id") or "").strip()
+        target_user_id = request.args.get("user_id", "").strip() or str(data.get("user_id") or "").strip()
+        if not target_member_id and not target_user_id:
+            return jsonify({"status": "error", "message": "member_id eller user_id krävs för återkallande."}), 400
+
+        if target_user_id == auth_uid or target_member_id == admin_mem.get("id"):
+            return jsonify({
+                "status": "error",
+                "code": "CANNOT_REVOKE_SELF",
+                "message": "Du kan inte återkalla din egen administratörsbehörighet.",
+            }), 400
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+        rev_query = (
+            supabase.table("organization_members")
+            .update({"status": "revoked", "revoked_at": now_iso})
+            .eq("org_id", org_id)
+        )
+        if target_member_id:
+            rev_query = rev_query.eq("id", target_member_id)
+        else:
+            rev_query = rev_query.eq("user_id", target_user_id)
+
+        rev_res = rev_query.execute()
+        if not rev_res.data:
+            return jsonify({"status": "error", "message": "Medlemmen hittades inte i organisationen."}), 404
+
+        return jsonify({
+            "status": "success",
+            "message": "Organisationssätet har återkallats.",
+            "member": rev_res.data[0],
+        }), 200
+    except Exception as e:
+        logging.error(f"B2B members-fel för org {org_id}: {e}")
+        return jsonify({"status": "error", "message": "Kunde inte hantera organisationsmedlemmar."}), 500
 
 
 if __name__ == "__main__":
