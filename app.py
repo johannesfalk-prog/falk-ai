@@ -1139,10 +1139,11 @@ def delete_user_account():
                 if cust_id and cust_id not in seen_custs:
                     seen_custs.add(cust_id)
                     try:
-                        active_subs = _stripe.Subscription.list(customer=cust_id, status="active")
-                        for s in getattr(active_subs, "data", []) or []:
+                        all_subs = _stripe.Subscription.list(customer=cust_id, status="all")
+                        for s in getattr(all_subs, "data", []) or []:
                             sid = getattr(s, "id", None) or (s.get("id") if isinstance(s, dict) else None)
-                            if sid and sid not in seen_subs:
+                            st = str(getattr(s, "status", None) or (s.get("status") if isinstance(s, dict) else "")).lower()
+                            if sid and sid not in seen_subs and st not in ("canceled", "incomplete_expired"):
                                 seen_subs.add(sid)
                                 cancel_fn(sid)
                     except Exception as cust_err:
@@ -1251,6 +1252,87 @@ def _verify_adult_and_terms(auth_uid: str) -> bool:
     return False
 
 
+def _extract_stripe_id(val: Any) -> Optional[str]:
+    if isinstance(val, dict):
+        val = val.get("id")
+    s = str(val or "").strip()
+    return s or None
+
+
+def _get_user_stripe_ids(uid: str) -> Tuple[Optional[str], Optional[str]]:
+    if not supabase or not uid:
+        return None, None
+    try:
+        res = supabase.table("user_profiles").select("stripe_customer_id,stripe_subscription_id").eq("id", uid).limit(1).execute()
+        if not res.data:
+            res = supabase.table("user_profiles").select("stripe_customer_id,stripe_subscription_id").eq("user_id", uid).limit(1).execute()
+        if res.data:
+            row = res.data[0]
+            cust_id = (row.get("stripe_customer_id") or "").strip() or None
+            sub_id = (row.get("stripe_subscription_id") or "").strip() or None
+            return cust_id, sub_id
+    except Exception as e:
+        logging.warning(f"Kunde inte läsa Stripe-ID:n för {uid}: {e}")
+    return None, None
+
+
+def _resolve_uid_from_stripe(uid: Optional[str], customer_id: Optional[str], subscription_id: Optional[str]) -> Optional[str]:
+    clean_uid = str(uid or "").strip()
+    if clean_uid and clean_uid != "guest":
+        return clean_uid
+    if not supabase:
+        return None
+    if customer_id:
+        res = supabase.table("user_profiles").select("id,user_id").eq("stripe_customer_id", customer_id).limit(1).execute()
+        if res.data:
+            return str(res.data[0].get("user_id") or res.data[0].get("id") or "").strip() or None
+    if subscription_id:
+        res = supabase.table("user_profiles").select("id,user_id").eq("stripe_subscription_id", subscription_id).limit(1).execute()
+        if res.data:
+            return str(res.data[0].get("user_id") or res.data[0].get("id") or "").strip() or None
+    return None
+
+
+def _sync_stripe_profile(
+    uid: Optional[str],
+    customer_id: Optional[str],
+    subscription_id: Optional[str],
+    is_premium: Optional[bool],
+    clear_subscription: bool = False,
+) -> None:
+    if not supabase:
+        return
+    resolved_uid = _resolve_uid_from_stripe(uid, customer_id, subscription_id)
+    if not resolved_uid or resolved_uid == "guest":
+        logging.warning(f"Stripe-synk ignorerad: kunde inte koppla till användare (cust={customer_id}, sub={subscription_id})")
+        return
+
+    updates: Dict[str, Any] = {}
+    if is_premium is not None:
+        updates["is_premium"] = bool(is_premium)
+    if customer_id:
+        updates["stripe_customer_id"] = customer_id
+    if clear_subscription:
+        updates["stripe_subscription_id"] = None
+    elif subscription_id:
+        updates["stripe_subscription_id"] = subscription_id
+
+    if not updates:
+        return
+
+    existing_by_id = supabase.table("user_profiles").select("id").eq("id", resolved_uid).execute()
+    existing_by_uid = supabase.table("user_profiles").select("id").eq("user_id", resolved_uid).execute()
+
+    if existing_by_id.data or existing_by_uid.data:
+        if existing_by_id.data:
+            supabase.table("user_profiles").update(updates).eq("id", resolved_uid).execute()
+        if existing_by_uid.data:
+            supabase.table("user_profiles").update(updates).eq("user_id", resolved_uid).execute()
+    else:
+        insert_payload: Dict[str, Any] = {"id": resolved_uid, "user_id": resolved_uid, **updates}
+        supabase.table("user_profiles").insert(insert_payload).execute()
+
+
 @app.route("/api/checkout", methods=["POST", "OPTIONS"])
 def create_stripe_checkout():
     if request.method == "OPTIONS":
@@ -1284,17 +1366,23 @@ def create_stripe_checkout():
     try:
         import stripe
         stripe.api_key = stripe_key
-        session = stripe.checkout.Session.create(
-            mode="subscription",
-            payment_method_types=["card"],
-            customer_email=email if email else None,
-            client_reference_id=auth_uid,
-            line_items=[{"price": price_id, "quantity": 1}],
-            success_url=success_url,
-            cancel_url=cancel_url,
-            metadata={"user_id": auth_uid, "age_verified_18_plus": "true"},
-            subscription_data={"metadata": {"user_id": auth_uid, "age_verified_18_plus": "true"}},
-        )
+        existing_customer_id, _ = _get_user_stripe_ids(auth_uid)
+        checkout_kwargs: Dict[str, Any] = {
+            "mode": "subscription",
+            "payment_method_types": ["card"],
+            "client_reference_id": auth_uid,
+            "line_items": [{"price": price_id, "quantity": 1}],
+            "success_url": success_url,
+            "cancel_url": cancel_url,
+            "metadata": {"user_id": auth_uid, "age_verified_18_plus": "true"},
+            "subscription_data": {"metadata": {"user_id": auth_uid, "age_verified_18_plus": "true"}},
+        }
+        if existing_customer_id:
+            checkout_kwargs["customer"] = existing_customer_id
+        elif email:
+            checkout_kwargs["customer_email"] = email
+
+        session = stripe.checkout.Session.create(**checkout_kwargs)
         return jsonify({"status": "success", "checkout_url": session.url}), 200
     except Exception as e:
         logging.error(f"Stripe checkout-fel: {e}")
@@ -1320,8 +1408,9 @@ def create_stripe_portal():
     try:
         import stripe
         stripe.api_key = stripe_key
-        customer_id = None
-        if auth_email:
+        db_customer_id, _ = _get_user_stripe_ids(auth_uid)
+        customer_id = db_customer_id
+        if not customer_id and auth_email:
             customers = stripe.Customer.list(email=auth_email, limit=1)
             if customers and customers.data:
                 customer_id = customers.data[0].id
@@ -1329,11 +1418,17 @@ def create_stripe_portal():
             try:
                 subs = stripe.Subscription.search(query=f"metadata['user_id']:'{auth_uid}'", limit=1)
                 if subs and subs.data:
-                    customer_id = subs.data[0].customer
+                    customer_id = _extract_stripe_id(subs.data[0].customer)
             except Exception:
                 pass
         if not customer_id:
             return jsonify({"status": "error", "message": "Ingen aktiv Stripe-kund hittades för kontot."}), 404
+
+        if not db_customer_id:
+            try:
+                _sync_stripe_profile(auth_uid, customer_id, None, None)
+            except Exception as sync_err:
+                logging.warning(f"Kunde inte cacha stripe_customer_id vid portalöppning: {sync_err}")
 
         portal = stripe.billing_portal.Session.create(
             customer=customer_id,
@@ -1359,35 +1454,45 @@ def stripe_webhook():
         import stripe
         stripe.api_key = stripe_key
         event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
-        if not event:
-            return jsonify({"status": "ignored"}), 200
+    except Exception as sig_err:
+        logging.error(f"Stripe webhook-signaturfel: {sig_err}")
+        return jsonify({"status": "error", "message": str(sig_err)}), 400
 
+    if not event:
+        return jsonify({"status": "ignored"}), 200
+
+    try:
         event_type = event.get("type", "")
         obj = event.get("data", {}).get("object", {})
 
         if event_type == "checkout.session.completed":
             uid = obj.get("client_reference_id") or (obj.get("metadata") or {}).get("user_id")
-            if supabase and uid and uid != "guest":
-                supabase.table("user_profiles").upsert({"id": uid, "is_premium": True}).execute()
+            cust_id = _extract_stripe_id(obj.get("customer"))
+            sub_id = _extract_stripe_id(obj.get("subscription"))
+            _sync_stripe_profile(uid, cust_id, sub_id, is_premium=True)
 
-        elif event_type == "customer.subscription.updated":
+        elif event_type in ("customer.subscription.created", "customer.subscription.updated"):
             uid = (obj.get("metadata") or {}).get("user_id")
+            cust_id = _extract_stripe_id(obj.get("customer"))
+            sub_id = _extract_stripe_id(obj.get("id"))
             sub_status = str(obj.get("status", "")).lower()
-            if supabase and uid and uid != "guest":
-                if sub_status in ("active", "trialing"):
-                    supabase.table("user_profiles").upsert({"id": uid, "is_premium": True}).execute()
-                elif sub_status in ("canceled", "unpaid", "incomplete_expired"):
-                    supabase.table("user_profiles").upsert({"id": uid, "is_premium": False}).execute()
+            if sub_status in ("active", "trialing"):
+                _sync_stripe_profile(uid, cust_id, sub_id, is_premium=True)
+            elif sub_status in ("canceled", "unpaid", "incomplete_expired"):
+                _sync_stripe_profile(uid, cust_id, sub_id, is_premium=False, clear_subscription=True)
+            else:
+                _sync_stripe_profile(uid, cust_id, sub_id, is_premium=None)
 
         elif event_type == "customer.subscription.deleted":
             uid = (obj.get("metadata") or {}).get("user_id")
-            if supabase and uid and uid != "guest":
-                supabase.table("user_profiles").upsert({"id": uid, "is_premium": False}).execute()
+            cust_id = _extract_stripe_id(obj.get("customer"))
+            sub_id = _extract_stripe_id(obj.get("id"))
+            _sync_stripe_profile(uid, cust_id, sub_id, is_premium=False, clear_subscription=True)
 
         return jsonify({"status": "received"}), 200
     except Exception as e:
-        logging.error(f"Stripe webhook-fel: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 400
+        logging.error(f"Stripe webhook-bearbetningsfel: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 
