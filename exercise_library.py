@@ -123,7 +123,31 @@ FALK_15_EXERCISE_CARDS: List[Dict[str, Any]] = [
     }
 ]
 
-def get_library_cards(category: Optional[str] = None) -> List[Dict[str, Any]]:
+def _get_b2c_library_cards(category: Optional[str] = None) -> List[Dict[str, Any]]:
     if not category or category.lower() == "alla":
         return FALK_15_EXERCISE_CARDS
     return [c for c in FALK_15_EXERCISE_CARDS if c["category"].lower() == category.lower()]
+
+
+from b2b_extensions import get_b2b_exercise_cards
+
+
+def get_b2b_library_cards(category: Optional[str] = None):
+    """Returnerar de 8 B2B-övningskorten, valfritt filtrerade på kategori."""
+    return get_b2b_exercise_cards(category=category)
+
+
+def get_library_cards(category: Optional[str] = None, segment: str = "b2c"):
+    """
+    Bakåtkompatibel hämtning av övningskort för Biblioteket.
+    - segment='b2c' (default): returnerar enbart befintliga B2C-kort.
+    - segment='b2b': returnerar de 8 B2B-korten.
+    - segment='all': returnerar B2C + B2B-kort.
+    """
+    norm_segment = (segment or "b2c").strip().lower()
+    if norm_segment == "b2b":
+        return get_b2b_exercise_cards(category=category)
+    b2c_cards = _get_b2c_library_cards(category=category)
+    if norm_segment == "all":
+        return list(b2c_cards) + get_b2b_exercise_cards(category=category)
+    return b2c_cards

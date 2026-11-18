@@ -15,6 +15,12 @@ from state_machine import FalkStateMachine
 from prompt_builder import build_falk_system_prompt
 from gate_checker import validate_response_against_gates
 from exercise_library import FALK_15_EXERCISE_CARDS, get_library_cards
+from b2b_extensions import (
+    B2B_COMPASSES,
+    get_b2b_compasses,
+    aggregate_b2b_compass_data,
+    recommend_b2b_exercises,
+)
 from dotenv import load_dotenv
 from pdf_exporter import generate_session_pdf_html
 
@@ -490,6 +496,38 @@ def handle_chat():
     if not is_guest and auth_uid:
         memories, compass_summary = _fetch_user_continuity(auth_uid)
 
+    sanitized_b2b_context = None
+    raw_b2b = data.get("b2b_context")
+    if not is_guest and auth_uid and isinstance(raw_b2b, dict):
+        b2b_level = str(raw_b2b.get("level") or "individ").strip().lower()
+        if b2b_level not in ("individ", "ledning", "foretag"):
+            b2b_level = "individ"
+        sanitized_b2b_context = {
+            "level": b2b_level,
+            "org_name": str(raw_b2b.get("org_name") or "").strip()[:120],
+            "topic_hint": str(raw_b2b.get("topic_hint") or "").strip()[:120],
+        }
+        if b2b_level == "individ":
+            sanitized_b2b_context["role"] = str(raw_b2b.get("role") or "").strip()[:80]
+            if isinstance(raw_b2b.get("compass_scores"), dict):
+                sanitized_b2b_context["compass_scores"] = {
+                    str(k): float(v)
+                    for k, v in raw_b2b["compass_scores"].items()
+                    if isinstance(v, (int, float))
+                }
+        else:
+            if isinstance(raw_b2b.get("records"), list):
+                agg = aggregate_b2b_compass_data(raw_b2b["records"], k_min=None)
+                sanitized_b2b_context["compass_averages"] = agg.get("compass_averages", {})
+                sanitized_b2b_context["respondent_count"] = agg.get("respondent_count", 0)
+            elif isinstance(raw_b2b.get("compass_averages"), dict):
+                sanitized_b2b_context["compass_averages"] = {
+                    str(k): float(v)
+                    for k, v in raw_b2b["compass_averages"].items()
+                    if isinstance(v, (int, float))
+                }
+                sanitized_b2b_context["respondent_count"] = int(raw_b2b.get("respondent_count") or 0)
+
     system_prompt = build_falk_system_prompt(
         user_message=message,
         current_stage=next_stage,
@@ -498,6 +536,7 @@ def handle_chat():
         user_context_memories=memories,
         compass_summary=compass_summary,
         response_variant=response_variant,
+        b2b_context=sanitized_b2b_context,
     )
 
     convo_messages = clean_history + [{"role": "user", "content": message}]
@@ -650,8 +689,13 @@ def api_get_library_cards():
             "message": "Biblioteket kräver FALK Premium.",
         }), 403
     category = request.args.get("category")
-    cards = get_library_cards(category) if category else FALK_15_EXERCISE_CARDS
-    return jsonify({"status": "success", "count": len(cards), "cards": cards}), 200
+    segment = (request.args.get("segment") or "b2c").strip().lower()
+    if segment in ("b2b", "all"):
+        cards = get_library_cards(category=category, segment=segment)
+    else:
+        segment = "b2c"
+        cards = get_library_cards(category) if category else FALK_15_EXERCISE_CARDS
+    return jsonify({"status": "success", "segment": segment, "count": len(cards), "cards": cards}), 200
 
 
 @app.route("/api/conversations/<conv_id>/messages", methods=["GET", "OPTIONS"])
@@ -991,6 +1035,80 @@ def handle_calibration():
                 continue
         return cleaned
 
+    req_data = request.get_json(silent=True) or {}
+    segment = (request.args.get("segment") or req_data.get("segment") or "b2c").strip().lower()
+
+    if segment == "b2b":
+        valid_b2b_keys = {c["key"] for c in B2B_COMPASSES}
+
+        def _sanitize_b2b_scores(raw_scores):
+            if not isinstance(raw_scores, dict):
+                return {}
+            cleaned = {}
+            for k, v in raw_scores.items():
+                key = str(k).strip()
+                if key not in valid_b2b_keys:
+                    continue
+                try:
+                    num = float(v)
+                    if num == num:
+                        cleaned[key] = round(max(1.0, min(10.0, num)), 2)
+                except (ValueError, TypeError):
+                    continue
+            return cleaned
+
+        if request.method == "GET":
+            b2b_compasses = get_b2b_compasses()
+            if not auth_uid or not supabase:
+                return jsonify({
+                    "status": "success",
+                    "segment": "b2b",
+                    "b2b_compasses": b2b_compasses,
+                    "calibrations": [],
+                }), 200
+            b2b_rows = []
+            try:
+                r = (
+                    supabase.table("compass_scores")
+                    .select("*")
+                    .eq("user_id", auth_uid)
+                    .order("created_at", desc=True)
+                    .limit(30)
+                    .execute()
+                )
+                for item in (r.data or []):
+                    clean_b2b = _sanitize_b2b_scores(item.get("scores"))
+                    if clean_b2b:
+                        b2b_rows.append({**item, "scores": clean_b2b})
+            except Exception as e:
+                logging.warning(f"Kunde inte läsa B2B-kompasser för {auth_uid}: {e}")
+            return jsonify({
+                "status": "success",
+                "segment": "b2b",
+                "b2b_compasses": b2b_compasses,
+                "calibrations": b2b_rows[:30],
+            }), 200
+
+        b2b_scores = _sanitize_b2b_scores(req_data.get("scores", {}))
+        if not b2b_scores:
+            return jsonify({"status": "error", "message": "Inga giltiga B2B-kompassvärden angavs."}), 400
+        if auth_uid and supabase:
+            try:
+                res = supabase.table("compass_scores").insert({
+                    "user_id": auth_uid,
+                    "scores": b2b_scores,
+                }).execute()
+                return jsonify({"status": "success", "segment": "b2b", "data": res.data}), 200
+            except Exception as e:
+                logging.error(f"Kunde inte spara B2B-kompasskalibrering: {e}")
+                return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({
+            "status": "success",
+            "segment": "b2b",
+            "message": "B2B-kalibrering mottagen lokalt.",
+            "data": b2b_scores,
+        }), 200
+
     if request.method == "GET":
         if not auth_uid or not supabase:
             return jsonify({"status": "success", "calibrations": []}), 200
@@ -1016,7 +1134,7 @@ def handle_calibration():
         rows.sort(key=lambda x: str(x.get("created_at") or ""), reverse=True)
         return jsonify({"status": "success", "calibrations": rows[:30]}), 200
 
-    data = request.get_json(silent=True) or {}
+    data = req_data
     scores = _sanitize_scores(data.get("scores", {}))
     if auth_uid and supabase:
         try:

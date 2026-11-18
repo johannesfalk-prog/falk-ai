@@ -166,7 +166,7 @@ def build_falk_system_prompt(
     user_context: Optional[Any] = None,
     safety_instructions: Optional[str] = None,
     recent_assistant_messages: Optional[List[str]] = None,
-) -> str:
+ b2b_context=None) -> str:
     """
     Bygger FALKs 5-lagers systemprompt enligt The Wayjs Prompt Architecture™ (Playbook Kap 14).
     Bakåtkompatibel med samtliga anropssignaturer i app.py, calibration_engine.py och dialogue_router.py.
@@ -247,7 +247,7 @@ def build_falk_system_prompt(
         f"{anti_repeat_note}"
     )
 
-    return (
+    _base_prompt = (
         f"{CORE_IDENTITY_PROMPT.strip()}"
         f"{safety_block}\n\n"
         f"LAGER 2 - AKTUELL SAMTALSFAS:\n{stage_text}\n\n"
@@ -257,3 +257,9 @@ def build_falk_system_prompt(
         f"{continuity_block}"
         f"{quality_layer}"
     ).strip()
+    if b2b_context:
+        from b2b_extensions import build_b2b_prompt_layer
+        _b2b_layer = build_b2b_prompt_layer(b2b_context=b2b_context, k_min=None)
+        if _b2b_layer:
+            return f"{_base_prompt}\n\n{_b2b_layer}"
+    return _base_prompt
