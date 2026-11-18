@@ -1827,9 +1827,33 @@ def b2b_join_organization():
         existing_member = existing_res.data[0] if existing_res.data else None
 
         if existing_member and existing_member.get("status") == "active":
+            role_rank = {
+                "member": 1,
+                "hr_viewer": 2,
+                "hr_admin": 3,
+                "insurer_admin": 3,
+                "org_admin": 4,
+                "admin": 5,
+            }
+            current_role = existing_member.get("role") or "member"
+            effective_role = current_role
+            effective_department = existing_member.get("department")
+            role_upgraded = False
+
+            if invite_code and role_rank.get(target_role, 0) > role_rank.get(current_role, 0):
+                upd_payload = {"role": target_role}
+                if target_department:
+                    upd_payload["department"] = target_department
+                supabase.table("organization_members").update(upd_payload).eq("id", existing_member["id"]).execute()
+                effective_role = target_role
+                if target_department:
+                    effective_department = target_department
+                role_upgraded = True
+
             return jsonify({
                 "status": "success",
-                "already_member": True,
+                "already_member": not role_upgraded,
+                "role_upgraded": role_upgraded,
                 "is_premium": True,
                 "organization": {
                     "id": org_id,
@@ -1838,8 +1862,8 @@ def b2b_join_organization():
                 },
                 "membership": {
                     "id": existing_member.get("id"),
-                    "role": existing_member.get("role"),
-                    "department": existing_member.get("department"),
+                    "role": effective_role,
+                    "department": effective_department,
                     "status": "active",
                 },
             }), 200
