@@ -21,7 +21,20 @@ from pdf_exporter import generate_session_pdf_html
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+CORS(
+    app,
+    resources={
+        r"/api/*": {
+            "origins": [
+                "https://falk-frontend.vercel.app",
+                r"^https://falk-frontend-[a-zA-Z0-9-]+\.vercel\.app$",
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+            ]
+        }
+    },
+    supports_credentials=True,
+)
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
@@ -1600,7 +1613,7 @@ def redeem_promo_code_route():
 # ---------------------------------------------------------------------------
 _B2B_JOIN_ATTEMPTS: dict[str, list[float]] = {}
 _B2B_ADMIN_ROLES = ("hr_admin", "insurer_admin", "org_admin", "admin")
-_B2B_VALID_ROLES = ("member", "hr_admin", "insurer_admin")
+_B2B_VALID_ROLES = ("member", "hr_admin", "insurer_admin", "org_admin", "hr_viewer")
 
 
 def _get_active_b2b_admin_membership(auth_uid: str, requested_org_id: Optional[str] = None) -> Tuple[Optional[dict], Optional[dict]]:
