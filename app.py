@@ -2098,6 +2098,9 @@ def b2b_org_members():
                 "invites": invites_res.data or [],
             }), 200
 
+        caller_role = str(admin_mem.get("role") or "").strip()
+        is_caller_org_admin = caller_role in ("org_admin", "admin")
+
         if request.method == "POST":
             action = str(data.get("action") or "create_invite").strip().lower()
 
@@ -2115,6 +2118,43 @@ def b2b_org_members():
                     updates["role"] = new_role
                 if not updates:
                     return jsonify({"status": "error", "message": "Inga fält att uppdatera."}), 400
+
+                target_res = (
+                    supabase.table("organization_members")
+                    .select("id,user_id,role,department,status")
+                    .eq("id", member_id)
+                    .eq("org_id", org_id)
+                    .limit(1)
+                    .execute()
+                )
+                target_mem = (target_res.data or [None])[0]
+                if not target_mem:
+                    return jsonify({"status": "error", "message": "Medlemmen hittades inte i organisationen."}), 404
+
+                target_role = str(target_mem.get("role") or "").strip()
+                if "role" in updates and (
+                    target_mem.get("id") == admin_mem.get("id")
+                    or target_mem.get("user_id") == auth_uid
+                ):
+                    return jsonify({
+                        "status": "error",
+                        "code": "CANNOT_CHANGE_OWN_ROLE",
+                        "message": "Du kan inte ändra din egen organisationsroll.",
+                    }), 403
+
+                if target_role in ("org_admin", "admin") and not is_caller_org_admin:
+                    return jsonify({
+                        "status": "error",
+                        "code": "HIERARCHY_VIOLATION",
+                        "message": "Endast org_admin kan ändra en organisationsadministratör.",
+                    }), 403
+
+                if updates.get("role") in ("org_admin", "admin") and not is_caller_org_admin:
+                    return jsonify({
+                        "status": "error",
+                        "code": "HIERARCHY_VIOLATION",
+                        "message": "Endast org_admin kan tilldela rollen org_admin.",
+                    }), 403
 
                 upd_res = (
                     supabase.table("organization_members")
@@ -2134,6 +2174,12 @@ def b2b_org_members():
             role = str(data.get("role") or "member").strip()
             if role not in _B2B_VALID_ROLES:
                 return jsonify({"status": "error", "message": "Ogiltig roll för inbjudan."}), 400
+            if role in ("org_admin", "admin") and not is_caller_org_admin:
+                return jsonify({
+                    "status": "error",
+                    "code": "HIERARCHY_VIOLATION",
+                    "message": "Endast org_admin kan skapa inbjudan med rollen org_admin.",
+                }), 403
 
             max_uses = int(data.get("max_uses") or 1)
             if max_uses < 1 or max_uses > 500:
@@ -2174,25 +2220,43 @@ def b2b_org_members():
         if not target_member_id and not target_user_id:
             return jsonify({"status": "error", "message": "member_id eller user_id krävs för återkallande."}), 400
 
-        if target_user_id == auth_uid or target_member_id == admin_mem.get("id"):
+        lookup_query = (
+            supabase.table("organization_members")
+            .select("id,user_id,role,status")
+            .eq("org_id", org_id)
+        )
+        if target_member_id:
+            lookup_query = lookup_query.eq("id", target_member_id)
+        else:
+            lookup_query = lookup_query.eq("user_id", target_user_id)
+
+        lookup_res = lookup_query.limit(1).execute()
+        target_mem = (lookup_res.data or [None])[0]
+        if not target_mem:
+            return jsonify({"status": "error", "message": "Medlemmen hittades inte i organisationen."}), 404
+
+        if target_mem.get("user_id") == auth_uid or target_mem.get("id") == admin_mem.get("id"):
             return jsonify({
                 "status": "error",
                 "code": "CANNOT_REVOKE_SELF",
                 "message": "Du kan inte återkalla din egen administratörsbehörighet.",
             }), 400
 
+        if str(target_mem.get("role") or "").strip() in ("org_admin", "admin") and not is_caller_org_admin:
+            return jsonify({
+                "status": "error",
+                "code": "HIERARCHY_VIOLATION",
+                "message": "Endast org_admin kan återkalla en organisationsadministratör.",
+            }), 403
+
         now_iso = datetime.now(timezone.utc).isoformat()
-        rev_query = (
+        rev_res = (
             supabase.table("organization_members")
             .update({"status": "revoked", "revoked_at": now_iso})
             .eq("org_id", org_id)
+            .eq("id", target_mem["id"])
+            .execute()
         )
-        if target_member_id:
-            rev_query = rev_query.eq("id", target_member_id)
-        else:
-            rev_query = rev_query.eq("user_id", target_user_id)
-
-        rev_res = rev_query.execute()
         if not rev_res.data:
             return jsonify({"status": "error", "message": "Medlemmen hittades inte i organisationen."}), 404
 
