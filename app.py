@@ -2,6 +2,7 @@ import os
 import re
 import time
 import logging
+import threading
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, Tuple, List
 
@@ -23,6 +24,7 @@ from b2b_extensions import (
 )
 from dotenv import load_dotenv
 from pdf_exporter import generate_session_pdf_html
+from vector_memory import retrieve_rag_memories, store_memory_vector
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -319,6 +321,36 @@ def _apply_gate_filter(
     return final_response or reply
 
 
+def _maybe_store_continuity_vector(uid: str, session_id: Optional[str], user_message: str) -> None:
+    """
+    Sparar selektivt långsiktiga utvecklingsmarkörer (värderingar, riktning, mål,
+    mönster, lärdomar) i vektorlagret i bakgrunden för inloggade användare.
+    """
+    if not uid or not user_message or len(user_message.strip()) < 35:
+        return
+    markers = (
+        "värdering", "viktigt för mig", "riktning", "nordstjärna", "mål",
+        "mönster", "lärdom", "insikt", "beslut", "rädd för", "längtar efter",
+        "vill förändra", "gräns", "balans", "syfte", "mening",
+    )
+    lowered = user_message.lower()
+    if not any(m in lowered for m in markers):
+        return
+
+    def _worker():
+        try:
+            store_memory_vector(
+                user_id=uid,
+                session_id=session_id or "general",
+                content=user_message.strip()[:800],
+                memory_layer="LONG_TERM",
+            )
+        except Exception as e:
+            logging.warning(f"Bakgrundslagring i vector_memory misslyckades: {e}")
+
+    threading.Thread(target=_worker, daemon=True).start()
+
+
 def _fetch_user_continuity(uid: str) -> Tuple[List[str], Optional[str]]:
     """
     Hämtar sparade insikter, aktiva mål, påminnelser och senaste kompasskalibrering
@@ -503,6 +535,12 @@ def handle_chat():
     memories, compass_summary = ([], None)
     if not is_guest and auth_uid:
         memories, compass_summary = _fetch_user_continuity(auth_uid)
+        try:
+            rag_block = retrieve_rag_memories(auth_uid, message, limit=3)
+            if rag_block:
+                memories.append(rag_block.strip())
+        except Exception as e:
+            logging.warning(f"Hybrid RAG-hämtning hoppades över: {e}")
 
     sanitized_b2b_context = None
     raw_b2b = data.get("b2b_context")
@@ -602,6 +640,7 @@ def handle_chat():
             supabase.table("messages").insert(msg_rows).execute()
         except Exception as e:
             logging.error(f"Kunde inte spara meddelanden i Supabase: {e}")
+        _maybe_store_continuity_vector(auth_uid, conversation_id, message)
 
     return jsonify({
         "status": "success",
@@ -1246,6 +1285,7 @@ def export_user_data():
         "reminders": [],
         "promo_redemptions": [],
         "organization_members": [],
+        "memory_vectors": [],
     }
     try:
         prof = supabase.table("user_profiles").select("*").eq("id", auth_uid).execute()
@@ -1275,6 +1315,11 @@ def export_user_data():
         export_payload["reminders"] = rems.data or []
         export_payload["promo_redemptions"] = promos.data or []
         export_payload["organization_members"] = org_members.data or []
+        try:
+            mvecs = supabase.table("user_memory_vectors").select("id, session_id, memory_layer, content, metadata, created_at").eq("user_id", auth_uid).execute()
+            export_payload["memory_vectors"] = mvecs.data or []
+        except Exception:
+            export_payload["memory_vectors"] = []
     except Exception as e:
         logging.error(f"GDPR-exportfel för {auth_uid}: {e}")
         return jsonify({"status": "error", "message": f"Exportfel: {e}"}), 500
@@ -1349,6 +1394,11 @@ def delete_user_account():
             "promo_redemptions",
         ):
             supabase.table(table_name).delete().eq("user_id", auth_uid).execute()
+
+        try:
+            supabase.table("user_memory_vectors").delete().eq("user_id", auth_uid).execute()
+        except Exception as vec_del_err:
+            logging.warning(f"user_memory_vectors radering hoppades över: {vec_del_err}")
 
         supabase.table("organization_members").delete().eq("user_id", auth_uid).execute()
         supabase.table("organization_invites").update({"created_by": None}).eq("created_by", auth_uid).execute()
