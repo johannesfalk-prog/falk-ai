@@ -362,6 +362,46 @@ def _fetch_user_continuity(uid: str) -> Tuple[List[str], Optional[str]]:
         return memories, compass_summary
 
     try:
+        jrn = (
+            supabase.table("falk_compass_journal")
+            .select("chapter_number, chapter_title, summary")
+            .eq("user_id", uid)
+            .order("chapter_number", desc=True)
+            .limit(3)
+            .execute()
+        )
+        if jrn.data:
+            for row in reversed(jrn.data):
+                ch_num = row.get("chapter_number")
+                ch_title = (row.get("chapter_title") or "").strip()
+                ch_sum = (row.get("summary") or "").strip()
+                if ch_sum:
+                    memories.append(f"Livsbok Kapitel {ch_num} ({ch_title}): {ch_sum}")
+            latest_sum = (jrn.data[0].get("summary") or "").strip()
+            if latest_sum and not compass_summary:
+                compass_summary = latest_sum
+    except Exception as e:
+        logging.warning(f"Kunde inte hämta Compass Journal: {e}")
+
+    try:
+        fmem = (
+            supabase.table("falk_memory")
+            .select("category, content")
+            .eq("user_id", uid)
+            .order("created_at", desc=True)
+            .limit(4)
+            .execute()
+        )
+        if fmem.data:
+            for row in fmem.data:
+                content = (row.get("content") or "").strip()
+                cat = (row.get("category") or "utveckling").strip()
+                if content:
+                    memories.append(f"Utvecklingsminne ({cat}): {content}")
+    except Exception as e:
+        logging.warning(f"Kunde inte hämta falk_memory: {e}")
+
+    try:
         ins = (
             supabase.table("user_insights")
             .select("content")
@@ -641,6 +681,7 @@ def handle_chat():
         except Exception as e:
             logging.error(f"Kunde inte spara meddelanden i Supabase: {e}")
         _maybe_store_continuity_vector(auth_uid, conversation_id, message)
+        _sync_journal_and_memory(auth_uid, conversation_id, message, final_reply, next_stage)
 
     return jsonify({
         "status": "success",
@@ -743,6 +784,147 @@ def handle_message_variation():
         "variant": response_variant,
         "reply": final_reply,
     }), 200
+
+
+def _sync_journal_and_memory(
+    uid: str,
+    conversation_id: Optional[str],
+    user_message: str,
+    assistant_reply: str,
+    stage: str,
+) -> None:
+    """
+    Uppdaterar användarens sessionskopplade kapitel i falk_compass_journal
+    och sparar selektiva utvecklingsminnen i falk_memory (endast inloggade).
+    """
+    if not supabase or not uid:
+        return
+
+    from datetime import datetime as _dt, timezone as _tz
+
+    clean_msg = (user_message or "").strip()
+    clean_reply = (assistant_reply or "").strip()
+    if not clean_msg:
+        return
+
+    # 1. Compass Journal (1 kapitel per conversation_id -> ON DELETE CASCADE)
+    if conversation_id:
+        try:
+            existing = (
+                supabase.table("falk_compass_journal")
+                .select("id, chapter_number, chapter_title")
+                .eq("user_id", uid)
+                .eq("conversation_id", conversation_id)
+                .limit(1)
+                .execute()
+            )
+            summary_text = f"[{stage}] Fokus: {clean_msg[:220]} | Reflektion: {clean_reply[:260]}"
+            now_iso = _dt.now(_tz.utc).isoformat()
+            if existing.data:
+                row_id = existing.data[0]["id"]
+                supabase.table("falk_compass_journal").update({
+                    "summary": summary_text,
+                    "updated_at": now_iso,
+                }).eq("id", row_id).eq("user_id", uid).execute()
+            else:
+                all_ch = (
+                    supabase.table("falk_compass_journal")
+                    .select("chapter_number")
+                    .eq("user_id", uid)
+                    .order("chapter_number", desc=True)
+                    .limit(1)
+                    .execute()
+                )
+                next_ch = (all_ch.data[0]["chapter_number"] + 1) if all_ch.data else 1
+                title_text = clean_msg[:80] if len(clean_msg) >= 4 else f"Kapitel {next_ch}"
+                supabase.table("falk_compass_journal").insert({
+                    "user_id": uid,
+                    "conversation_id": conversation_id,
+                    "chapter_number": next_ch,
+                    "chapter_title": title_text,
+                    "summary": summary_text,
+                    "updated_at": now_iso,
+                }).execute()
+        except Exception as e:
+            logging.warning(f"Kunde inte synka falk_compass_journal: {e}")
+
+    # 2. Selektivt långtidsminne (spara utveckling, inte småprat)
+    if len(clean_msg) >= 25:
+        try:
+            stage_upper = (stage or "").upper()
+            if stage_upper == "HANDLING":
+                category = "beslut"
+            elif stage_upper in ("KLARHET", "PERSPEKTIV"):
+                category = "insikt"
+            elif any(w in clean_msg.lower() for w in ("värdering", "viktigast", "riktning", "mål")):
+                category = "riktning"
+            else:
+                category = "utveckling"
+
+            mem_content = clean_msg[:500]
+            dup = (
+                supabase.table("falk_memory")
+                .select("id")
+                .eq("user_id", uid)
+                .eq("content", mem_content)
+                .limit(1)
+                .execute()
+            )
+            if not dup.data:
+                supabase.table("falk_memory").insert({
+                    "user_id": uid,
+                    "category": category,
+                    "content": mem_content,
+                }).execute()
+        except Exception as e:
+            logging.warning(f"Kunde inte synka falk_memory: {e}")
+
+
+@app.route("/api/journal", methods=["GET", "OPTIONS"])
+def get_compass_journal():
+    if request.method == "OPTIONS":
+        return "", 200
+    auth_uid, _, _ = _resolve_auth_user()
+    if not auth_uid:
+        return jsonify({"status": "error", "message": "Autentisering krävs."}), 401
+    if not supabase:
+        return jsonify({"status": "error", "message": "Databas ej tillgänglig."}), 503
+    try:
+        res = (
+            supabase.table("falk_compass_journal")
+            .select("id, conversation_id, chapter_number, chapter_title, summary, created_at, updated_at")
+            .eq("user_id", auth_uid)
+            .order("chapter_number", desc=False)
+            .execute()
+        )
+        return jsonify({"status": "success", "chapters": res.data or []}), 200
+    except Exception as e:
+        logging.error(f"Fel vid hämtning av falk_compass_journal: {e}")
+        return jsonify({"status": "error", "message": "Kunde inte hämta journalen."}), 500
+
+
+@app.route("/api/memories", methods=["GET", "OPTIONS"])
+def get_user_memories():
+    if request.method == "OPTIONS":
+        return "", 200
+    auth_uid, _, _ = _resolve_auth_user()
+    if not auth_uid:
+        return jsonify({"status": "error", "message": "Autentisering krävs."}), 401
+    if not supabase:
+        return jsonify({"status": "error", "message": "Databas ej tillgänglig."}), 503
+    try:
+        res = (
+            supabase.table("falk_memory")
+            .select("id, category, content, created_at")
+            .eq("user_id", auth_uid)
+            .order("created_at", desc=True)
+            .limit(50)
+            .execute()
+        )
+        return jsonify({"status": "success", "memories": res.data or []}), 200
+    except Exception as e:
+        logging.error(f"Fel vid hämtning av falk_memory: {e}")
+        return jsonify({"status": "error", "message": "Kunde inte hämta minnen."}), 500
 
 
 # ---------------------------------------------------------------------------
@@ -1285,6 +1467,8 @@ def export_user_data():
         "reminders": [],
         "promo_redemptions": [],
         "organization_members": [],
+        "compass_journal": [],
+        "falk_memory": [],
         "memory_vectors": [],
     }
     try:
@@ -1313,8 +1497,13 @@ def export_user_data():
         export_payload["insights"] = ins.data or []
         export_payload["goals"] = goals.data or []
         export_payload["reminders"] = rems.data or []
+        jrn = supabase.table("falk_compass_journal").select("*").eq("user_id", auth_uid).execute()
+        fmem = supabase.table("falk_memory").select("*").eq("user_id", auth_uid).execute()
+
         export_payload["promo_redemptions"] = promos.data or []
         export_payload["organization_members"] = org_members.data or []
+        export_payload["compass_journal"] = jrn.data or []
+        export_payload["falk_memory"] = fmem.data or []
         try:
             mvecs = supabase.table("user_memory_vectors").select("id, session_id, memory_layer, content, metadata, created_at").eq("user_id", auth_uid).execute()
             export_payload["memory_vectors"] = mvecs.data or []
@@ -1382,6 +1571,8 @@ def delete_user_account():
 
         # 2. Radera all associerad användardata i samtliga tabeller
         for table_name in (
+            "falk_compass_journal",
+            "falk_memory",
             "message_feedback",
             "messages",
             "conversations",

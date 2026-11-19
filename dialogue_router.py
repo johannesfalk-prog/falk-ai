@@ -34,7 +34,44 @@ try:
 except Exception as e:
     print('⚠️ Supabase init note:', e)
 
-in_memory_journals = {}
+def _verify_bearer_uid():
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return None
+    token = auth_header.split(' ', 1)[1].strip()
+    if not token:
+        return None
+    if supabase_client:
+        try:
+            u_res = supabase_client.auth.get_user(token)
+            user_obj = getattr(u_res, 'user', None) or (u_res.get('user') if isinstance(u_res, dict) else None)
+            uid = getattr(user_obj, 'id', None) or (user_obj.get('id') if isinstance(user_obj, dict) else None)
+            if uid:
+                return str(uid)
+        except Exception:
+            pass
+    jwt_secret = os.environ.get('SUPABASE_JWT_SECRET', '')
+    if jwt_secret:
+        try:
+            import jwt
+            payload = jwt.decode(token, jwt_secret, algorithms=['HS256'], options={'verify_aud': False})
+            sub = payload.get('sub')
+            if sub:
+                return str(sub)
+        except Exception:
+            pass
+    return None
+
+def _authorize_user(raw_user_id):
+    auth_uid = _verify_bearer_uid()
+    if not auth_uid:
+        return None, (jsonify({'status': 'error', 'message': 'Autentisering krävs.'}), 401)
+    user_id = ensure_uuid(raw_user_id)
+    if ensure_uuid(auth_uid) != user_id:
+        return None, (jsonify({'status': 'error', 'message': 'Åtkomst nekad.'}), 403)
+    if not supabase_client:
+        return None, (jsonify({'status': 'error', 'message': 'Databas ej tillgänglig.'}), 503)
+    return user_id, None
 
 def ensure_uuid(val):
     try:
@@ -116,7 +153,7 @@ def extract_and_save_memory(user_id, user_message):
 def schema_check():
     try:
         if supabase_client:
-            res = supabase_client.table('falk_memories').select('*').limit(1).execute()
+            res = supabase_client.table('falk_memory').select('*').limit(1).execute()
             columns = []
             if hasattr(res, 'data') and res.data and len(res.data) > 0:
                 columns = list(res.data[0].keys())
@@ -140,6 +177,13 @@ def dialogue_turn():
         raw_user_id = str(data.get('user_id', 'anonymous'))
         user_id = ensure_uuid(raw_user_id)
         user_message = str(data.get('message', ''))
+        raw_conversation_id = data.get('conversation_id') or data.get('session_id')
+        conversation_id = None
+        if raw_conversation_id:
+            try:
+                conversation_id = str(uuid.UUID(str(raw_conversation_id)))
+            except Exception:
+                conversation_id = None
         
         is_guest = data.get('is_guest', False) or data.get('guest_uuid') is not None
         guest_uuid = data.get('guest_uuid') or (user_id if is_guest else None)
@@ -182,7 +226,7 @@ def dialogue_turn():
         user_journal = []
         history_context = ""
 
-        if supabase_client and user_message:
+        if supabase_client and user_message and not is_guest:
             try:
                 extract_and_save_memory(user_id, user_message)
 
@@ -193,7 +237,7 @@ def dialogue_turn():
                     if past_summaries:
                         history_context = "\n\nTIDIGARE DIALOGER OCH KAPITEL I ANVÄNDARENS RESA:\n" + "\n".join(past_summaries)
 
-                mem_res = supabase_client.table('falk_memories').select('*').eq('user_id', user_id).execute()
+                mem_res = supabase_client.table('falk_memory').select('*').eq('user_id', user_id).execute()
                 if mem_res and hasattr(mem_res, 'data') and mem_res.data:
                     mem_list = [f"- Minne: {m.get('content', '')}" for m in mem_res.data[-5:]]
                     if mem_list:
@@ -203,8 +247,12 @@ def dialogue_turn():
                 latest_entry = None
                 if user_journal:
                     latest_entry = user_journal[-1]
+                    same_session = (
+                        not conversation_id
+                        or latest_entry.get('conversation_id') in (None, conversation_id)
+                    )
                     created_str = latest_entry.get('created_at')
-                    if created_str:
+                    if same_session and created_str:
                         try:
                             created_dt = datetime.fromisoformat(created_str.replace('Z', '+00:00'))
                             now_dt = datetime.now(timezone.utc)
@@ -217,10 +265,13 @@ def dialogue_turn():
                 if should_update_existing and latest_entry:
                     entry_id = latest_entry['id']
                     c_title, c_summary = generate_chapter_meta(user_message, latest_entry.get('summary', ''))
-                    supabase_client.table('falk_compass_journal').update({
+                    update_payload = {
                         'chapter_title': c_title,
                         'summary': c_summary
-                    }).eq('id', entry_id).execute()
+                    }
+                    if conversation_id and not latest_entry.get('conversation_id'):
+                        update_payload['conversation_id'] = conversation_id
+                    supabase_client.table('falk_compass_journal').update(update_payload).eq('id', entry_id).execute()
                 else:
                     next_chap = len(user_journal) + 1
                     c_title, c_summary = generate_chapter_meta(user_message)
@@ -230,6 +281,8 @@ def dialogue_turn():
                         'chapter_title': c_title,
                         'summary': c_summary
                     }
+                    if conversation_id:
+                        journal_entry['conversation_id'] = conversation_id
                     supabase_client.table('falk_compass_journal').insert(journal_entry).execute()
 
                 j_res_updated = supabase_client.table('falk_compass_journal').select('*').eq('user_id', user_id).order('chapter_number').execute()
@@ -237,20 +290,6 @@ def dialogue_turn():
                     user_journal = j_res_updated.data
             except Exception as db_err:
                 print('⚠️ Supabase DB Op Note:', db_err)
-
-        if not user_journal and user_message:
-            if user_id not in in_memory_journals:
-                in_memory_journals[user_id] = []
-            next_num = len(in_memory_journals[user_id]) + 1
-            c_title, c_summary = generate_chapter_meta(user_message)
-            entry = {
-                'chapter_number': next_num,
-                'chapter_title': c_title,
-                'summary': c_summary,
-                'user_id': user_id
-            }
-            in_memory_journals[user_id].append(entry)
-            user_journal = in_memory_journals[user_id]
 
         api_key = os.environ.get('OPENAI_API_KEY')
         falk_reply = ''
@@ -323,56 +362,48 @@ def dialogue_turn():
 @dialogue_bp.route('/journal/<raw_user_id>', methods=['GET'])
 def get_user_journal(raw_user_id):
     try:
-        user_id = ensure_uuid(raw_user_id)
-        if supabase_client:
-            res = supabase_client.table('falk_compass_journal').select('*').eq('user_id', user_id).order('chapter_number').execute()
-            raw_data = res.data if hasattr(res, 'data') and res.data is not None else []
-            formatted = []
-            for d in raw_data:
-                d_copy = dict(d)
-                d_copy['raw_user_id'] = raw_user_id
-                formatted.append(d_copy)
-            return jsonify({
-                'status': 'success',
-                'journal': formatted,
-                'user_id': raw_user_id
-            }), 200
-        else:
-            return jsonify({
-                'status': 'success',
-                'journal': in_memory_journals.get(user_id, []),
-                'user_id': raw_user_id
-            }), 200
+        user_id, auth_err = _authorize_user(raw_user_id)
+        if auth_err:
+            return auth_err
+        res = supabase_client.table('falk_compass_journal').select('*').eq('user_id', user_id).order('chapter_number').execute()
+        raw_data = res.data if hasattr(res, 'data') and res.data is not None else []
+        formatted = []
+        for d in raw_data:
+            d_copy = dict(d)
+            d_copy['raw_user_id'] = raw_user_id
+            formatted.append(d_copy)
+        return jsonify({
+            'status': 'success',
+            'journal': formatted,
+            'user_id': raw_user_id
+        }), 200
     except Exception as err:
         return jsonify({'status': 'error', 'message': str(err)}), 500
 
 @dialogue_bp.route('/memories/<raw_user_id>', methods=['GET'])
 def get_user_memories(raw_user_id):
     try:
-        user_id = ensure_uuid(raw_user_id)
-        if supabase_client:
-            # Läs från bas-tabellen falk_memory istället för vyn falk_memories
-            res = supabase_client.table('falk_memory').select('*').eq('user_id', user_id).execute()
-            raw_data = res.data if hasattr(res, 'data') and res.data is not None else []
-            return jsonify({
-                'status': 'success',
-                'memories': raw_data,
-                'user_id': raw_user_id
-            }), 200
-        else:
-            return jsonify({'status': 'success', 'memories': [], 'user_id': raw_user_id}), 200
+        user_id, auth_err = _authorize_user(raw_user_id)
+        if auth_err:
+            return auth_err
+        res = supabase_client.table('falk_memory').select('*').eq('user_id', user_id).execute()
+        raw_data = res.data if hasattr(res, 'data') and res.data is not None else []
+        return jsonify({
+            'status': 'success',
+            'memories': raw_data,
+            'user_id': raw_user_id
+        }), 200
     except Exception as err:
         return jsonify({'status': 'error', 'message': str(err)}), 500
 
 @dialogue_bp.route('/reset/<raw_user_id>', methods=['POST', 'DELETE'])
 def reset_user_journal(raw_user_id):
     try:
-        user_id = ensure_uuid(raw_user_id)
-        if supabase_client:
-            supabase_client.table('falk_compass_journal').delete().eq('user_id', user_id).execute()
-            supabase_client.table('falk_memory').delete().eq('user_id', user_id).execute()
-        if user_id in in_memory_journals:
-            in_memory_journals[user_id] = []
+        user_id, auth_err = _authorize_user(raw_user_id)
+        if auth_err:
+            return auth_err
+        supabase_client.table('falk_compass_journal').delete().eq('user_id', user_id).execute()
+        supabase_client.table('falk_memory').delete().eq('user_id', user_id).execute()
         return jsonify({
             'status': 'success',
             'message': f'Journal och minnen rensade för användare {raw_user_id}'
