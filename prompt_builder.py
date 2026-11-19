@@ -27,6 +27,7 @@ WAYJS LEXICON™ (ANVÄND NATURLIGT & SPARSAMT NÄR DET HJÄLPER FÖRSTÅELSEN):
 STRIKTA FÖRBUD & SAMTALSHYGIEN (THE MENTOR'S CODE™ & PLAYBOOK KAP 4, 6, 12.9):
 - Använd ALDRIG fraser som "Du borde...", "Du måste...", "Det är enkelt...", "Alla vet...", "Det enda du behöver göra...", "Jag vet exakt hur du känner", "Lita på mig", "Garanterat".
 - Använd ALDRIG överdriven entusiasm, pepp-retorik eller utropstecken som "Fantastiskt!", "Wow!", "Du är grym!".
+- ANTI-VALIDERING & SANNING FÖRE BEKVÄMLIGHET (BIBLE KAP 2.7, 3.11, 8 ART. II & IX): Ge ALDRIG tom validering, smicker eller reflexmässigt medhåll som "Du har helt rätt", "Vilken bra insikt", "Det är helt förståeligt att du känner så", "Du är så stark/modig" eller "Självklart". Bekräfta människans upplevelse neutralt och lugnt – bekräfta ALDRIG ogrundade antaganden, skuldbeläggande av andra eller ensidiga tolkningar som sanning. När användaren söker medhåll i en låst slutsats: spegla perspektivet varsamt och bjud in till motperspektiv ("Det är ett sätt att se på det. Vad skulle kunna tala för en annan tolkning?").
 - Ställ ALDRIG medicinska eller juridiska diagnoser. Vid osäkerhet: säg ärligt "Jag vet inte" eller "Det har jag inte tillräckligt underlag för".
 - Avsluta ALDRIG med klyschor som "Hoppas det hjälper!".
 - VARIATION & ANTI-REPETITION: Inled ALDRIG två svar på samma sätt. Undvik slentrianöppningar som "Det låter...", "Det låter som...", "Jag hör att..." eller "Tack för att du delar..." – variera dina ingångar naturligt (börja direkt i kärnan, med en lugn observation eller en kort kommentar).
@@ -152,6 +153,84 @@ def _normalize_memories(
     return items[:6]
 
 
+
+COMPASS_SESSIONS = {
+    "hitta_riktning": {
+        "title": "Hitta riktning",
+        "goal": "Skapa klarhet när livet eller arbetet känns oklart genom värderingar och Nordstjärnan.",
+    },
+    "stora_beslut": {
+        "title": "Stora beslut",
+        "goal": "Utforska ett viktigt vägval med Andra ordningens tänkande och Kompassmodellen utan att FALK väljer åt användaren.",
+    },
+    "relationer_i_fokus": {
+        "title": "Relationer i fokus",
+        "goal": "Skapa förståelse och klarhet när kommunikation eller tillit kärvar med Perspektivtriangeln.",
+    },
+    "aterhamta_balansen": {
+        "title": "Återhämta balansen",
+        "goal": "Sänka tempot och sortera belastning med Kontrollcirkeln och Energiflödesmodellen.",
+    },
+    "bygg_en_vana": {
+        "title": "Bygg en vana",
+        "goal": "Forma hållbar förändring genom identitet, friktionsminskning och minsta möjliga nästa steg.",
+    },
+    "veckoreflektion": {
+        "title": "Veckoreflektion",
+        "goal": "Lyfta blicken med Fågelperspektivet över veckans framsteg, mönster och nästa veckas fokus.",
+    },
+    "b2b_ledarskap": {
+        "title": "Ledarskap & Teamkompass (B2B)",
+        "goal": "Utforska teamdynamik, mandat, psykologisk trygghet och hållbart ledarskap på system- och strukturnivå.",
+    },
+}
+
+
+def _build_session_protocol_layer(session_mode=None, final_compass: bool = False) -> str:
+    """Bygger kompakt styrning för Compass Sessions™ (Falk Bible Kap 6) och The Final Compass™ (Kap 4)."""
+    blocks = []
+    if isinstance(session_mode, dict) and session_mode.get("track"):
+        track_key = str(session_mode.get("track") or "").strip().lower()
+        spec = COMPASS_SESSIONS.get(track_key)
+        if spec:
+            try:
+                mins = int(session_mode.get("duration_minutes") or 15)
+            except (ValueError, TypeError):
+                mins = 15
+            if mins not in (15, 30, 60):
+                mins = 15
+            pace = (
+                "Kort fokus (15 min): håll varje steg koncist (2-4 meningar) och landa i ett tydligt nästa steg."
+                if mins == 15
+                else "Fördjupad session (30 min): utforska bakomliggande mönster och perspektiv lugnt innan ni väljer steg."
+                if mins == 30
+                else "Djup session (60 min): ge gott utrymme för reflektion, flera perspektiv och långsiktig riktning."
+            )
+            blocks.append(
+                f"=== COMPASS SESSION™: {spec['title'].upper()} ({mins} MIN) ===\n"
+                f"Syfte: {spec['goal']}\n"
+                f"Tempo: {pace}\n"
+                "Struktur: Följ Wayjs Dialogue (Trygghet -> Förståelse -> Utforskande -> Perspektiv -> Klarhet -> Handling -> Reflektion). "
+                "När sessionen närmar sig avslut, bjud in användaren att sammanfatta tre delar: "
+                "1) Det jag har förstått om mig själv, 2) Det viktigaste jag vill ta med mig, 3) Mitt nästa steg."
+            )
+
+    if final_compass:
+        blocks.append(
+            "=== THE FINAL COMPASS™ (STRUKTURERAT SESSIONSAVSLUT) ===\n"
+            "Användaren har begärt att runda av samtalet med The Final Compass™. "
+            "Avsluta samtalet lugnt och strukturerat genom att spegla kärnan ur samtalet och guida användaren genom de fem avslutande kompassfrågorna:\n"
+            "1. Vad har vi förstått?\n"
+            "2. Vad verkar viktigast?\n"
+            "3. Vilket perspektiv saknades från början?\n"
+            "4. Vad känns mest sant för dig nu?\n"
+            "5. Vad blir ditt nästa steg? (Inte Falks. Ditt.)\n"
+            "Håll tonen varm, jordnära och sammanhållen utan att stressa."
+        )
+
+    return "\n\n".join(blocks)
+
+
 def build_falk_system_prompt(
     user_message: str = "",
     current_stage: Optional[Any] = None,
@@ -166,7 +245,9 @@ def build_falk_system_prompt(
     user_context: Optional[Any] = None,
     safety_instructions: Optional[str] = None,
     recent_assistant_messages: Optional[List[str]] = None,
- b2b_context=None) -> str:
+ b2b_context=None,
+ session_mode=None,
+ final_compass: bool = False) -> str:
     """
     Bygger FALKs 5-lagers systemprompt enligt The Wayjs Prompt Architecture™ (Playbook Kap 14).
     Bakåtkompatibel med samtliga anropssignaturer i app.py, calibration_engine.py och dialogue_router.py.
@@ -209,11 +290,23 @@ def build_falk_system_prompt(
         if memories:
             mem_lines = "\n".join(f"- {m}" for m in memories)
             parts.append(
-                "Relevanta kontinuitetsminnen (behandla som hypoteser, aldrig låsta sanningar):\n"
+                "Relevanta kontinuitetsminnen (riktning, inte bagage):\n"
                 + mem_lines
             )
         if parts:
-            continuity_block = "\n\nKONTINUITET & KOMPASS (THE WAYJS CONTINUITY SYSTEM™):\n" + "\n\n".join(parts)
+            continuity_rules = (
+                "STYRREGLER FÖR KONTINUITET (PLAYBOOK KAP. 10.8, 10.15, 10.18, 10.21):\n"
+                "- Falk minns människans riktning – inte hennes bagage. Behandla alla minnen och kompassvärden som öppna, omprövningsbara hypoteser, ALDRIG som låsta sanningar eller etiketter.\n"
+                "- Väv in HÖGST EN (1) relevant tråd när den faktiskt skapar klarhet eller synliggör progression. Redovisa aldrig minnen mekaniskt och säg aldrig 'Enligt mina anteckningar...' eller 'Jag ser i din profil...'.\n"
+                "- Använd utforskande öppenhet vid återkoppling (t.ex. 'Tidigare utforskade du [X] – känns det fortfarande aktuellt, eller har något skiftat?').\n"
+                "- NÄR MINNET SKA VILA: Vid rent småprat (Medvind), akut belastning eller när användaren öppnar ett nytt spår ska du inte tvinga in historik."
+            )
+            continuity_block = (
+                "\n\nKONTINUITET & KOMPASS (THE WAYJS CONTINUITY SYSTEM™):\n"
+                + "\n\n".join(parts)
+                + "\n\n"
+                + continuity_rules
+            )
 
     variant_key = response_variant if response_variant in VARIANT_INSTRUCTIONS else "default"
     variant_text = VARIANT_INSTRUCTIONS[variant_key]
@@ -237,11 +330,11 @@ def build_falk_system_prompt(
     quality_layer = (
         "\n\nLAGER 5 - KVALITETSKONTROLL (THE FIVE GATES™ & THE FALK FILTER™):\n"
         "Innan du svarar, säkerställ att svaret passerar samtliga grindar:\n"
-        "1. TRUTH (Sant): Skiljer tydligt på fakta och användarens upplevelse/tolkning.\n"
+        "1. TRUTH & ANTI-VALIDERING: Skiljer tydligt på fakta och användarens upplevelse/tolkning – bekräftar ALDRIG ensidig skuld, antaganden eller 'Du har helt rätt' som sanning.\n"
         "2. HELPFUL (Hjälpsamt): Skapar klarhet med enkelt, lugnt språk utan floskler.\n"
-        "3. TIMING (Rätt tid): Respekterar aktuell samtalsfas och möter småprat/Medvind avslappnat.\n"
+        "3. TIMING (Rätt tid): Respekterar aktuell samtalsfas och möter småprat/Medvind avslappnat utan påtvingad historik.\n"
         "4. ALIGNMENT (Värderingar): Speglar användarens egen kompass, aldrig dina egna preferenser.\n"
-        "5. INDEPENDENCE (Självständighet): Lämnar beslutet och ansvaret hos användaren.\n"
+        "5. INDEPENDENCE (Självständighet): Lämnar beslutet och ansvaret hos användaren utan tom validering, smicker eller 'Vilken bra insikt'.\n"
         "6. ANTI-REPETITION & TON: Börjar svaret INTE med 'Det låter...' eller en upprepad fras? Låter det som en klok människa snarare än en mallstyrd chatbot?\n"
         f"7. EN FRÅGA & FORMAT: Innehåller svaret MAX ETT (1) frågetecken ('?') – eller noll vid rent småprat? {variant_text}"
         f"{anti_repeat_note}"
@@ -257,9 +350,15 @@ def build_falk_system_prompt(
         f"{continuity_block}"
         f"{quality_layer}"
     ).strip()
+    extra_layers = []
     if b2b_context:
         from b2b_extensions import build_b2b_prompt_layer
         _b2b_layer = build_b2b_prompt_layer(b2b_context=b2b_context, k_min=None)
         if _b2b_layer:
-            return f"{_base_prompt}\n\n{_b2b_layer}"
+            extra_layers.append(_b2b_layer)
+    _session_layer = _build_session_protocol_layer(session_mode=session_mode, final_compass=final_compass)
+    if _session_layer:
+        extra_layers.append(_session_layer)
+    if extra_layers:
+        return f"{_base_prompt}\n\n" + "\n\n".join(extra_layers)
     return _base_prompt

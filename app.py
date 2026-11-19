@@ -12,7 +12,7 @@ from supabase import create_client, Client
 
 from safety_guardrails import evaluate_safety_and_crisis
 from state_machine import FalkStateMachine
-from prompt_builder import build_falk_system_prompt
+from prompt_builder import build_falk_system_prompt, COMPASS_SESSIONS
 from gate_checker import validate_response_against_gates
 from exercise_library import FALK_15_EXERCISE_CARDS, get_library_cards
 from b2b_extensions import (
@@ -263,6 +263,12 @@ FORBIDDEN_FALK_PHRASES = (
     "wow!",
     "lita på mig",
     "garanterat",
+    "du har helt rätt",
+    "du har absolut rätt",
+    "helt rätt tänkt",
+    "vilken bra insikt",
+    "det är fruktansvärt",
+    "det är hemskt",
 )
 
 
@@ -272,6 +278,7 @@ def _apply_gate_filter(
     stage: str,
     system_prompt: str,
     is_guest: bool = True,
+    previous_assistant_response: Optional[str] = None,
 ) -> str:
     """
     Kör svaret genom The Five Gates™ (Falk Bible Kap. 4 & Falk Playbook Kap. 4.19)
@@ -305,6 +312,7 @@ def _apply_gate_filter(
         user_message=user_message,
         active_stage=stage,
         is_guest=is_guest,
+        previous_assistant_response=previous_assistant_response,
     )
     if not passed:
         logging.info(f"Five Gates justerade svar: {meta.get('violated_gates')} - {meta.get('feedback')}")
@@ -528,6 +536,22 @@ def handle_chat():
                 }
                 sanitized_b2b_context["respondent_count"] = int(raw_b2b.get("respondent_count") or 0)
 
+    sanitized_session_mode = None
+    final_compass_flag = False
+    if not is_guest and is_premium:
+        raw_session = data.get("session_mode")
+        if isinstance(raw_session, dict):
+            track = str(raw_session.get("track") or "").strip().lower()
+            if track in COMPASS_SESSIONS:
+                try:
+                    dur = int(raw_session.get("duration_minutes") or 15)
+                except (ValueError, TypeError):
+                    dur = 15
+                if dur not in (15, 30, 60):
+                    dur = 15
+                sanitized_session_mode = {"track": track, "duration_minutes": dur}
+        final_compass_flag = bool(data.get("final_compass"))
+
     system_prompt = build_falk_system_prompt(
         user_message=message,
         current_stage=next_stage,
@@ -537,16 +561,23 @@ def handle_chat():
         compass_summary=compass_summary,
         response_variant=response_variant,
         b2b_context=sanitized_b2b_context,
+        session_mode=sanitized_session_mode,
+        final_compass=final_compass_flag,
     )
 
     convo_messages = clean_history + [{"role": "user", "content": message}]
     raw_reply = _call_llm(system_prompt, convo_messages)
+    prev_assistant = next(
+        (m.get("content") for m in reversed(clean_history) if m.get("role") == "assistant" and m.get("content")),
+        None,
+    )
     final_reply = _apply_gate_filter(
         raw_reply,
         message,
         next_stage,
         system_prompt,
         is_guest=is_guest,
+        previous_assistant_response=prev_assistant,
     )
 
     conversation_id = data.get("conversation_id")
@@ -664,6 +695,7 @@ def handle_message_variation():
         active_stage,
         system_prompt,
         is_guest=is_guest,
+        previous_assistant_response=original_reply,
     )
 
     return jsonify({
@@ -677,6 +709,17 @@ def handle_message_variation():
 # ---------------------------------------------------------------------------
 # BIBLIOTEK (15 ÖVNINGSKORT) & PDF-EXPORT
 # ---------------------------------------------------------------------------
+@app.route("/api/sessions/templates", methods=["GET", "OPTIONS"])
+def get_compass_session_templates():
+    if request.method == "OPTIONS":
+        return "", 200
+    items = [
+        {"key": k, "title": v["title"], "goal": v["goal"], "durations": [15, 30, 60]}
+        for k, v in COMPASS_SESSIONS.items()
+    ]
+    return jsonify({"status": "success", "sessions": items}), 200
+
+
 @app.route("/api/library", methods=["GET", "OPTIONS"])
 def api_get_library_cards():
     if request.method == "OPTIONS":
