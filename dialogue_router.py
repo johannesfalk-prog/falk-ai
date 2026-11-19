@@ -267,7 +267,8 @@ def dialogue_turn():
                 turn_count = (len(hist) // 2) + 1 if hist else (len(user_journal) + 1)
                 curr_num, _ = FalkStateMachine.normalize_stage(data.get('stage') or data.get('current_stage') or min(turn_count, 7))
                 prop_num = min(curr_num + 1, 7) if turn_count > 1 else curr_num
-                crisis_st = 'FAIL_SAFE_CAUTION' if safety_flags.get('safety_instructions') else 'SAFE'
+                has_caution_signal = bool(safety_flags.get('is_crisis')) or ('PROFESSIONELL GRÄNSDRAGNING' in (safety_flags.get('safety_instructions') or ''))
+                crisis_st = 'FAIL_SAFE_CAUTION' if has_caution_signal else 'SAFE'
                 resolved_num = FalkStateMachine.resolve_next_phase(curr_num, prop_num, turn_count, crisis_st)
                 _, active_stage = FalkStateMachine.normalize_stage(resolved_num)
                 full_system_prompt = build_falk_system_prompt(user_id=raw_user_id, current_dialogue_stage=active_stage, is_guest=bool(is_guest), user_message=user_message, focus_sliders=focus_scores, user_context=history_context, safety_instructions=safety_flags.get('safety_instructions'))
