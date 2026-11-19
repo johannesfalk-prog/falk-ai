@@ -927,6 +927,31 @@ def get_user_memories():
         return jsonify({"status": "error", "message": "Kunde inte hämta minnen."}), 500
 
 
+@app.route("/api/memories/<memory_id>", methods=["DELETE", "OPTIONS"])
+def delete_user_memory(memory_id):
+    if request.method == "OPTIONS":
+        return "", 200
+    auth_uid, _, _ = _resolve_auth_user()
+    if not auth_uid:
+        return jsonify({"status": "error", "message": "Autentisering krävs."}), 401
+    if not supabase:
+        return jsonify({"status": "error", "message": "Databas ej tillgänglig."}), 503
+    if not memory_id or len(memory_id) > 64:
+        return jsonify({"status": "error", "message": "Ogiltigt minnes-ID."}), 400
+    try:
+        (
+            supabase.table("falk_memory")
+            .delete()
+            .eq("id", memory_id)
+            .eq("user_id", auth_uid)
+            .execute()
+        )
+        return jsonify({"status": "success", "deleted_id": memory_id}), 200
+    except Exception as e:
+        logging.error(f"Fel vid radering av falk_memory {memory_id}: {e}")
+        return jsonify({"status": "error", "message": "Kunde inte ta bort minnet."}), 500
+
+
 # ---------------------------------------------------------------------------
 # BIBLIOTEK (15 ÖVNINGSKORT) & PDF-EXPORT
 # ---------------------------------------------------------------------------
