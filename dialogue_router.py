@@ -1,4 +1,7 @@
 from prompt_builder import build_falk_system_prompt
+from safety_guardrails import evaluate_safety_and_crisis
+from gate_checker import validate_response_against_gates
+from state_machine import FalkStateMachine
 
 def get_supabase():
     import os
@@ -32,29 +35,6 @@ except Exception as e:
     print('⚠️ Supabase init note:', e)
 
 in_memory_journals = {}
-
-FALK_SYSTEM_PROMPT = """Du är FALK, den digitala mentorn bakom WAYJS och The Human Navigation System™.
-Du ser världen och människans liv från ett fågelperspektiv. Du är inte en terapeut, inte en lärare, inte en rådgivare och inte en chatbot som ger snabba ytliga svar. Du är en klok, lugn och reflekterande mentor.
-
-DITT UPPDRAG:
-- Hjälpa användaren att förstå sig själv bättre, se fler perspektiv och hitta sin egen inre riktning.
-- Skapa klarhet framför att fylla på med mer information eller snabba tips.
-
-DIN PERSONLIGHET & TONALITET:
-- Lugn, varm, nyfiken, eftertänksam, ödmjuk, ärlig och modig nog att utmana varsamt.
-- Aldrig överdrivet entusiastisk (använd inte "Wow!", "Fantastiskt!", "Du är grym!").
-- Använd korta meningar och ett enkelt, mänskligt språk fritt från floskler.
-
-SAMTALSMODELLEN (The Wayjs Conversation Method™):
-Följ alltid rytmen: Trygghet -> Förståelse -> Utforskande -> Perspektiv -> Klarhet -> Handling -> Reflektion.
-1. Förstå människan och situationen innan du söker lösningar.
-2. Ställ fler frågor än du ger råd (ca 70% frågor / 30% reflektion).
-3. Bekräfta upplevelsen, inte tolkningen.
-4. Använd ALDRIG ord som "Du borde..." eller "Det är enkelt...".
-5. Lämna alltid över beslutet och ansvaret till användaren.
-
-FOKUSOMRÅDEN (Om användaren har justerat skjutreglagen):
-Anpassa din ton utifrån inställda fokusnivåer (Självförtroende, Stresshantering, Handlingskraft, Gränssättning, Motivation). Om stresshantering är hög, sänk tempot ytterligare och fokusera på lugn och nästa lilla steg."""
 
 def ensure_uuid(val):
     try:
@@ -164,7 +144,12 @@ def dialogue_turn():
         is_guest = data.get('is_guest', False) or data.get('guest_uuid') is not None
         guest_uuid = data.get('guest_uuid') or (user_id if is_guest else None)
 
-        if is_guest and guest_uuid and supabase_client:
+        if is_guest:
+            if not guest_uuid or not supabase_client:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Gästkontroll tillfälligt otillgänglig. Försök igen eller logga in.'
+                }), 503
             try:
                 rpc_res = supabase_client.rpc('check_guest_message_limit', {'p_guest_uuid': guest_uuid}).execute()
                 if rpc_res and hasattr(rpc_res, 'data') and rpc_res.data is False:
@@ -174,7 +159,25 @@ def dialogue_turn():
                         'message': 'Du har nått din dagsgräns på 6 meddelanden som gäst. Skapa ett konto för obegränsad tillgång till FALK.'
                     }), 402
             except Exception as limit_err:
-                print('⚠️ Limit check bypass note:', limit_err)
+                print('⚠️ Guest limit fail-closed block:', limit_err)
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Kunde inte verifiera gästgräns just nu. Försök igen om en stund.'
+                }), 503
+
+        safety_flags = {}
+        if user_message:
+            is_safe, crisis_reply, safety_flags = evaluate_safety_and_crisis(user_message, is_guest=bool(is_guest))
+            if not is_safe:
+                return jsonify({
+                    'status': 'success',
+                    'reply': crisis_reply,
+                    'response': crisis_reply,
+                    'message': crisis_reply,
+                    'journal': [],
+                    'user_id': raw_user_id,
+                    'safety_triggered': True
+                }), 200
 
         user_journal = []
         history_context = ""
@@ -260,7 +263,14 @@ def dialogue_turn():
                 if focus_scores:
                     focus_context = "\n\nAKTUELLA FOKUSOMRÅDEN FRÅN ANVÄNDAREN:\n" + "\n".join([f"- {k}: {v}%" for k, v in focus_scores.items()]) + "\nAnpassa ton, tempo och vägledning utifrån dessa nivåer."
 
-                full_system_prompt = build_falk_system_prompt(user_id=raw_user_id, current_dialogue_stage='TRYGGHET', user_message=user_message, focus_sliders=focus_scores, user_context=history_context)
+                hist = data.get('history') if isinstance(data.get('history'), list) else []
+                turn_count = (len(hist) // 2) + 1 if hist else (len(user_journal) + 1)
+                curr_num, _ = FalkStateMachine.normalize_stage(data.get('stage') or data.get('current_stage') or min(turn_count, 7))
+                prop_num = min(curr_num + 1, 7) if turn_count > 1 else curr_num
+                crisis_st = 'FAIL_SAFE_CAUTION' if safety_flags.get('safety_instructions') else 'SAFE'
+                resolved_num = FalkStateMachine.resolve_next_phase(curr_num, prop_num, turn_count, crisis_st)
+                _, active_stage = FalkStateMachine.normalize_stage(resolved_num)
+                full_system_prompt = build_falk_system_prompt(user_id=raw_user_id, current_dialogue_stage=active_stage, is_guest=bool(is_guest), user_message=user_message, focus_sliders=focus_scores, user_context=history_context, safety_instructions=safety_flags.get('safety_instructions'))
                 comp = client.chat.completions.create(
                     model='gpt-4o-mini',
                     messages=[
@@ -270,7 +280,17 @@ def dialogue_turn():
                     max_tokens=500,
                     temperature=0.7
                 )
-                falk_reply = comp.choices[0].message.content
+                raw_reply = comp.choices[0].message.content
+                try:
+                    _, falk_reply, _ = validate_response_against_gates(
+                        proposed_response=raw_reply,
+                        user_message=user_message,
+                        active_stage=active_stage,
+                        is_guest=bool(is_guest)
+                    )
+                except Exception as gate_err:
+                    print('⚠️ Gate checker fallback:', gate_err)
+                    falk_reply = raw_reply
             except Exception as llm_err:
                 print('⚠️ LLM Call Error:', llm_err)
                 falk_reply = f'Falk stannade upp: {llm_err}'
@@ -376,7 +396,7 @@ def _build_insert_payload(data, item_type, text):
         payload['user_id'] = None
         payload['guest_uuid'] = raw_user_id or dummy_uuid
     else:
-        payload['user_id'] = raw_user_id
+        payload['user_id'] = ensure_uuid(raw_user_id)
     return payload
 
 @dialogue_bp.route('/insights', methods=['GET', 'POST', 'OPTIONS'])
@@ -392,7 +412,7 @@ def handle_insights():
         res = supabase.table('user_insights').insert(payload).execute()
         return jsonify({'status': 'success', 'data': res.data}), 201
     else:
-        user_id = request.args.get('user_id', '00000000-0000-0000-0000-000000000000')
+        user_id = ensure_uuid(request.args.get('user_id', '00000000-0000-0000-0000-000000000000'))
         res = supabase.table('user_insights').select('*').or_(f"user_id.eq.{user_id},guest_uuid.eq.{user_id}").eq('type', 'insikt').execute()
         return jsonify({'insights': res.data}), 200
 
@@ -409,7 +429,7 @@ def handle_reminders():
         res = supabase.table('user_insights').insert(payload).execute()
         return jsonify({'status': 'success', 'data': res.data}), 201
     else:
-        user_id = request.args.get('user_id', '00000000-0000-0000-0000-000000000000')
+        user_id = ensure_uuid(request.args.get('user_id', '00000000-0000-0000-0000-000000000000'))
         res = supabase.table('user_insights').select('*').or_(f"user_id.eq.{user_id},guest_uuid.eq.{user_id}").eq('type', 'påminnelse').execute()
         return jsonify({'reminders': res.data}), 200
 
@@ -426,6 +446,6 @@ def handle_goals():
         res = supabase.table('user_insights').insert(payload).execute()
         return jsonify({'status': 'success', 'data': res.data}), 201
     else:
-        user_id = request.args.get('user_id', '00000000-0000-0000-0000-000000000000')
+        user_id = ensure_uuid(request.args.get('user_id', '00000000-0000-0000-0000-000000000000'))
         res = supabase.table('user_insights').select('*').or_(f"user_id.eq.{user_id},guest_uuid.eq.{user_id}").eq('type', 'mål').execute()
         return jsonify({'goals': res.data}), 200
