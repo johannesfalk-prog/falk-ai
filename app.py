@@ -376,7 +376,9 @@ def _fetch_user_continuity(uid: str) -> Tuple[List[str], Optional[str]]:
                 ch_title = (row.get("chapter_title") or "").strip()
                 ch_sum = (row.get("summary") or "").strip()
                 if ch_sum:
-                    memories.append(f"Livsbok Kapitel {ch_num} ({ch_title}): {ch_sum}")
+                    memories.append(
+                        f"Livsbok Kapitel {ch_num} – {ch_title} (tidigare riktning/hypotes): {ch_sum}"
+                    )
             latest_sum = (jrn.data[0].get("summary") or "").strip()
             if latest_sum and not compass_summary:
                 compass_summary = latest_sum
@@ -389,15 +391,17 @@ def _fetch_user_continuity(uid: str) -> Tuple[List[str], Optional[str]]:
             .select("category, content")
             .eq("user_id", uid)
             .order("created_at", desc=True)
-            .limit(4)
+            .limit(6)
             .execute()
         )
         if fmem.data:
-            for row in fmem.data:
+            for row in reversed(fmem.data):
                 content = (row.get("content") or "").strip()
                 cat = (row.get("category") or "utveckling").strip()
                 if content:
-                    memories.append(f"Utvecklingsminne ({cat}): {content}")
+                    memories.append(
+                        f"Utvecklingshypotes [{cat}] (utforska öppet, lås ej identitet): {content}"
+                    )
     except Exception as e:
         logging.warning(f"Kunde inte hämta falk_memory: {e}")
 
@@ -794,38 +798,126 @@ def _sync_journal_and_memory(
     stage: str,
 ) -> None:
     """
-    Uppdaterar användarens sessionskopplade kapitel i falk_compass_journal
-    och sparar selektiva utvecklingsminnen i falk_memory (endast inloggade).
+    Uppdaterar användarens sessionskopplade kapitel i falk_compass_journal (ackumulerande syntes)
+    och destillerar selektiva utvecklingsminnen i falk_memory (endast inloggade, ej småprat).
     """
     if not supabase or not uid:
         return
 
     from datetime import datetime as _dt, timezone as _tz
+    import json as _json
+    import re as _re
 
     clean_msg = (user_message or "").strip()
     clean_reply = (assistant_reply or "").strip()
     if not clean_msg:
         return
 
-    # 1. Compass Journal (1 kapitel per conversation_id -> ON DELETE CASCADE)
+    # Ignorera rent småprat / korta hälsningar (Playbook Kap 10.4)
+    trivial_phrases = {
+        "hej", "hejsan", "hallå", "tja", "god morgon", "god kväll",
+        "tack", "tack så mycket", "ok", "okej", "ja", "nej", "mm", "bra", "toppen",
+    }
+    norm_check = _re.sub(r"[.!?,\s]+$", "", clean_msg.lower())
+    is_trivial = len(clean_msg) < 18 or norm_check in trivial_phrases
+
+    existing_row = None
+    prev_summary = ""
+    prev_title = ""
     if conversation_id:
         try:
             existing = (
                 supabase.table("falk_compass_journal")
-                .select("id, chapter_number, chapter_title")
+                .select("id, chapter_number, chapter_title, summary")
                 .eq("user_id", uid)
                 .eq("conversation_id", conversation_id)
                 .limit(1)
                 .execute()
             )
-            summary_text = f"[{stage}] Fokus: {clean_msg[:220]} | Reflektion: {clean_reply[:260]}"
-            now_iso = _dt.now(_tz.utc).isoformat()
             if existing.data:
-                row_id = existing.data[0]["id"]
-                supabase.table("falk_compass_journal").update({
+                existing_row = existing.data[0]
+                prev_summary = (existing_row.get("summary") or "").strip()
+                prev_title = (existing_row.get("chapter_title") or "").strip()
+        except Exception as e:
+            logging.warning(f"Kunde inte läsa befintligt kapitel i falk_compass_journal: {e}")
+
+    recent_memories: List[str] = []
+    try:
+        rmem = (
+            supabase.table("falk_memory")
+            .select("content")
+            .eq("user_id", uid)
+            .order("created_at", desc=True)
+            .limit(6)
+            .execute()
+        )
+        if rmem.data:
+            recent_memories = [(r.get("content") or "").strip() for r in rmem.data if r.get("content")]
+    except Exception as e:
+        logging.warning(f"Kunde inte hämta befintliga minnen för dedup: {e}")
+
+    distilled = None
+    if not is_trivial:
+        distill_system = (
+            "Du är Wayjs Continuity Engine för FALK (en lugn, vis mentor). "
+            "Destillera samtalsutbytet till strukturerad JSON på svenska enligt Falk Bible Kap 7 & Playbook Kap 10. "
+            "REGLER: "
+            "1. Spara ALDRIG småprat, tillfälliga känslor utan riktning eller råa citat. "
+            "2. 'chapter_title': En varm, konkret kapiteltitel på svenska (3–7 ord, inga citattecken). "
+            "3. 'chapter_summary': Syntetisera den röda tråden i samtalet (2–3 lugna meningar, max 420 tecken). "
+            "Om ett tidigare kapitelutkast finns, väv samman den nya fördjupningen med det befintliga utan att tappa kärnan. "
+            "4. 'save_memory': true ENDAST om användaren uttryckt en tydlig värdering, livsriktning, återkommande mönster, "
+            "viktigt beslut, lärdom eller milstolpe som är värdefull om 6 månader (och inte redan täcks av befintliga minnen). Annars false. "
+            "5. 'memory_category': En av 'riktning', 'varderingar', 'monster', 'beslut', 'insikt', 'framsteg', 'utveckling'. "
+            "6. 'memory_content': En koncis, icke-dömande mening på svenska (max 220 tecken) som beskriver användarens riktning eller insikt. "
+            "Svara Uteslutande med giltig JSON med nycklarna: chapter_title, chapter_summary, save_memory, memory_category, memory_content."
+        )
+        distill_user = (
+            f"Samtalsfas: {stage}\n"
+            f"Befintlig kapiteltitel: {prev_title or '(nytt kapitel)'}\n"
+            f"Befintligt kapitelutkast: {prev_summary or '(inget ännu)'}\n"
+            f"Redan sparade minnen: {recent_memories[:4]}\n"
+            f"Användarens meddelande: {clean_msg[:900]}\n"
+            f"FALKs svar: {clean_reply[:900]}"
+        )
+        try:
+            raw_json = _call_llm(
+                distill_system,
+                [{"role": "user", "content": distill_user}],
+                max_tokens=340,
+            )
+            match = _re.search(r"\{.*\}", raw_json or "", _re.DOTALL)
+            if match:
+                parsed = _json.loads(match.group(0))
+                if isinstance(parsed, dict):
+                    distilled = parsed
+        except Exception as e:
+            logging.warning(f"AI-destillering av minne/journal föll tillbaka till säker standard: {e}")
+
+    # 1. Compass Journal (1 ackumulerande kapitel per conversation_id -> ON DELETE CASCADE)
+    if conversation_id:
+        try:
+            now_iso = _dt.now(_tz.utc).isoformat()
+            if distilled and (distilled.get("chapter_summary") or "").strip():
+                summary_text = str(distilled["chapter_summary"]).strip()[:480]
+                ai_title = str(distilled.get("chapter_title") or "").strip().strip('"')[:80]
+            else:
+                fallback_core = clean_msg[:220]
+                if prev_summary:
+                    summary_text = f"{prev_summary[:240]} Vidare reflektion: {fallback_core}"[:480]
+                else:
+                    summary_text = f"Reflektion kring: {fallback_core}"[:480]
+                ai_title = ""
+
+            if existing_row:
+                row_id = existing_row["id"]
+                update_payload = {
                     "summary": summary_text,
                     "updated_at": now_iso,
-                }).eq("id", row_id).eq("user_id", uid).execute()
+                }
+                if ai_title and (not prev_title or prev_title.startswith("Kapitel ") or len(prev_title) < 6):
+                    update_payload["chapter_title"] = ai_title
+                supabase.table("falk_compass_journal").update(update_payload).eq("id", row_id).eq("user_id", uid).execute()
             else:
                 all_ch = (
                     supabase.table("falk_compass_journal")
@@ -836,7 +928,7 @@ def _sync_journal_and_memory(
                     .execute()
                 )
                 next_ch = (all_ch.data[0]["chapter_number"] + 1) if all_ch.data else 1
-                title_text = clean_msg[:80] if len(clean_msg) >= 4 else f"Kapitel {next_ch}"
+                title_text = ai_title or (clean_msg[:60] if len(clean_msg) >= 4 else f"Kapitel {next_ch}")
                 supabase.table("falk_compass_journal").insert({
                     "user_id": uid,
                     "conversation_id": conversation_id,
@@ -848,34 +940,28 @@ def _sync_journal_and_memory(
         except Exception as e:
             logging.warning(f"Kunde inte synka falk_compass_journal: {e}")
 
-    # 2. Selektivt långtidsminne (spara utveckling, inte småprat)
-    if len(clean_msg) >= 25:
+    # 2. Selektivt långtidsminne (spara endast destillerad utveckling, aldrig småprat)
+    if distilled and distilled.get("save_memory") is True:
         try:
-            stage_upper = (stage or "").upper()
-            if stage_upper == "HANDLING":
-                category = "beslut"
-            elif stage_upper in ("KLARHET", "PERSPEKTIV"):
-                category = "insikt"
-            elif any(w in clean_msg.lower() for w in ("värdering", "viktigast", "riktning", "mål")):
-                category = "riktning"
-            else:
-                category = "utveckling"
+            allowed_cats = {
+                "riktning", "varderingar", "monster", "beslut", "insikt", "framsteg", "utveckling"
+            }
+            raw_cat = str(distilled.get("memory_category") or "utveckling").strip().lower()
+            category = raw_cat if raw_cat in allowed_cats else "utveckling"
+            mem_content = str(distilled.get("memory_content") or "").strip()[:300]
 
-            mem_content = clean_msg[:500]
-            dup = (
-                supabase.table("falk_memory")
-                .select("id")
-                .eq("user_id", uid)
-                .eq("content", mem_content)
-                .limit(1)
-                .execute()
-            )
-            if not dup.data:
-                supabase.table("falk_memory").insert({
-                    "user_id": uid,
-                    "category": category,
-                    "content": mem_content,
-                }).execute()
+            if len(mem_content) >= 12:
+                norm_new = mem_content.lower()
+                is_dup = any(
+                    norm_new == m.lower() or norm_new in m.lower() or m.lower() in norm_new
+                    for m in recent_memories
+                )
+                if not is_dup:
+                    supabase.table("falk_memory").insert({
+                        "user_id": uid,
+                        "category": category,
+                        "content": mem_content,
+                    }).execute()
         except Exception as e:
             logging.warning(f"Kunde inte synka falk_memory: {e}")
 
