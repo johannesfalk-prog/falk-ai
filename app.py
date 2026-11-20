@@ -353,124 +353,203 @@ def _maybe_store_continuity_vector(uid: str, session_id: Optional[str], user_mes
 
 def _fetch_user_continuity(uid: str) -> Tuple[List[str], Optional[str]]:
     """
-    Hämtar sparade insikter, aktiva mål, påminnelser och senaste kompasskalibrering
-    för inloggad användare (The Wayjs Continuity System™).
+    Hämtar och prioriterar användarens kontinuitet enligt Falk Bible Kap 7
+    och Falk Playbook Kap 10 (The Wayjs Continuity System):
+    påminnelser, aktiva mål, mönster/värderingar/framsteg med tidsstämplar,
+    senaste kapitel ur Livsboken, insikter samt kompassrörelse över tid.
     """
-    memories: List[str] = []
-    compass_summary: Optional[str] = None
-    if not supabase:
-        return memories, compass_summary
+    if not supabase or not uid:
+        return [], None
 
+    def _fmt_date(raw_ts: Any) -> str:
+        if not raw_ts:
+            return ""
+        s = str(raw_ts).strip()
+        return s[:10] if len(s) >= 10 else s
+
+    reminders_ctx: List[str] = []
+    goals_ctx: List[str] = []
+    memories_ctx: List[str] = []
+    journal_ctx: List[str] = []
+    insights_ctx: List[str] = []
+    compass_summary: Optional[str] = None
+
+    # 1. Kommande/aktiva påminnelser (Playbook 15.15)
     try:
-        jrn = (
-            supabase.table("falk_compass_journal")
-            .select("chapter_number, chapter_title, summary")
+        rem_res = (
+            supabase.table("falk_reminders")
+            .select("title, description, frequency, next_trigger_at")
             .eq("user_id", uid)
-            .order("chapter_number", desc=True)
+            .order("next_trigger_at", desc=False)
             .limit(3)
             .execute()
         )
-        if jrn.data:
-            for row in reversed(jrn.data):
-                ch_num = row.get("chapter_number")
-                ch_title = (row.get("chapter_title") or "").strip()
-                ch_sum = (row.get("summary") or "").strip()
-                if ch_sum:
-                    memories.append(
-                        f"Livsbok Kapitel {ch_num} – {ch_title} (tidigare riktning/hypotes): {ch_sum}"
-                    )
-            latest_sum = (jrn.data[0].get("summary") or "").strip()
-            if latest_sum and not compass_summary:
-                compass_summary = latest_sum
+        for r in (rem_res.data or [])[:2]:
+            title = (r.get("title") or "").strip()
+            desc = (r.get("description") or "").strip()
+            when = _fmt_date(r.get("next_trigger_at"))
+            freq = (r.get("frequency") or "").strip()
+            if title:
+                meta = ", ".join(p for p in [when, freq] if p)
+                prefix = f"[Påminnelse · {meta}]" if meta else "[Påminnelse]"
+                detail = f" – {desc}" if desc else ""
+                reminders_ctx.append(f"{prefix} {title}{detail}")
     except Exception as e:
-        logging.warning(f"Kunde inte hämta Compass Journal: {e}")
+        logging.warning(f"Kunde inte hämta falk_reminders: {e}")
 
+    # 2. Aktiva mål (Playbook 10.13 Målbibliotek)
     try:
-        fmem = (
-            supabase.table("falk_memory")
-            .select("category, content")
+        goal_res = (
+            supabase.table("falk_goals")
+            .select("title, description, area, progress, target_date")
             .eq("user_id", uid)
-            .order("created_at", desc=True)
-            .limit(6)
+            .limit(5)
             .execute()
         )
-        if fmem.data:
-            for row in reversed(fmem.data):
-                content = (row.get("content") or "").strip()
-                cat = (row.get("category") or "utveckling").strip()
-                if content:
-                    memories.append(
-                        f"Utvecklingshypotes [{cat}] (utforska öppet, lås ej identitet): {content}"
-                    )
+        active_goals = [
+            g for g in (goal_res.data or [])
+            if (g.get("progress") is None or int(g.get("progress") or 0) < 100)
+        ]
+        for g in active_goals[:2]:
+            title = (g.get("title") or "").strip()
+            area = (g.get("area") or "").strip()
+            prog = g.get("progress")
+            target = _fmt_date(g.get("target_date"))
+            if title:
+                meta_parts = [p for p in [area, f"{prog}%" if prog is not None else "", f"mål {target}" if target else ""] if p]
+                meta = f" ({', '.join(meta_parts)})" if meta_parts else ""
+                goals_ctx.append(f"[Aktivt mål] {title}{meta}")
+    except Exception as e:
+        logging.warning(f"Kunde inte hämta falk_goals: {e}")
+
+    # 3. Långtidsminnen, återkommande mönster & framsteg (Falk Bible 7.3, 7.6 & Playbook 10.5, 10.11)
+    try:
+        mem_res = (
+            supabase.table("falk_memory")
+            .select("memory_type, content, importance, created_at")
+            .eq("user_id", uid)
+            .order("importance", desc=True)
+            .order("created_at", desc=True)
+            .limit(8)
+            .execute()
+        )
+        type_meta = {
+            "pattern": ("Återkommande mönster", 0),
+            "north_star": ("Nordstjärna/Riktning", 1),
+            "direction": ("Riktning", 1),
+            "value": ("Värdering", 1),
+            "progress": ("Framsteg/Mod", 2),
+            "milestone": ("Milstolpe", 2),
+            "decision": ("Beslut", 3),
+            "lesson": ("Lärdom", 4),
+            "habit": ("Vana", 4),
+            "preference": ("Preferens", 5),
+        }
+        raw_mems = [m for m in (mem_res.data or []) if (m.get("content") or "").strip()]
+        raw_mems.sort(
+            key=lambda m: (
+                type_meta.get(str(m.get("memory_type") or "").lower(), ("Minne", 6))[1],
+                -(int(m.get("importance") or 0)),
+            )
+        )
+        for m in raw_mems[:4]:
+            mtype = str(m.get("memory_type") or "").lower()
+            label, _ = type_meta.get(mtype, ("Minne", 6))
+            dt = _fmt_date(m.get("created_at"))
+            header = f"[{label} · {dt}]" if dt else f"[{label}]"
+            memories_ctx.append(f"{header} {m['content'].strip()}")
     except Exception as e:
         logging.warning(f"Kunde inte hämta falk_memory: {e}")
 
+    # 4. Senaste kapitel i Livsboken / The Compass Journal (Falk Bible 7.1, 7.14)
     try:
-        ins = (
-            supabase.table("user_insights")
-            .select("content")
+        j_res = (
+            supabase.table("falk_compass_journal")
+            .select("chapter_number, chapter_title, summary, key_themes, created_at")
             .eq("user_id", uid)
-            .order("created_at", desc=True)
-            .limit(4)
+            .order("chapter_number", desc=True)
+            .limit(2)
             .execute()
         )
-        if ins.data:
-            memories.extend([f"Insikt: {row['content']}" for row in ins.data if row.get("content")])
+        for ch in (j_res.data or []):
+            num = ch.get("chapter_number")
+            title = (ch.get("chapter_title") or "").strip()
+            summary = (ch.get("summary") or "").strip()
+            dt = _fmt_date(ch.get("created_at"))
+            themes = ch.get("key_themes") or []
+            theme_str = f" (Teman: {', '.join(str(t) for t in themes[:4])})" if themes else ""
+            if summary or title:
+                dt_part = f" · {dt}" if dt else ""
+                journal_ctx.append(f"[Livsboken Kap {num}{dt_part}: {title}] {summary}{theme_str}")
     except Exception as e:
-        logging.warning(f"Kunde inte hämta kontinuitetsinsikter: {e}")
+        logging.warning(f"Kunde inte hämta falk_compass_journal: {e}")
 
+    # 5. Senaste insikter (Playbook 10.12 Insiktsbibliotek)
     try:
-        goals = (
-            supabase.table("user_goals")
-            .select("title, status")
+        ins_res = (
+            supabase.table("falk_insights")
+            .select("title, content, category, created_at")
             .eq("user_id", uid)
             .order("created_at", desc=True)
-            .limit(3)
+            .limit(2)
             .execute()
         )
-        if goals.data:
-            for g in goals.data:
-                if g.get("title") and g.get("status") != "completed":
-                    memories.append(f"Aktivt mål: {g['title']}")
+        for ins in (ins_res.data or []):
+            title = (ins.get("title") or "").strip()
+            content = (ins.get("content") or "").strip()
+            cat = (ins.get("category") or "").strip()
+            dt = _fmt_date(ins.get("created_at"))
+            meta = " · ".join(p for p in [dt, cat] if p)
+            prefix = f"[Insikt · {meta}]" if meta else "[Insikt]"
+            body = f"{title}: {content}" if (title and content and title != content) else (title or content)
+            if body:
+                insights_ctx.append(f"{prefix} {body}")
     except Exception as e:
-        logging.warning(f"Kunde inte hämta kontinuitetsmål: {e}")
+        logging.warning(f"Kunde inte hämta falk_insights: {e}")
 
+    # 6. Kompassen över tid – senaste mätning + progression mot föregående (Falk Bible 7.5 & Playbook 10.10)
     try:
-        rems = (
-            supabase.table("user_reminders")
-            .select("content, remind_at")
-            .eq("user_id", uid)
-            .eq("is_active", True)
-            .order("created_at", desc=True)
-            .limit(3)
-            .execute()
-        )
-        if rems.data:
-            for r in rems.data:
-                if r.get("content"):
-                    memories.append(f"Påminnelse: {r['content']}")
-    except Exception as e:
-        logging.warning(f"Kunde inte hämta kontinuitetspåminnelser: {e}")
-
-    try:
-        comp = (
+        sc_res = (
             supabase.table("compass_scores")
-            .select("scores, created_at")
+            .select("riktning, balans, handling, reflektion, overall_index, created_at")
             .eq("user_id", uid)
             .order("created_at", desc=True)
-            .limit(1)
+            .limit(2)
             .execute()
         )
-        if comp.data and comp.data[0].get("scores"):
-            raw_scores = comp.data[0]["scores"]
-            if isinstance(raw_scores, dict):
-                compass_summary = ", ".join(f"{k}: {v}" for k, v in raw_scores.items())
+        rows = sc_res.data or []
+        if rows:
+            curr = rows[0]
+            curr_dt = _fmt_date(curr.get("created_at"))
+            base_line = (
+                f"Senaste kompasskalibrering ({curr_dt or 'aktuell'}): "
+                f"Helhetsindex {curr.get('overall_index')}/100 "
+                f"(Riktning: {curr.get('riktning')}, Balans: {curr.get('balans')}, "
+                f"Handling: {curr.get('handling')}, Reflektion: {curr.get('reflektion')})."
+            )
+            if len(rows) >= 2:
+                prev = rows[1]
+                prev_dt = _fmt_date(prev.get("created_at"))
+                def _d(k: str) -> str:
+                    try:
+                        diff = int(round(float(curr.get(k) or 0) - float(prev.get(k) or 0)))
+                        return f"{diff:+d}"
+                    except Exception:
+                        return "0"
+                delta_line = (
+                    f" Utveckling sedan {prev_dt or 'föregående mätning'}: "
+                    f"Helhet {_d('overall_index')}, Riktning {_d('riktning')}, "
+                    f"Balans {_d('balans')}, Handling {_d('handling')}, Reflektion {_d('reflektion')}."
+                )
+                compass_summary = base_line + delta_line
             else:
-                compass_summary = str(raw_scores)
+                compass_summary = base_line
     except Exception as e:
-        logging.warning(f"Kunde inte hämta kompassläge: {e}")
+        logging.warning(f"Kunde inte hämta compass_scores: {e}")
 
-    return memories, compass_summary
+    ordered_memories = reminders_ctx + goals_ctx + memories_ctx + journal_ctx + insights_ctx
+    return ordered_memories, compass_summary
+
 
 
 # ---------------------------------------------------------------------------
@@ -634,6 +713,21 @@ def handle_chat():
                 sanitized_session_mode = {"track": track, "duration_minutes": dur}
         final_compass_flag = bool(data.get("final_compass"))
 
+    # Prioritera semantiska RAG-träffar före bakgrundskontinuitet så de inte trunkeras av [:10]-taket
+    if memories:
+        _structured_prefixes = (
+            "[Påminnelse", "[Aktivt mål", "[Återkommande mönster", "[Nordstjärna",
+            "[Riktning", "[Värdering", "[Framsteg", "[Milstolpe", "[Beslut",
+            "[Lärdom", "[Vana", "[Preferens", "[Minne", "[Livsboken", "[Insikt",
+        )
+        _rag_hits = [
+            f"[Relevant tidigare samtal] {m}" if not m.startswith("[") else m
+            for m in memories
+            if not m.startswith(_structured_prefixes)
+        ][:3]
+        _cont_hits = [m for m in memories if m.startswith(_structured_prefixes)]
+        memories = _rag_hits + _cont_hits
+
     system_prompt = build_falk_system_prompt(
         user_message=message,
         current_stage=next_stage,
@@ -645,6 +739,7 @@ def handle_chat():
         b2b_context=sanitized_b2b_context,
         session_mode=sanitized_session_mode,
         final_compass=final_compass_flag,
+        is_new_session=(len(clean_history) == 0),
     )
 
     convo_messages = clean_history + [{"role": "user", "content": message}]

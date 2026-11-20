@@ -148,18 +148,27 @@ def _normalize_memories(
     user_context_memories: Optional[List[str]],
     user_context: Optional[Any],
 ) -> List[str]:
-    items: List[str] = []
+    raw_items: List[str] = []
     if isinstance(user_context_memories, list):
-        items.extend(str(m).strip() for m in user_context_memories if str(m).strip())
+        raw_items.extend(str(m).strip() for m in user_context_memories if str(m).strip())
     if isinstance(user_context, list):
-        items.extend(str(m).strip() for m in user_context if str(m).strip())
+        raw_items.extend(str(m).strip() for m in user_context if str(m).strip())
     elif isinstance(user_context, str) and user_context.strip():
-        items.append(user_context.strip())
+        raw_items.append(user_context.strip())
     elif isinstance(user_context, dict):
         for k, v in user_context.items():
             if v:
-                items.append(f"{k}: {v}")
-    return items[:6]
+                raw_items.append(f"{k}: {v}")
+
+    deduped: List[str] = []
+    seen = set()
+    for item in raw_items:
+        key = item.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    return deduped[:10]
 
 
 
@@ -254,9 +263,11 @@ def build_falk_system_prompt(
     user_context: Optional[Any] = None,
     safety_instructions: Optional[str] = None,
     recent_assistant_messages: Optional[List[str]] = None,
- b2b_context=None,
- session_mode=None,
- final_compass: bool = False) -> str:
+    b2b_context=None,
+    session_mode=None,
+    final_compass: bool = False,
+    is_new_session: bool = False,
+) -> str:
     """
     Bygger FALKs 5-lagers systemprompt enligt The Wayjs Prompt Architecture™ (Playbook Kap 14).
     Bakåtkompatibel med samtliga anropssignaturer i app.py, calibration_engine.py och dialogue_router.py.
@@ -289,26 +300,39 @@ def build_falk_system_prompt(
     models_block = format_mental_models_prompt(selected_models)
     focus_block = _build_focus_layer(focus_sliders)
 
-    # Kontinuitetsminnen & Kompassprofil (endast för inloggade användare)
+    # Kontinuitetsminnen & Kompassprofil (endast för inloggade användare, isolerat från organisatorisk B2B-nivå)
     continuity_block = ""
-    if not resolved_is_guest:
+    is_org_b2b = (
+        isinstance(b2b_context, dict)
+        and str(b2b_context.get("level") or "").strip().lower() in ("ledning", "foretag")
+    )
+    if not resolved_is_guest and not is_org_b2b:
         parts: List[str] = []
         if compass_summary:
-            parts.append(f"Användarens senaste kompassläge:\n{compass_summary}")
+            parts.append(f"Användarens senaste kompassläge & riktning:\n{compass_summary}")
         memories = _normalize_memories(user_context_memories, user_context)
         if memories:
             mem_lines = "\n".join(f"- {m}" for m in memories)
             parts.append(
-                "Relevanta kontinuitetsminnen (riktning, inte bagage):\n"
+                "Kontinuitetshistorik, mönster & hypoteser (riktning, inte bagage):\n"
                 + mem_lines
             )
         if parts:
+            session_opening_note = (
+                "- SESSIONSSTART (NYTT KAPITEL - FALK BIBLE 7.4 / PLAYBOOK 10.18): Detta är första meddelandet i ett nytt samtal. "
+                "Om användaren inte öppnar med ett helt nytt akut spår eller bara hälsar kort i Medvind, kan du varsamt knyta an "
+                "till senast utforskade riktning eller mål som en öppen fråga (t.ex. 'Senast utforskade du [X] – hur har det rört sig sedan dess?').\n"
+                if is_new_session
+                else ""
+            )
             continuity_rules = (
-                "STYRREGLER FÖR KONTINUITET (PLAYBOOK KAP. 10.8, 10.15, 10.18, 10.21):\n"
-                "- Falk minns människans riktning – inte hennes bagage. Behandla alla minnen och kompassvärden som öppna, omprövningsbara hypoteser, ALDRIG som låsta sanningar eller etiketter.\n"
-                "- Väv in HÖGST EN (1) relevant tråd när den faktiskt skapar klarhet eller synliggör progression. Redovisa aldrig minnen mekaniskt och säg aldrig 'Enligt mina anteckningar...' eller 'Jag ser i din profil...'.\n"
-                "- Använd utforskande öppenhet vid återkoppling (t.ex. 'Tidigare utforskade du [X] – känns det fortfarande aktuellt, eller har något skiftat?').\n"
-                "- NÄR MINNET SKA VILA: Vid rent småprat (Medvind), akut belastning eller när användaren öppnar ett nytt spår ska du inte tvinga in historik."
+                "STYRREGLER FÖR AKTIV KONTINUITET & MÖNSTERIGENKÄNNING (FALK BIBLE KAP. 7 & PLAYBOOK KAP. 10):\n"
+                "- HYPOTESPRINCIPEN (PLAYBOOK 10.8 & 10.21): Falk minns människans riktning – inte hennes bagage. Behandla alla minnen, kapitel och kompassvärden som öppna, omprövningsbara hypoteser, ALDRIG som låsta sanningar eller identitetsetiketter.\n"
+                "- MÖNSTERIGENKÄNNING (FALK BIBLE 7.6 & PLAYBOOK 10.11): När nuvarande meddelande speglar ett återkommande tema, hinder eller en värderingskonflikt i historiken, lyft mönstret varsamt och utforskande ('Jag lägger märke till ett tema som verkar återkomma...') och låt användaren bekräfta eller korrigera.\n"
+                "- PROGRESSION & MOD (FALK BIBLE 7.5, 7.9 & PLAYBOOK 10.9): Om tidslinjen visar en förflyttning från tidigare osäkerhet till ny klarhet, gränssättning eller mod, spegla den rörelsen lugnt utan smicker eller överdrivna utrop.\n"
+                + session_opening_note
+                + "- DOSERING & INTEGRITET: Väv in HÖGST EN (1) relevant tråd när den faktiskt skapar klarhet. Redovisa aldrig minnen mekaniskt och säg aldrig 'Enligt mina anteckningar...' eller 'Jag ser i din profil...'.\n"
+                "- NÄR MINNET SKA VILA (PLAYBOOK 10.15): Vid rent småprat (Medvind), akut belastning eller när användaren tydligt byter riktning ska historiken vila."
             )
             continuity_block = (
                 "\n\nKONTINUITET & KOMPASS (THE WAYJS CONTINUITY SYSTEM™):\n"
