@@ -59,6 +59,8 @@ if SUPABASE_URL and SUPABASE_KEY:
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+FALK_PRIMARY_MODEL = os.getenv("FALK_PRIMARY_MODEL", "gpt-4.1").strip() or "gpt-4.1"
+FALK_GROQ_MODEL = os.getenv("FALK_GROQ_MODEL", "llama-3.3-70b-versatile").strip() or "llama-3.3-70b-versatile"
 
 state_machine = FalkStateMachine()
 
@@ -207,43 +209,60 @@ def _check_guest_quota(identifier: str, limit: int = 6) -> Tuple[bool, int]:
 
 
 def _call_llm(system_prompt: str, messages_payload: List[Dict[str, str]], max_tokens: int = 650) -> str:
+    import time
     full_messages = [{"role": "system", "content": system_prompt}] + messages_payload
-
-    if GROQ_API_KEY:
-        try:
-            res = requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {GROQ_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": "llama-3.3-70b-versatile",
-                    "messages": full_messages,
-                    "temperature": 0.65,
-                    "max_tokens": max_tokens,
-                },
-                timeout=14,
-            )
-            if res.status_code == 200:
-                return res.json()["choices"][0]["message"]["content"].strip()
-            logging.warning(f"Groq API status {res.status_code}: {res.text[:200]}")
-        except Exception as e:
-            logging.error(f"Groq-anrop misslyckades: {e}")
+    deadline = time.monotonic() + 24.0
 
     if OPENAI_API_KEY:
         try:
             import openai
             client = openai.OpenAI(api_key=OPENAI_API_KEY)
-            res = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=full_messages,
-                temperature=0.65,
-                max_tokens=max_tokens,
-            )
-            return res.choices[0].message.content.strip()
+            openai_models = list(dict.fromkeys([FALK_PRIMARY_MODEL, "gpt-4o", "gpt-4o-mini"]))
+            for model_name in openai_models:
+                remaining = deadline - time.monotonic()
+                if remaining < 4.0:
+                    break
+                try:
+                    res = client.chat.completions.create(
+                        model=model_name,
+                        messages=full_messages,
+                        temperature=0.65,
+                        max_tokens=max_tokens,
+                        timeout=min(15.0, remaining),
+                    )
+                    content = (res.choices[0].message.content or "").strip()
+                    if content:
+                        return content
+                except Exception as model_err:
+                    logging.warning(f"OpenAI ({model_name}) misslyckades: {model_err}")
         except Exception as e:
-            logging.error(f"OpenAI-anrop misslyckades: {e}")
+            logging.error(f"OpenAI-klientfel: {e}")
+
+    if GROQ_API_KEY:
+        remaining = deadline - time.monotonic()
+        if remaining >= 3.0:
+            try:
+                res = requests.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {GROQ_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": FALK_GROQ_MODEL,
+                        "messages": full_messages,
+                        "temperature": 0.65,
+                        "max_tokens": max_tokens,
+                    },
+                    timeout=min(12.0, remaining),
+                )
+                if res.status_code == 200:
+                    content = res.json()["choices"][0]["message"]["content"].strip()
+                    if content:
+                        return content
+                logging.warning(f"Groq API status {res.status_code}: {res.text[:200]}")
+            except Exception as e:
+                logging.error(f"Groq-anrop misslyckades: {e}")
 
     last_user = next((m["content"] for m in reversed(messages_payload) if m["role"] == "user"), "")
     return (
@@ -867,7 +886,12 @@ def handle_message_variation():
         if user_prompt
         else original_reply
     )
-    raw_reply = _call_llm(system_prompt, [{"role": "user", "content": context_input}])
+    variant_max_tokens = {"deeper": 1100, "concise": 320}.get(response_variant, 650)
+    raw_reply = _call_llm(
+        system_prompt,
+        [{"role": "user", "content": context_input}],
+        max_tokens=variant_max_tokens,
+    )
     final_reply = _apply_gate_filter(
         raw_reply,
         check_target,
@@ -979,7 +1003,7 @@ def _sync_journal_and_memory(
             raw_json = _call_llm(
                 distill_system,
                 [{"role": "user", "content": distill_user}],
-                max_tokens=340,
+                max_tokens=700,
             )
             match = _re.search(r"\{.*\}", raw_json or "", _re.DOTALL)
             if match:
