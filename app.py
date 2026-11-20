@@ -747,6 +747,7 @@ def handle_chat():
         _cont_hits = [m for m in memories if m.startswith(_structured_prefixes)]
         memories = _rag_hits + _cont_hits
 
+    _resolved_user_name = _resolve_user_display_name(uid if 'uid' in locals() else (user_id if 'user_id' in locals() else None), is_guest if 'is_guest' in locals() else True)
     system_prompt = build_falk_system_prompt(
         user_message=message,
         current_stage=next_stage,
@@ -759,6 +760,7 @@ def handle_chat():
         session_mode=sanitized_session_mode,
         final_compass=final_compass_flag,
         is_new_session=(len(clean_history) == 0),
+        user_name=_resolved_user_name,
     )
 
     convo_messages = clean_history + [{"role": "user", "content": message}]
@@ -809,6 +811,7 @@ def handle_chat():
         "user_tier": user_tier,
         "conversation_id": conversation_id,
         "guest_remaining": guest_remaining,
+        "suggested_goal": _extract_goal_suggestion(user_message if "user_message" in locals() else "", is_guest if "is_guest" in locals() else True),
     }), 200
 
 
@@ -2901,6 +2904,341 @@ def b2b_org_members():
         logging.error(f"B2B members-fel för org {org_id}: {e}")
         return jsonify({"status": "error", "message": "Kunde inte hantera organisationsmedlemmar."}), 500
 
+
+
+# === FALK_STEP4_PUSH_AND_PROFILE_PATCH ===
+try:
+    import fcntl as _falk_fcntl
+except Exception:
+    _falk_fcntl = None
+
+try:
+    from pywebpush import webpush as _pywebpush_send, WebPushException as _WebPushException
+except Exception:
+    _pywebpush_send = None
+    _WebPushException = Exception
+
+
+def _resolve_user_display_name(uid: Optional[str], is_guest: bool = True) -> Optional[str]:
+    if is_guest or not uid or not supabase:
+        return None
+    try:
+        res = (
+            supabase.table("user_profiles")
+            .select("display_name")
+            .eq("user_id", uid)
+            .limit(1)
+            .execute()
+        )
+        rows = res.data or []
+        if not rows:
+            res = (
+                supabase.table("user_profiles")
+                .select("display_name")
+                .eq("id", uid)
+                .limit(1)
+                .execute()
+            )
+            rows = res.data or []
+        if rows:
+            name = (rows[0].get("display_name") or "").strip()
+            if name:
+                return name[:80]
+    except Exception as e:
+        logging.warning(f"Kunde inte hämta display_name från user_profiles: {e}")
+    return None
+
+
+def _extract_goal_suggestion(user_message: str, is_guest: bool = True) -> Optional[Dict[str, str]]:
+    """
+    Identifierar om en inloggad användare i samtalet formulerar ett konkret mål
+    eller åtagande så att gränssnittet kan erbjuda att spara det i Kompassen.
+    Triggas aldrig för gäster.
+    """
+    if is_guest or not user_message:
+        return None
+    text = user_message.strip()
+    if len(text) < 12 or len(text) > 260 or text.endswith("?"):
+        return None
+
+    lowered = text.lower()
+    triggers = (
+        "mitt mål är",
+        "jag vill sätta som mål",
+        "sätt ett mål",
+        "spara som mål",
+        "mitt nästa steg är att",
+        "jag har bestämt mig för att",
+        "jag ska börja",
+        "jag vill börja",
+        "jag vill uppnå",
+    )
+    if not any(t in lowered for t in triggers):
+        return None
+
+    area = "Personlig utveckling"
+    area_keywords = (
+        ("Hälsa och träning", ("träna", "sömn", "sova", "hälsa", "promenad", "springa", "vila", "återhämtning", "energi")),
+        ("Jobb och karriär", ("jobb", "karriär", "chef", "arbete", "projekt", "företag", "studier")),
+        ("Familj", ("familj", "barn", "förälder", "mamma", "pappa", "syskon")),
+        ("Intim relation", ("partner", "relation", "kärlek", "sambo", "fru", "man", "dejta")),
+        ("Finans", ("ekonomi", "spara", "pengar", "budget", "lön", "investera")),
+        ("Spiritualitet", ("meditation", "mening", "syfte", "inre ro", "närvaro", "tacksamhet")),
+    )
+    for candidate_area, kws in area_keywords:
+        if any(k in lowered for k in kws):
+            area = candidate_area
+            break
+
+    cleaned_title = text.rstrip(".!").strip()
+    if len(cleaned_title) > 110:
+        cleaned_title = cleaned_title[:107].rstrip() + "..."
+    return {"title": cleaned_title, "area": area}
+
+
+def _get_push_auth_uid() -> Optional[str]:
+    if not supabase:
+        return None
+    auth_header = (request.headers.get("Authorization") or "").strip()
+    if not auth_header.lower().startswith("bearer "):
+        return None
+    token = auth_header.split(" ", 1)[1].strip()
+    if not token:
+        return None
+    try:
+        user_resp = supabase.auth.get_user(token)
+        user_obj = getattr(user_resp, "user", None)
+        if user_obj and getattr(user_obj, "id", None):
+            return str(user_obj.id)
+    except Exception as e:
+        logging.warning(f"Push auth-verifiering misslyckades: {e}")
+    return None
+
+
+def _send_web_push_to_user(user_id: str, title: str, body: str, url: str = "/", tag: str = "falk-reminder") -> int:
+    if not _pywebpush_send or not supabase or not user_id:
+        return 0
+    vapid_private = (os.environ.get("VAPID_PRIVATE_KEY") or "").strip()
+    vapid_subject = (os.environ.get("VAPID_SUBJECT") or "mailto:hej@wayjs.se").strip()
+    if not vapid_private:
+        return 0
+
+    try:
+        subs_res = (
+            supabase.table("push_subscriptions")
+            .select("id, endpoint, p256dh, auth")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        subs = subs_res.data or []
+    except Exception as e:
+        logging.warning(f"Kunde inte hämta push_subscriptions för {user_id}: {e}")
+        return 0
+
+    sent_count = 0
+    payload = json.dumps({
+        "title": title,
+        "body": body,
+        "url": url,
+        "tag": tag,
+    }, ensure_ascii=False)
+
+    for sub in subs:
+        endpoint = sub.get("endpoint")
+        p256dh = sub.get("p256dh")
+        auth_key = sub.get("auth")
+        if not endpoint or not p256dh or not auth_key:
+            continue
+        try:
+            _pywebpush_send(
+                subscription_info={
+                    "endpoint": endpoint,
+                    "keys": {"p256dh": p256dh, "auth": auth_key},
+                },
+                data=payload,
+                vapid_private_key=vapid_private,
+                vapid_claims={"sub": vapid_subject},
+                ttl=3600,
+            )
+            sent_count += 1
+        except _WebPushException as ex:
+            status_code = getattr(getattr(ex, "response", None), "status_code", None)
+            if status_code in (404, 410) and sub.get("id"):
+                try:
+                    supabase.table("push_subscriptions").delete().eq("id", sub["id"]).execute()
+                except Exception:
+                    pass
+            else:
+                logging.warning(f"WebPushException för {user_id}: {ex}")
+        except Exception as e:
+            logging.warning(f"Oväntat fel vid Web Push till {user_id}: {e}")
+    return sent_count
+
+
+@app.route("/api/push/vapid-public-key", methods=["GET"])
+def get_vapid_public_key():
+    pub = (os.environ.get("VAPID_PUBLIC_KEY") or "").strip()
+    return jsonify({"status": "success", "publicKey": pub}), 200
+
+
+@app.route("/api/push/subscribe", methods=["POST"])
+def subscribe_web_push():
+    uid = _get_push_auth_uid()
+    if not uid:
+        return jsonify({"status": "error", "message": "Inloggning krävs för push-notiser."}), 401
+
+    data = request.get_json(silent=True) or {}
+    sub = data.get("subscription") or data
+    endpoint = (sub.get("endpoint") or "").strip()
+    keys = sub.get("keys") or {}
+    p256dh = (keys.get("p256dh") or "").strip()
+    auth_key = (keys.get("auth") or "").strip()
+    user_agent = (request.headers.get("User-Agent") or "")[:250]
+
+    if not endpoint or not p256dh or not auth_key:
+        return jsonify({"status": "error", "message": "Ogiltig push-prenumeration."}), 400
+
+    try:
+        now_iso = datetime.now(timezone.utc).isoformat()
+        existing = (
+            supabase.table("push_subscriptions")
+            .select("id")
+            .eq("user_id", uid)
+            .eq("endpoint", endpoint)
+            .limit(1)
+            .execute()
+        )
+        if existing.data:
+            supabase.table("push_subscriptions").update({
+                "p256dh": p256dh,
+                "auth": auth_key,
+                "user_agent": user_agent,
+                "updated_at": now_iso,
+            }).eq("id", existing.data[0]["id"]).execute()
+        else:
+            supabase.table("push_subscriptions").insert({
+                "user_id": uid,
+                "endpoint": endpoint,
+                "p256dh": p256dh,
+                "auth": auth_key,
+                "user_agent": user_agent,
+                "updated_at": now_iso,
+            }).execute()
+        return jsonify({"status": "success"}), 200
+    except Exception as e:
+        logging.error(f"Fel vid sparande av push-prenumeration: {e}")
+        return jsonify({"status": "error", "message": "Kunde inte aktivera push-notiser."}), 500
+
+
+@app.route("/api/push/unsubscribe", methods=["POST"])
+def unsubscribe_web_push():
+    uid = _get_push_auth_uid()
+    if not uid:
+        return jsonify({"status": "error", "message": "Inloggning krävs."}), 401
+
+    data = request.get_json(silent=True) or {}
+    endpoint = (data.get("endpoint") or "").strip()
+    try:
+        query = supabase.table("push_subscriptions").delete().eq("user_id", uid)
+        if endpoint:
+            query = query.eq("endpoint", endpoint)
+        query.execute()
+        return jsonify({"status": "success"}), 200
+    except Exception as e:
+        logging.error(f"Fel vid avregistrering av push-prenumeration: {e}")
+        return jsonify({"status": "error", "message": "Kunde inte stänga av push-notiser."}), 500
+
+
+_sent_push_reminder_keys = set()
+
+
+def _parse_utc_timestamp(raw_val: Any) -> Optional[datetime]:
+    if not raw_val:
+        return None
+    s = str(raw_val).strip()
+    if not s:
+        return None
+    try:
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
+def _reminder_push_worker_loop() -> None:
+    lock_fd = None
+    if _falk_fcntl is not None:
+        try:
+            lock_fd = open("/tmp/falk_push_worker.lock", "w")
+            _falk_fcntl.flock(lock_fd.fileno(), _falk_fcntl.LOCK_EX | _falk_fcntl.LOCK_NB)
+        except Exception:
+            # En annan Gunicorn-worker håller redan låset
+            return
+
+    while True:
+        try:
+            if supabase and _pywebpush_send and (os.environ.get("VAPID_PRIVATE_KEY") or "").strip():
+                now_utc = datetime.now(timezone.utc)
+                res = supabase.table("user_reminders").select("*").limit(200).execute()
+                for row in (res.data or []):
+                    if row.get("is_completed") is True:
+                        continue
+                    status_val = str(row.get("status") or "active").lower()
+                    if status_val in ("completed", "done", "dismissed", "cancelled"):
+                        continue
+
+                    raw_due = (
+                        row.get("remind_at")
+                        or row.get("due_at")
+                        or row.get("next_trigger_at")
+                        or row.get("scheduled_at")
+                    )
+                    due_dt = _parse_utc_timestamp(raw_due)
+                    if not due_dt:
+                        continue
+
+                    # Skicka endast för påminnelser som förfallit inom senaste 15 min (undviker historik-spam)
+                    delta_sec = (now_utc - due_dt).total_seconds()
+                    if delta_sec < 0 or delta_sec > 900:
+                        continue
+
+                    rem_id = str(row.get("id") or "")
+                    uid = str(row.get("user_id") or "")
+                    dedup_key = f"{rem_id}:{due_dt.isoformat()}"
+                    if not rem_id or not uid or dedup_key in _sent_push_reminder_keys:
+                        continue
+
+                    title_txt = (row.get("title") or row.get("text") or "Påminnelse från FALK").strip()
+                    body_txt = (row.get("context") or row.get("description") or "Dags att stanna upp och reflektera.").strip()
+                    _sent_push_reminder_keys.add(dedup_key)
+                    if len(_sent_push_reminder_keys) > 2000:
+                        _sent_push_reminder_keys.clear()
+
+                    _send_web_push_to_user(
+                        user_id=uid,
+                        title=f"FALK · {title_txt[:60]}",
+                        body=body_txt[:160],
+                        url="/",
+                        tag=f"falk-rem-{rem_id}",
+                    )
+        except Exception as e:
+            logging.warning(f"Reminder push worker-varv felade: {e}")
+        time.sleep(45)
+
+
+def _start_reminder_push_worker() -> None:
+    if os.environ.get("FALK_DISABLE_PUSH_WORKER") == "1":
+        return
+    t = threading.Thread(target=_reminder_push_worker_loop, daemon=True, name="falk-push-worker")
+    t.start()
+
+
+_start_reminder_push_worker()
+# === END FALK_STEP4_PUSH_AND_PROFILE_PATCH ===
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001))

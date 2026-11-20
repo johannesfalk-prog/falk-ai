@@ -8,3 +8,4 @@ python-dotenv
 stripe
 PyJWT
 httpx[http2]
+pywebpush

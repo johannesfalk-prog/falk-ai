@@ -267,6 +267,7 @@ def build_falk_system_prompt(
     session_mode=None,
     final_compass: bool = False,
     is_new_session: bool = False,
+    user_name: Optional[str] = None,
 ) -> str:
     """
     Bygger FALKs 5-lagers systemprompt enligt The Wayjs Prompt Architecture™ (Playbook Kap 14).
@@ -373,6 +374,16 @@ def build_falk_system_prompt(
         f"{anti_repeat_note}"
     )
 
+    user_identity_block = ""
+    if not resolved_is_guest and not is_org_b2b:
+        clean_user_name = " ".join(str(user_name or "").split()).strip()[:80]
+        if clean_user_name:
+            user_identity_block = (
+                f"\n\n[ANVÄNDARIDENTITET]\n"
+                f"Användarens namn/tilltalsnamn är: {clean_user_name}.\n"
+                f"- Använd namnet naturligt och sparsamt som en klok mänsklig mentor (t.ex. vid hälsning eller viktig spegling) – aldrig mekaniskt eller i varje meddelande."
+            )
+
     _base_prompt = (
         f"{CORE_IDENTITY_PROMPT.strip()}"
         f"{safety_block}\n\n"
@@ -380,6 +391,7 @@ def build_falk_system_prompt(
         f"LAGER 3 - SITUATION PLAYBOOK:\n{situation_block}\n\n"
         f"LAGER 4 - MENTALA MODELLER:\n{models_block}"
         f"{focus_block}"
+        f"{user_identity_block}"
         f"{continuity_block}"
         f"{quality_layer}"
     ).strip()
