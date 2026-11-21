@@ -748,7 +748,11 @@ def handle_chat():
         memories = _rag_hits + _cont_hits
 
     _active_uid = auth_uid if 'auth_uid' in locals() else None
-    _resolved_user_name = _resolve_user_display_name(_active_uid, is_guest if 'is_guest' in locals() else True)
+    _resolved_user_name = _resolve_user_display_name(
+        _active_uid,
+        is_guest if 'is_guest' in locals() else True,
+        fallback_name=data.get("display_name"),
+    )
     _created_reminder = _maybe_create_chat_reminder(message, _active_uid, is_guest if 'is_guest' in locals() else True)
     system_prompt = build_falk_system_prompt(
         user_message=message,
@@ -885,6 +889,11 @@ def handle_message_variation():
     if not is_guest and auth_uid:
         memories, compass_summary = _fetch_user_continuity(auth_uid)
 
+    _resolved_user_name = _resolve_user_display_name(
+        auth_uid,
+        is_guest,
+        fallback_name=data.get("display_name"),
+    )
     system_prompt = build_falk_system_prompt(
         user_message=check_target,
         current_stage=active_stage,
@@ -893,6 +902,7 @@ def handle_message_variation():
         user_context_memories=memories,
         compass_summary=compass_summary,
         response_variant=response_variant,
+        user_name=_resolved_user_name,
     )
 
     context_input = (
@@ -2931,9 +2941,23 @@ except Exception:
     _WebPushException = Exception
 
 
-def _resolve_user_display_name(uid: Optional[str], is_guest: bool = True) -> Optional[str]:
-    if is_guest or not uid or not supabase:
+def _resolve_user_display_name(
+    uid: Optional[str],
+    is_guest: bool = True,
+    fallback_name: Optional[str] = None,
+) -> Optional[str]:
+    if is_guest:
         return None
+
+    clean_fallback = None
+    if isinstance(fallback_name, str):
+        stripped = " ".join(fallback_name.strip().split())
+        if stripped:
+            clean_fallback = stripped[:80]
+
+    if not uid or not supabase:
+        return clean_fallback
+
     try:
         res = (
             supabase.table("user_profiles")
@@ -2970,7 +2994,7 @@ def _resolve_user_display_name(uid: Optional[str], is_guest: bool = True) -> Opt
                     return val[:80]
     except Exception as e:
         logging.warning(f"Kunde inte hämta display_name från auth metadata: {e}")
-    return None
+    return clean_fallback
 
 
 def _maybe_create_chat_reminder(user_message: str, auth_uid: Optional[str], is_guest: bool = True) -> Optional[Dict[str, Any]]:
