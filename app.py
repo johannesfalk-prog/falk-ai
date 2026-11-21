@@ -3,7 +3,7 @@ import re
 import time
 import logging
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional, Tuple, List
 
 import requests
@@ -747,7 +747,9 @@ def handle_chat():
         _cont_hits = [m for m in memories if m.startswith(_structured_prefixes)]
         memories = _rag_hits + _cont_hits
 
-    _resolved_user_name = _resolve_user_display_name(uid if 'uid' in locals() else (user_id if 'user_id' in locals() else None), is_guest if 'is_guest' in locals() else True)
+    _active_uid = auth_uid if 'auth_uid' in locals() else None
+    _resolved_user_name = _resolve_user_display_name(_active_uid, is_guest if 'is_guest' in locals() else True)
+    _created_reminder = _maybe_create_chat_reminder(message, _active_uid, is_guest if 'is_guest' in locals() else True)
     system_prompt = build_falk_system_prompt(
         user_message=message,
         current_stage=next_stage,
@@ -762,6 +764,15 @@ def handle_chat():
         is_new_session=(len(clean_history) == 0),
         user_name=_resolved_user_name,
     )
+    if _created_reminder:
+        system_prompt += (
+            "\n\n[SYSTEMBEKRÄFTELSE – PÅMINNELSE SKAPAD]\n"
+            f"En påminnelse har nu sparats i användarens konto och schemalagts för push-notis:\n"
+            f"- Innehåll: \"{_created_reminder.get('content', '')}\"\n"
+            f"- Tidpunkt (svensk tid): {_created_reminder.get('local_time_label', '')}\n"
+            "Bekräfta detta naturligt, lugnt och varmt i ditt svar som FALK. "
+            "Säg INTE att du saknar förmåga att skapa påminnelser."
+        )
 
     convo_messages = clean_history + [{"role": "user", "content": message}]
     raw_reply = _call_llm(system_prompt, convo_messages)
@@ -811,7 +822,8 @@ def handle_chat():
         "user_tier": user_tier,
         "conversation_id": conversation_id,
         "guest_remaining": guest_remaining,
-        "suggested_goal": _extract_goal_suggestion(user_message if "user_message" in locals() else "", is_guest if "is_guest" in locals() else True),
+        "suggested_goal": _extract_goal_suggestion(message if "message" in locals() else "", is_guest if "is_guest" in locals() else True),
+        "reminder": _created_reminder,
     }), 200
 
 
@@ -2946,7 +2958,161 @@ def _resolve_user_display_name(uid: Optional[str], is_guest: bool = True) -> Opt
                 return name[:80]
     except Exception as e:
         logging.warning(f"Kunde inte hämta display_name från user_profiles: {e}")
+
+    try:
+        auth_res = supabase.auth.admin.get_user_by_id(uid)
+        u_obj = getattr(auth_res, "user", None)
+        meta = getattr(u_obj, "user_metadata", None) or {}
+        if isinstance(meta, dict):
+            for k in ("display_name", "full_name", "name", "first_name"):
+                val = str(meta.get(k) or "").strip()
+                if val:
+                    return val[:80]
+    except Exception as e:
+        logging.warning(f"Kunde inte hämta display_name från auth metadata: {e}")
     return None
+
+
+def _maybe_create_chat_reminder(user_message: str, auth_uid: Optional[str], is_guest: bool = True) -> Optional[Dict[str, Any]]:
+    """
+    Detekterar när en inloggad Premium-användare ber FALK sätta en påminnelse i chatten,
+    beräknar svensk tid (Europe/Stockholm -> UTC) och sparar i user_reminders.
+    Triggas aldrig för gäster.
+    """
+    if is_guest or not auth_uid or not supabase or not user_message:
+        return None
+
+    text = user_message.strip()
+    if len(text) < 8 or len(text) > 320:
+        return None
+
+    lowered = text.lower()
+    if any(skip in lowered for skip in ("vad vi pratade om", "vad jag sa", "påminner det här om")):
+        return None
+
+    has_trigger = bool(re.search(
+        r"\b(påminn\s+mig|sätt\s+(?:en\s+)?påminnelse|skapa\s+(?:en\s+)?påminnelse|lägg\s+in\s+(?:en\s+)?påminnelse)\b",
+        lowered,
+    ))
+    if not has_trigger:
+        return None
+    if text.endswith("?") and not re.search(r"^(kan|skulle|vill)\s+du\s+påminna\s+mig", lowered):
+        return None
+
+    try:
+        from zoneinfo import ZoneInfo
+        stockholm_tz = ZoneInfo("Europe/Stockholm")
+    except Exception:
+        stockholm_tz = timezone(timedelta(hours=1))
+
+    now_local = datetime.now(stockholm_tz)
+    due_local: Optional[datetime] = None
+
+    rel_match = re.search(
+        r"\bom\s+(\d{1,3})\s*(sekunder|sekund|sek|minuter|minut|min|timmar|timme|tim|h)\b",
+        lowered,
+    )
+    clock_match = re.search(
+        r"\b(?:kl\.?|klockan)\s*(\d{1,2})(?:[:.](\d{2}))?\b",
+        lowered,
+    )
+    is_tomorrow = bool(re.search(r"\b(imorgon|i\s+morgon)\b", lowered))
+
+    if rel_match:
+        amount = max(1, int(rel_match.group(1)))
+        unit = rel_match.group(2)
+        if unit.startswith("sek"):
+            due_local = now_local + timedelta(seconds=amount)
+        elif unit.startswith("min"):
+            due_local = now_local + timedelta(minutes=amount)
+        else:
+            due_local = now_local + timedelta(hours=amount)
+    elif clock_match:
+        hour = int(clock_match.group(1))
+        minute = int(clock_match.group(2) or 0)
+        if 0 <= hour <= 23 and 0 <= minute <= 59:
+            candidate = now_local.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            if is_tomorrow:
+                candidate = candidate + timedelta(days=1)
+            elif candidate <= now_local - timedelta(seconds=30):
+                candidate = candidate + timedelta(days=1)
+            due_local = candidate
+
+    if due_local is None:
+        due_local = (now_local + timedelta(hours=1)).replace(second=0, microsecond=0)
+
+    cleaned = re.sub(
+        r"^(?:hej\s+falk[,!.\s]*|falk[,!.\s]*)?(?:kan\s+du\s+|skulle\s+du\s+kunna\s+|vill\s+du\s+)?(?:påminna|påminn)\s+mig\s*",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    ).strip()
+    cleaned = re.sub(
+        r"^(?:sätt|skapa|lägg\s+in)\s+(?:en\s+)?påminnelse\s*",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    ).strip()
+    cleaned = re.sub(
+        r"\b(?:imorgon|i\s+morgon|idag|i\s+dag)\b",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    ).strip()
+    cleaned = re.sub(
+        r"\bom\s+\d{1,3}\s*(?:sekunder|sekund|sek|minuter|minut|min|timmar|timme|tim|h)\b",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    ).strip()
+    cleaned = re.sub(
+        r"\b(?:kl\.?|klockan)\s*\d{1,2}(?:[:.]\d{2})?\b",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    ).strip()
+    cleaned = re.sub(r"^(?:att|om|för\s+att)\s+", "", cleaned, flags=re.IGNORECASE).strip(" .!?,-")
+    if not cleaned:
+        cleaned = "Påminnelse från samtal med FALK"
+    else:
+        cleaned = cleaned[0].upper() + cleaned[1:]
+    if len(cleaned) > 160:
+        cleaned = cleaned[:157].rstrip() + "..."
+
+    due_utc_iso = due_local.astimezone(timezone.utc).isoformat()
+    local_label = due_local.strftime("%Y-%m-%d %H:%M")
+
+    base_payload: Dict[str, Any] = {
+        "user_id": auth_uid,
+        "content": cleaned,
+        "frequency": "once",
+        "reminder_at": due_utc_iso,
+        "remind_at": due_utc_iso,
+    }
+    saved_row: Dict[str, Any] = dict(base_payload)
+    try:
+        res = supabase.table("user_reminders").insert(base_payload).execute()
+        if res.data:
+            saved_row = dict(res.data[0])
+    except Exception:
+        try:
+            alt_payload = {
+                "user_id": auth_uid,
+                "content": cleaned,
+                "frequency": "once",
+                "reminder_at": due_utc_iso,
+            }
+            res = supabase.table("user_reminders").insert(alt_payload).execute()
+            if res.data:
+                saved_row = dict(res.data[0])
+        except Exception as e:
+            logging.warning(f"Kunde inte spara chatt-påminnelse i user_reminders: {e}")
+            return None
+
+    saved_row.setdefault("content", cleaned)
+    saved_row.setdefault("reminder_at", due_utc_iso)
+    saved_row["local_time_label"] = local_label
+    return saved_row
 
 
 def _extract_goal_suggestion(user_message: str, is_guest: bool = True) -> Optional[Dict[str, str]]:
@@ -3192,7 +3358,8 @@ def _reminder_push_worker_loop() -> None:
                         continue
 
                     raw_due = (
-                        row.get("remind_at")
+                        row.get("reminder_at")
+                        or row.get("remind_at")
                         or row.get("due_at")
                         or row.get("next_trigger_at")
                         or row.get("scheduled_at")
@@ -3212,8 +3379,9 @@ def _reminder_push_worker_loop() -> None:
                     if not rem_id or not uid or dedup_key in _sent_push_reminder_keys:
                         continue
 
-                    title_txt = (row.get("title") or row.get("text") or "Påminnelse från FALK").strip()
-                    body_txt = (row.get("context") or row.get("description") or "Dags att stanna upp och reflektera.").strip()
+                    content_txt = (row.get("content") or "").strip()
+                    title_txt = (row.get("title") or row.get("text") or content_txt or "Påminnelse från FALK").strip()
+                    body_txt = (row.get("context") or row.get("description") or content_txt or "Dags att stanna upp och reflektera.").strip()
                     _sent_push_reminder_keys.add(dedup_key)
                     if len(_sent_push_reminder_keys) > 2000:
                         _sent_push_reminder_keys.clear()
