@@ -718,8 +718,32 @@ def handle_chat():
 
     sanitized_session_mode = None
     final_compass_flag = False
-    if not is_guest and is_premium:
-        raw_session = data.get("session_mode")
+    is_moderator_session = False
+    raw_session = data.get("session_mode")
+    requested_moderator = (
+        (isinstance(raw_session, str) and raw_session.strip().lower() == "moderator")
+        or (isinstance(raw_session, dict) and str(raw_session.get("track") or "").strip().lower() == "moderator")
+    )
+    if requested_moderator:
+        if is_guest or not is_premium:
+            return jsonify({
+                "status": "error",
+                "code": "PREMIUM_REQUIRED",
+                "message": "Moderatorläget för par- och gruppsamtal kräver FALK Premium.",
+            }), 403
+        mod_context = "private"
+        is_checkin_synth = False
+        if isinstance(raw_session, dict):
+            if str(raw_session.get("context") or "").strip().lower() == "b2b":
+                mod_context = "b2b"
+            is_checkin_synth = bool(raw_session.get("check_in_synthesis"))
+        sanitized_session_mode = {
+            "track": "moderator",
+            "context": mod_context,
+            "check_in_synthesis": is_checkin_synth,
+        }
+        is_moderator_session = True
+    elif not is_guest and is_premium:
         if isinstance(raw_session, dict):
             track = str(raw_session.get("track") or "").strip().lower()
             if track in COMPASS_SESSIONS:
@@ -731,6 +755,10 @@ def handle_chat():
                     dur = 15
                 sanitized_session_mode = {"track": track, "duration_minutes": dur}
         final_compass_flag = bool(data.get("final_compass"))
+
+    if is_moderator_session:
+        memories = []
+        compass_summary = None
 
     # Prioritera semantiska RAG-träffar före bakgrundskontinuitet så de inte trunkeras av [:10]-taket
     if memories:
@@ -753,7 +781,7 @@ def handle_chat():
         is_guest if 'is_guest' in locals() else True,
         fallback_name=data.get("display_name"),
     )
-    _created_reminder = _maybe_create_chat_reminder(message, _active_uid, is_guest if 'is_guest' in locals() else True)
+    _created_reminder = None if is_moderator_session else _maybe_create_chat_reminder(message, _active_uid, is_guest if 'is_guest' in locals() else True)
     system_prompt = build_falk_system_prompt(
         user_message=message,
         current_stage=next_stage,
@@ -794,7 +822,7 @@ def handle_chat():
     )
 
     conversation_id = data.get("conversation_id")
-    if supabase and not is_guest and auth_uid:
+    if supabase and not is_guest and auth_uid and not is_moderator_session:
         try:
             if not conversation_id:
                 conv_res = supabase.table("conversations").insert({
@@ -818,6 +846,10 @@ def handle_chat():
         _maybe_store_continuity_vector(auth_uid, conversation_id, message)
         _sync_journal_and_memory(auth_uid, conversation_id, message, final_reply, next_stage)
 
+    moderator_meta = None
+    if is_moderator_session:
+        final_reply, moderator_meta = _parse_moderator_reply_meta(final_reply)
+
     return jsonify({
         "status": "success",
         "reply": final_reply,
@@ -826,8 +858,9 @@ def handle_chat():
         "user_tier": user_tier,
         "conversation_id": conversation_id,
         "guest_remaining": guest_remaining,
-        "suggested_goal": _extract_goal_suggestion(message if "message" in locals() else "", is_guest if "is_guest" in locals() else True),
+        "suggested_goal": None if is_moderator_session else _extract_goal_suggestion(message if "message" in locals() else "", is_guest if "is_guest" in locals() else True),
         "reminder": _created_reminder,
+        "moderator_meta": moderator_meta,
     }), 200
 
 
@@ -3431,6 +3464,459 @@ def _start_reminder_push_worker() -> None:
 
 _start_reminder_push_worker()
 # === END FALK_STEP4_PUSH_AND_PROFILE_PATCH ===
+
+# === START FALK_MODERATOR_ROOMS_AND_META ===
+import fcntl
+import json as _mod_json
+import re as _mod_re
+import secrets as _mod_secrets
+from pathlib import Path as _ModPath
+
+_MOD_ROOM_DIR = _ModPath("/tmp/falk_mod_rooms")
+_MOD_ROOM_TTL_SEC = 4 * 3600  # 4 timmar max livslängd i flyktigt minne/tmp
+_MOD_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def _default_moderator_meta() -> dict:
+    return {
+        "phase": "TRYGGHET",
+        "perspective_triangle": {
+            "part_1_need": "",
+            "part_2_need": "",
+            "shared_ground": "",
+            "core_question": "",
+        },
+        "compass_summary": None,
+    }
+
+
+def _parse_moderator_reply_meta(reply_text: str):
+    text = str(reply_text or "")
+    meta = _default_moderator_meta()
+    pattern = _mod_re.compile(r"<<<MODERATOR_META>>>\s*(\{.*?\})\s*<<<END_MODERATOR_META>>>", _mod_re.DOTALL)
+    match = pattern.search(text)
+    if match:
+        raw_json = match.group(1).strip()
+        clean_text = (text[:match.start()] + text[match.end():]).strip()
+        try:
+            parsed = _mod_json.loads(raw_json)
+            if isinstance(parsed, dict):
+                phase = str(parsed.get("phase") or "TRYGGHET").strip().upper()
+                if phase in {"TRYGGHET", "FÖRSTÅELSE", "PERSPEKTIV", "KLARHET", "NÄSTA_STEG"}:
+                    meta["phase"] = phase
+                tri = parsed.get("perspective_triangle")
+                if isinstance(tri, dict):
+                    meta["perspective_triangle"] = {
+                        "part_1_need": str(tri.get("part_1_need") or "").strip()[:140],
+                        "part_2_need": str(tri.get("part_2_need") or "").strip()[:140],
+                        "shared_ground": str(tri.get("shared_ground") or "").strip()[:160],
+                        "core_question": str(tri.get("core_question") or "").strip()[:160],
+                    }
+                cs = parsed.get("compass_summary")
+                if isinstance(cs, dict):
+                    steps = cs.get("next_steps")
+                    meta["compass_summary"] = {
+                        "understood": str(cs.get("understood") or "").strip()[:400],
+                        "most_important": str(cs.get("most_important") or "").strip()[:400],
+                        "missing_perspective": str(cs.get("missing_perspective") or "").strip()[:400],
+                        "most_true_now": str(cs.get("most_true_now") or "").strip()[:400],
+                        "next_steps": [str(s).strip()[:200] for s in steps[:4]] if isinstance(steps, list) else [],
+                    }
+        except Exception as parse_err:
+            logging.warning(f"Kunde inte parsa MODERATOR_META JSON: {parse_err}")
+        return clean_text, meta
+    # Fallback om markörer delvis läckt
+    clean_text = _mod_re.sub(r"<<<(?:END_)?MODERATOR_META>>>.*", "", text, flags=_mod_re.DOTALL).strip()
+    return clean_text, meta
+
+
+def _sanitize_room_code(code: str) -> str:
+    cleaned = "".join(ch for ch in str(code or "").upper().strip() if ch in _MOD_CODE_ALPHABET)
+    return cleaned[:8]
+
+
+def _ensure_mod_room_dir() -> None:
+    _MOD_ROOM_DIR.mkdir(parents=True, exist_ok=True)
+    now = time.time()
+    try:
+        for p in _MOD_ROOM_DIR.glob("*.json"):
+            try:
+                if now - p.stat().st_mtime > _MOD_ROOM_TTL_SEC:
+                    p.unlink(missing_ok=True)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
+def _mod_room_file(code: str) -> _ModPath:
+    return _MOD_ROOM_DIR / f"{code}.json"
+
+
+def _read_mod_room(code: str):
+    _ensure_mod_room_dir()
+    fp = _mod_room_file(code)
+    if not fp.exists():
+        return None
+    try:
+        with fp.open("r", encoding="utf-8") as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_SH)
+            data = _mod_json.load(f)
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        if time.time() - float(data.get("created_at") or 0) > _MOD_ROOM_TTL_SEC:
+            fp.unlink(missing_ok=True)
+            return None
+        return data
+    except Exception:
+        return None
+
+
+def _write_mod_room(code: str, room_data: dict) -> None:
+    _ensure_mod_room_dir()
+    fp = _mod_room_file(code)
+    with fp.open("w", encoding="utf-8") as f:
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        _mod_json.dump(room_data, f, ensure_ascii=False)
+        f.flush()
+        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+
+
+def _delete_mod_room(code: str) -> None:
+    try:
+        _mod_room_file(code).unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
+def _verify_premium_host_from_request():
+    auth_header = request.headers.get("Authorization") or ""
+    if not auth_header.startswith("Bearer ") or not supabase:
+        return None
+    token = auth_header.split(" ", 1)[1].strip()
+    if not token:
+        return None
+    try:
+        user_resp = supabase.auth.get_user(token)
+        user_obj = getattr(user_resp, "user", None)
+        uid = getattr(user_obj, "id", None) if user_obj else None
+        if not uid:
+            return None
+        prof = (
+            supabase.table("user_profiles")
+            .select("is_premium")
+            .eq("user_id", uid)
+            .limit(1)
+            .execute()
+        )
+        rows = prof.data or []
+        if rows and bool(rows[0].get("is_premium")):
+            return str(uid)
+    except Exception as e:
+        logging.warning(f"Moderator host auth check misslyckades: {e}")
+    return None
+
+
+def _serialize_mod_room_public(room: dict, viewer_role: str = "") -> dict:
+    # Exponerar ALDRIG råa enskilda incheckningstexter för motparten
+    checkins = room.get("private_checkins") or {}
+    return {
+        "room_code": room.get("room_code"),
+        "context": room.get("context", "private"),
+        "part_1_name": room.get("part_1_name", "Part 1"),
+        "part_2_name": room.get("part_2_name", "Part 2"),
+        "guest_joined": bool(room.get("guest_joined")),
+        "checkin_status": {
+            "part_1_submitted": bool(checkins.get("part_1_done")),
+            "part_2_submitted": bool(checkins.get("part_2_done")),
+            "synthesized": bool(checkins.get("synthesized")),
+        },
+        "messages": room.get("messages") or [],
+        "moderator_meta": room.get("moderator_meta") or _default_moderator_meta(),
+        "speaker_counts": room.get("speaker_counts") or {"part_1": 0, "part_2": 0},
+        "expires_at": int((room.get("created_at") or time.time()) + _MOD_ROOM_TTL_SEC),
+        "viewer_role": viewer_role,
+    }
+
+
+def _run_moderator_room_falk_turn(room: dict, is_checkin_synthesis: bool = False, final_compass: bool = False):
+    convo = []
+    for m in (room.get("messages") or [])[-24:]:
+        role = m.get("role")
+        content = str(m.get("content") or "").strip()
+        if not content:
+            continue
+        if role == "falk":
+            convo.append({"role": "assistant", "content": content})
+        else:
+            speaker = str(m.get("speaker_name") or ("Part 1" if role == "part_1" else "Part 2")).strip()
+            convo.append({"role": "user", "content": f"[{speaker}]: {content}"})
+
+    latest_user_msg = convo[-1]["content"] if convo and convo[-1]["role"] == "user" else "Syntetisera parternas enskilda incheckning."
+    sys_prompt = build_falk_system_prompt(
+        user_message=latest_user_msg,
+        current_stage="EXPLORATION",
+        is_guest=False,
+        focus_sliders={},
+        user_context_memories=[],
+        compass_summary=None,
+        response_variant="default",
+        b2b_context=None,
+        session_mode={
+            "track": "moderator",
+            "context": room.get("context", "private"),
+            "check_in_synthesis": is_checkin_synthesis,
+        },
+        final_compass=final_compass,
+        is_new_session=(len(convo) <= 1),
+        user_name=f"{room.get('part_1_name', 'Part 1')} & {room.get('part_2_name', 'Part 2')}",
+    )
+    raw = _call_llm(sys_prompt, convo or [{"role": "user", "content": latest_user_msg}])
+    prev_falk = next((m["content"] for m in reversed(convo) if m["role"] == "assistant"), None)
+    filtered = _apply_gate_filter(
+        raw,
+        latest_user_msg,
+        "EXPLORATION",
+        sys_prompt,
+        is_guest=False,
+        previous_assistant_response=prev_falk,
+    )
+    clean_reply, meta = _parse_moderator_reply_meta(filtered)
+    room["messages"].append({
+        "id": _mod_secrets.token_hex(6),
+        "role": "falk",
+        "speaker_name": "FALK",
+        "content": clean_reply,
+        "ts": int(time.time() * 1000),
+    })
+    room["moderator_meta"] = meta
+
+
+@app.route("/api/moderator/room", methods=["POST"])
+def create_moderator_room():
+    host_uid = _verify_premium_host_from_request()
+    if not host_uid:
+        return jsonify({
+            "status": "error",
+            "code": "PREMIUM_REQUIRED",
+            "message": "Endast inloggade FALK Premium-användare kan skapa delade moderatorrum.",
+        }), 403
+
+    payload = request.get_json(silent=True) or {}
+    context = "b2b" if str(payload.get("context") or "").strip().lower() == "b2b" else "private"
+    part_1_name = str(payload.get("part_1_name") or "Part 1").strip()[:40] or "Part 1"
+    part_2_name = str(payload.get("part_2_name") or "Part 2").strip()[:40] or "Part 2"
+
+    _ensure_mod_room_dir()
+    room_code = ""
+    for _ in range(12):
+        candidate = "".join(_mod_secrets.choice(_MOD_CODE_ALPHABET) for _ in range(6))
+        if not _mod_room_file(candidate).exists():
+            room_code = candidate
+            break
+    if not room_code:
+        return jsonify({"status": "error", "message": "Kunde inte generera rumskod."}), 500
+
+    host_token = _mod_secrets.token_urlsafe(24)
+    room_data = {
+        "room_code": room_code,
+        "created_at": time.time(),
+        "context": context,
+        "part_1_name": part_1_name,
+        "part_2_name": part_2_name,
+        "host_token": host_token,
+        "guest_token": "",
+        "guest_joined": False,
+        "private_checkins": {
+            "part_1_text": "",
+            "part_2_text": "",
+            "part_1_done": False,
+            "part_2_done": False,
+            "synthesized": False,
+        },
+        "messages": [],
+        "moderator_meta": _default_moderator_meta(),
+        "speaker_counts": {"part_1": 0, "part_2": 0},
+    }
+    _write_mod_room(room_code, room_data)
+    return jsonify({
+        "status": "success",
+        "participant_token": host_token,
+        "role": "part_1",
+        "room": _serialize_mod_room_public(room_data, viewer_role="part_1"),
+    }), 201
+
+
+@app.route("/api/moderator/room/<room_code>", methods=["GET"])
+def get_moderator_room(room_code):
+    code = _sanitize_room_code(room_code)
+    room = _read_mod_room(code)
+    if not room:
+        return jsonify({"status": "error", "code": "ROOM_NOT_FOUND", "message": "Rummet hittades inte eller har löpt ut."}), 404
+
+    token = str(request.headers.get("X-Moderator-Token") or request.args.get("token") or "").strip()
+    viewer_role = ""
+    if token and token == room.get("host_token"):
+        viewer_role = "part_1"
+    elif token and token == room.get("guest_token"):
+        viewer_role = "part_2"
+
+    return jsonify({
+        "status": "success",
+        "room": _serialize_mod_room_public(room, viewer_role=viewer_role),
+    }), 200
+
+
+@app.route("/api/moderator/room/<room_code>/join", methods=["POST"])
+def join_moderator_room(room_code):
+    code = _sanitize_room_code(room_code)
+    room = _read_mod_room(code)
+    if not room:
+        return jsonify({"status": "error", "code": "ROOM_NOT_FOUND", "message": "Rummet hittades inte eller har löpt ut."}), 404
+
+    payload = request.get_json(silent=True) or {}
+    guest_name = str(payload.get("guest_name") or room.get("part_2_name") or "Part 2").strip()[:40] or "Part 2"
+    existing_token = str(payload.get("participant_token") or "").strip()
+
+    if existing_token and existing_token == room.get("guest_token"):
+        room["part_2_name"] = guest_name
+        _write_mod_room(code, room)
+        return jsonify({
+            "status": "success",
+            "participant_token": existing_token,
+            "role": "part_2",
+            "room": _serialize_mod_room_public(room, viewer_role="part_2"),
+        }), 200
+
+    guest_token = _mod_secrets.token_urlsafe(24)
+    room["guest_token"] = guest_token
+    room["guest_joined"] = True
+    room["part_2_name"] = guest_name
+    _write_mod_room(code, room)
+
+    return jsonify({
+        "status": "success",
+        "participant_token": guest_token,
+        "role": "part_2",
+        "room": _serialize_mod_room_public(room, viewer_role="part_2"),
+    }), 200
+
+
+@app.route("/api/moderator/room/<room_code>/checkin", methods=["POST"])
+def submit_moderator_room_checkin(room_code):
+    code = _sanitize_room_code(room_code)
+    room = _read_mod_room(code)
+    if not room:
+        return jsonify({"status": "error", "code": "ROOM_NOT_FOUND", "message": "Rummet hittades inte eller har löpt ut."}), 404
+
+    payload = request.get_json(silent=True) or {}
+    token = str(payload.get("participant_token") or request.headers.get("X-Moderator-Token") or "").strip()
+    private_text = str(payload.get("private_text") or "").strip()[:2000]
+    force_synthesize = bool(payload.get("force_synthesize"))
+
+    role = ""
+    if token and token == room.get("host_token"):
+        role = "part_1"
+    elif token and token == room.get("guest_token"):
+        role = "part_2"
+    else:
+        return jsonify({"status": "error", "code": "UNAUTHORIZED_PARTICIPANT", "message": "Ogiltig deltagarnyckel."}), 403
+
+    checkins = room.setdefault("private_checkins", {})
+    if private_text:
+        checkins[f"{role}_text"] = private_text
+        checkins[f"{role}_done"] = True
+
+    both_ready = bool(checkins.get("part_1_done")) and bool(checkins.get("part_2_done"))
+    if (both_ready or (force_synthesize and role == "part_1")) and not checkins.get("synthesized"):
+        p1_raw = str(checkins.get("part_1_text") or "(Ej inskickad)").strip()
+        p2_raw = str(checkins.get("part_2_text") or "(Ej inskickad)").strip()
+        synth_instruction = (
+            f"ENSKILD FÖRBEREDELSE (KONFIDENTIELLT UNDERLAG – ÅTERGE EJ ORDAGRANT):\n"
+            f"- {room.get('part_1_name', 'Part 1')} delade enskilt: {p1_raw}\n"
+            f"- {room.get('part_2_name', 'Part 2')} delade enskilt: {p2_raw}\n\n"
+            "Översätt nu bådas utsagor till underliggande mänskliga behov och gemensam riktning utan att citera eller avslöja anklagelser, och öppna det gemensamma samtalet."
+        )
+        # Rådata raderas omedelbart efter syntes
+        checkins["part_1_text"] = ""
+        checkins["part_2_text"] = ""
+        checkins["synthesized"] = True
+
+        # Temporär syntes-prompt som inte sparas som synligt råmeddelande
+        temp_room = dict(room)
+        temp_room["messages"] = list(room.get("messages") or []) + [{
+            "role": "part_1",
+            "speaker_name": "System (Enskild incheckning)",
+            "content": synth_instruction,
+        }]
+        _run_moderator_room_falk_turn(temp_room, is_checkin_synthesis=True, final_compass=False)
+        room["messages"] = [m for m in temp_room["messages"] if m.get("speaker_name") != "System (Enskild incheckning)"]
+        room["moderator_meta"] = temp_room.get("moderator_meta") or room["moderator_meta"]
+
+    _write_mod_room(code, room)
+    return jsonify({
+        "status": "success",
+        "room": _serialize_mod_room_public(room, viewer_role=role),
+    }), 200
+
+
+@app.route("/api/moderator/room/<room_code>/message", methods=["POST"])
+def post_moderator_room_message(room_code):
+    code = _sanitize_room_code(room_code)
+    room = _read_mod_room(code)
+    if not room:
+        return jsonify({"status": "error", "code": "ROOM_NOT_FOUND", "message": "Rummet hittades inte eller har löpt ut."}), 404
+
+    payload = request.get_json(silent=True) or {}
+    token = str(payload.get("participant_token") or request.headers.get("X-Moderator-Token") or "").strip()
+    content = str(payload.get("content") or "").strip()[:3000]
+    request_falk = payload.get("request_falk", True)
+    final_compass = bool(payload.get("final_compass"))
+
+    role = ""
+    if token and token == room.get("host_token"):
+        role = "part_1"
+    elif token and token == room.get("guest_token"):
+        role = "part_2"
+    else:
+        return jsonify({"status": "error", "code": "UNAUTHORIZED_PARTICIPANT", "message": "Ogiltig deltagarnyckel."}), 403
+
+    if content:
+        speaker_name = room.get("part_1_name", "Part 1") if role == "part_1" else room.get("part_2_name", "Part 2")
+        room["messages"].append({
+            "id": _mod_secrets.token_hex(6),
+            "role": role,
+            "speaker_name": speaker_name,
+            "content": content,
+            "ts": int(time.time() * 1000),
+        })
+        counts = room.setdefault("speaker_counts", {"part_1": 0, "part_2": 0})
+        counts[role] = int(counts.get(role) or 0) + 1
+
+    if request_falk or final_compass:
+        _run_moderator_room_falk_turn(room, is_checkin_synthesis=False, final_compass=final_compass)
+
+    _write_mod_room(code, room)
+    return jsonify({
+        "status": "success",
+        "room": _serialize_mod_room_public(room, viewer_role=role),
+    }), 200
+
+
+@app.route("/api/moderator/room/<room_code>", methods=["DELETE"])
+def delete_moderator_room(room_code):
+    code = _sanitize_room_code(room_code)
+    room = _read_mod_room(code)
+    if not room:
+        return jsonify({"status": "success", "deleted": True}), 200
+
+    token = str(request.headers.get("X-Moderator-Token") or request.args.get("token") or "").strip()
+    if token not in {room.get("host_token"), room.get("guest_token")}:
+        return jsonify({"status": "error", "message": "Behörighet saknas."}), 403
+
+    _delete_mod_room(code)
+    return jsonify({"status": "success", "deleted": True}), 200
+# === END FALK_MODERATOR_ROOMS_AND_META ===
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001))

@@ -201,6 +201,10 @@ COMPASS_SESSIONS = {
         "title": "Ledarskap & Teamkompass (B2B)",
         "goal": "Utforska teamdynamik, mandat, psykologisk trygghet och hållbart ledarskap på system- och strukturnivå.",
     },
+    "moderator": {
+        "title": "Moderator & Flerpartssamtal",
+        "goal": "Leda ett tryggt, balanserat par- eller gruppsamtal där alla parter blir hörda utan att Falk tar sida.",
+    },
 }
 
 
@@ -210,7 +214,40 @@ def _build_session_protocol_layer(session_mode=None, final_compass: bool = False
     if isinstance(session_mode, dict) and session_mode.get("track"):
         track_key = str(session_mode.get("track") or "").strip().lower()
         spec = COMPASS_SESSIONS.get(track_key)
-        if spec:
+        if spec and track_key == "moderator":
+            mod_context = str(session_mode.get("context") or "private").strip().lower()
+            is_checkin = bool(session_mode.get("check_in_synthesis"))
+            context_note = (
+                "- KONTEXT (B2B / LEDNING & TEAM): Samtalet gäller samarbete, mandat, psykologisk trygghet eller teamdynamik. "
+                "Håll system- och fågelperspektiv (Bird's Eye View), skilj på sak, roll och person, och skydda varje deltagares värdighet.\n"
+                if mod_context == "b2b"
+                else "- KONTEXT (PAR & RELATION): Samtalet gäller nära relationer eller familj. Skapa lugn, sänk tempot vid affekt och hjälp parterna höra varandras underliggande behov.\n"
+            )
+            checkin_note = (
+                "- ENSKILD INCHECKNING (SYNTES): Parterna har just delat sina perspektiv enskilt innan gemensam dialog. "
+                "Återge ALDRIG skarpa anklagelser eller laddade ordagrant – översätt i stället bådas utsagor till underliggande behov, "
+                "längtan och gemensam riktning, och öppna det delade samtalet med en lugn, inbjudande fråga.\n"
+                if is_checkin
+                else ""
+            )
+            blocks.append(
+                "[SESSION PROTOKOLL – MODERATORLÄGE (PAR, GRUPP & TEAM)]\n"
+                "- Du agerar neutral samtalsledare och moderator mellan flera deltagare.\n"
+                + context_note
+                + checkin_note
+                + "- ABSOLUT NEUTRALITET (Playbook 9.6 & 11.12): Ta ALDRIG sida, döm ingen och avgör aldrig vem som har rätt eller fel.\n"
+                "- Bekräfta varje deltagares upplevelse var för sig utan att bekräfta tolkningar eller anklagelser som sanning.\n"
+                "- Spegla gemensamma behov under ytan (Iceberg Model) och bjud in tystare deltagare med lugna, öppna frågor.\n"
+                "- Håll svaren korta, lugna och strukturerade så att samtalet stannar mellan deltagarna – inte med dig som domare.\n"
+                "- OBLIGATORISK METADATA (SLUTET AV VARJE SVAR): Avsluta ALLTID ditt svar med exakt följande block på nya rader "
+                "(giltig JSON på en rad mellan markörerna, utan markdown-kodblock):\n"
+                "<<<MODERATOR_META>>>\n"
+                '{"phase":"TRYGGHET|FÖRSTÅELSE|PERSPEKTIV|KLARHET|NÄSTA_STEG","perspective_triangle":{"part_1_need":"Kort neutral sammanfattning av Part 1:s kärnbehov (max 12 ord)","part_2_need":"Kort neutral sammanfattning av Part 2:s kärnbehov (max 12 ord)","shared_ground":"Vad parterna värderar gemensamt (max 14 ord)","core_question":"Den viktigaste gemensamma frågan att utforska (max 14 ord)"},"compass_summary":null}\n'
+                "<<<END_MODERATOR_META>>>\n"
+                "- Om användaren begärt The Final Compass™ (sessionsavslut), fyll 'compass_summary' med ett JSON-objekt med nycklarna: "
+                "'understood', 'most_important', 'missing_perspective', 'most_true_now' (strängar) samt 'next_steps' (lista med 1-2 korta steg per deltagare)."
+            )
+        elif spec:
             try:
                 mins = int(session_mode.get("duration_minutes") or 15)
             except (ValueError, TypeError):
