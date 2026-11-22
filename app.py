@@ -3918,6 +3918,82 @@ def delete_moderator_room(room_code):
 # === END FALK_MODERATOR_ROOMS_AND_META ===
 
 
+# === FALK PREMIUM TTS (OPENAI AUDIO SPEECH) ===
+ALLOWED_TTS_VOICES = {
+    "onyx",
+    "sage",
+    "ash",
+    "nova",
+    "echo",
+    "shimmer",
+    "fable",
+    "alloy",
+    "coral",
+}
+
+
+@app.route("/api/tts", methods=["POST"])
+def generate_tts_audio():
+    """
+    Genererar röstljud (MP3) via OpenAI TTS för autentiserade Premium- och B2B-användare.
+    Ingen ljuddata eller text lagras i databas (GDPR-kompatibel direktström).
+    """
+    uid, _email, is_premium = _resolve_auth_user()
+    if not uid:
+        return jsonify({"error": "Inloggning krävs för AI-röst."}), 401
+    if not is_premium:
+        return jsonify({"error": "AI-röst och röstval kräver Premium eller aktiv B2B-licens."}), 403
+
+    if not OPENAI_API_KEY:
+        return jsonify({"error": "Röstsyntes är inte konfigurerad på servern."}), 503
+
+    data = request.get_json(silent=True) or {}
+    raw_text = str(data.get("text") or "").strip()
+    clean_text = re.sub(r"[#*`_~>]+", "", raw_text)
+    clean_text = " ".join(clean_text.split())
+
+    if not clean_text:
+        return jsonify({"error": "Ingen text att läsa upp."}), 400
+
+    # Hårt teckentak per anrop för kostnads- och latensskydd
+    clean_text = clean_text[:1500]
+
+    voice = str(data.get("voice") or "onyx").strip().lower()
+    if voice not in ALLOWED_TTS_VOICES:
+        voice = "onyx"
+
+    try:
+        speed = float(data.get("speed", 0.98))
+    except (TypeError, ValueError):
+        speed = 0.98
+    speed = max(0.85, min(1.15, speed))
+
+    try:
+        import openai
+        tts_client = openai.OpenAI(api_key=OPENAI_API_KEY, timeout=25.0)
+        speech_resp = tts_client.audio.speech.create(
+            model="tts-1",
+            voice=voice,
+            input=clean_text,
+            speed=speed,
+            response_format="mp3",
+        )
+        audio_bytes = getattr(speech_resp, "content", None)
+        if audio_bytes is None:
+            audio_bytes = speech_resp.read()
+
+        return Response(
+            audio_bytes,
+            status=200,
+            mimetype="audio/mpeg",
+            headers={"Cache-Control": "no-store"},
+        )
+    except Exception as e:
+        logging.error(f"TTS-generering misslyckades för uid={uid}: {type(e).__name__}")
+        return jsonify({"error": "Kunde inte generera röstljud just nu."}), 502
+# === END FALK PREMIUM TTS ===
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001))
     app.run(host="0.0.0.0", port=port, debug=False)
