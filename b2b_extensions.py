@@ -219,13 +219,21 @@ def get_b2b_compasses() -> List[Dict[str, Any]]:
 def get_b2b_exercise_cards(category: Optional[str] = None) -> List[Dict[str, Any]]:
     """Returnerar B2B-övningskorten, valfritt filtrerade på kategori."""
     if not category:
-        return [dict(card) for card in B2B_EXERCISE_CARDS]
+        _b2b_cards = [dict(_c) for _c in ([dict(card) for card in B2B_EXERCISE_CARDS])]
+        for _c in _b2b_cards:
+            _c.setdefault("prompt_trigger", _c.get("starter_prompt", ""))
+            _c.setdefault("tag", _c.get("duration", ""))
+        return _b2b_cards
     norm = category.strip().lower()
-    return [
+    _b2b_cards = [dict(_c) for _c in ([
         dict(card)
         for card in B2B_EXERCISE_CARDS
         if card.get("category", "").strip().lower() == norm
-    ]
+    ])]
+    for _c in _b2b_cards:
+        _c.setdefault("prompt_trigger", _c.get("starter_prompt", ""))
+        _c.setdefault("tag", _c.get("duration", ""))
+    return _b2b_cards
 
 
 def aggregate_b2b_compass_data(
