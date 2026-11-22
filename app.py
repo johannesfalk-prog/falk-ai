@@ -733,14 +733,50 @@ def handle_chat():
             }), 403
         mod_context = "private"
         is_checkin_synth = False
+        mod_participants = []
+        mod_current_speaker = ""
+        mod_next_speaker = ""
+        mod_overlap_event = None
         if isinstance(raw_session, dict):
             if str(raw_session.get("context") or "").strip().lower() == "b2b":
                 mod_context = "b2b"
             is_checkin_synth = bool(raw_session.get("check_in_synthesis"))
+            raw_parts = raw_session.get("participants")
+            if isinstance(raw_parts, list):
+                for item in raw_parts[:8]:
+                    cp = " ".join(str(item or "").split()).strip()[:60]
+                    if cp and cp not in mod_participants:
+                        mod_participants.append(cp)
+            mod_current_speaker = " ".join(str(raw_session.get("current_speaker") or "").split()).strip()[:60]
+            mod_next_speaker = " ".join(str(raw_session.get("next_speaker") or "").split()).strip()[:60]
+            raw_ov = raw_session.get("overlap_event")
+            if isinstance(raw_ov, dict):
+                sel_sp = " ".join(str(raw_ov.get("selected_speaker") or "").split()).strip()[:60]
+                def_sp = " ".join(str(raw_ov.get("deferred_speaker") or "").split()).strip()[:60]
+                raw_cands = raw_ov.get("candidates")
+                if not sel_sp and isinstance(raw_cands, list):
+                    clean_cands = []
+                    for c in raw_cands[:8]:
+                        cc = " ".join(str(c or "").split()).strip()[:60]
+                        if cc and cc not in clean_cands:
+                            clean_cands.append(cc)
+                    if len(clean_cands) >= 2:
+                        picked = _mod_secrets.SystemRandom().sample(clean_cands, 2)
+                        sel_sp, def_sp = picked[0], picked[1]
+                if sel_sp:
+                    mod_overlap_event = {
+                        "selected_speaker": sel_sp,
+                        "deferred_speaker": def_sp,
+                    }
+                    mod_next_speaker = sel_sp
         sanitized_session_mode = {
             "track": "moderator",
             "context": mod_context,
             "check_in_synthesis": is_checkin_synth,
+            "participants": mod_participants,
+            "current_speaker": mod_current_speaker,
+            "next_speaker": mod_next_speaker,
+            "overlap_event": mod_overlap_event,
         }
         is_moderator_session = True
     elif not is_guest and is_premium:
@@ -849,6 +885,12 @@ def handle_chat():
     moderator_meta = None
     if is_moderator_session:
         final_reply, moderator_meta = _parse_moderator_reply_meta(final_reply)
+        if isinstance(moderator_meta, dict):
+            if mod_overlap_event:
+                moderator_meta["overlap_event"] = mod_overlap_event
+                moderator_meta["next_speaker"] = mod_overlap_event["selected_speaker"]
+            elif not moderator_meta.get("next_speaker") and mod_next_speaker:
+                moderator_meta["next_speaker"] = mod_next_speaker
 
     return jsonify({
         "status": "success",
@@ -3480,6 +3522,8 @@ _MOD_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 def _default_moderator_meta() -> dict:
     return {
         "phase": "TRYGGHET",
+        "next_speaker": "",
+        "overlap_event": None,
         "perspective_triangle": {
             "part_1_need": "",
             "part_2_need": "",
@@ -3504,6 +3548,9 @@ def _parse_moderator_reply_meta(reply_text: str):
                 phase = str(parsed.get("phase") or "TRYGGHET").strip().upper()
                 if phase in {"TRYGGHET", "FÖRSTÅELSE", "PERSPEKTIV", "KLARHET", "NÄSTA_STEG"}:
                     meta["phase"] = phase
+                next_sp = " ".join(str(parsed.get("next_speaker") or "").split()).strip()[:60]
+                if next_sp:
+                    meta["next_speaker"] = next_sp
                 tri = parsed.get("perspective_triangle")
                 if isinstance(tri, dict):
                     meta["perspective_triangle"] = {
@@ -3616,15 +3663,51 @@ def _verify_premium_host_from_request():
     return None
 
 
+def _resolve_room_next_role(room: dict, current_role: str = "") -> str:
+    if current_role == "part_1":
+        return "part_2"
+    if current_role == "part_2":
+        return "part_1"
+    counts = room.get("speaker_counts") or {"part_1": 0, "part_2": 0}
+    c1 = int(counts.get("part_1") or 0)
+    c2 = int(counts.get("part_2") or 0)
+    return "part_2" if c2 < c1 else "part_1"
+
+
+def _draw_room_overlap_winner(room: dict) -> dict:
+    p1_name = room.get("part_1_name", "Part 1")
+    p2_name = room.get("part_2_name", "Part 2")
+    pair = [("part_1", p1_name), ("part_2", p2_name)]
+    winner, deferred = _mod_secrets.SystemRandom().sample(pair, 2)
+    return {
+        "id": _mod_secrets.token_hex(4),
+        "selected_role": winner[0],
+        "selected_speaker": winner[1],
+        "deferred_role": deferred[0],
+        "deferred_speaker": deferred[1],
+        "ts": int(time.time() * 1000),
+    }
+
+
 def _serialize_mod_room_public(room: dict, viewer_role: str = "") -> dict:
     # Exponerar ALDRIG råa enskilda incheckningstexter för motparten
     checkins = room.get("private_checkins") or {}
+    p1_name = room.get("part_1_name", "Part 1")
+    p2_name = room.get("part_2_name", "Part 2")
+    active_role = room.get("active_turn_role") or "part_1"
+    if active_role not in {"part_1", "part_2"}:
+        active_role = "part_1"
+    active_speaker = p2_name if active_role == "part_2" else p1_name
     return {
         "room_code": room.get("room_code"),
         "context": room.get("context", "private"),
-        "part_1_name": room.get("part_1_name", "Part 1"),
-        "part_2_name": room.get("part_2_name", "Part 2"),
+        "part_1_name": p1_name,
+        "part_2_name": p2_name,
         "guest_joined": bool(room.get("guest_joined")),
+        "active_turn_role": active_role,
+        "active_turn_speaker": active_speaker,
+        "last_speaker_role": room.get("last_speaker_role") or "",
+        "overlap_event": room.get("overlap_event"),
         "checkin_status": {
             "part_1_submitted": bool(checkins.get("part_1_done")),
             "part_2_submitted": bool(checkins.get("part_2_done")),
@@ -3638,7 +3721,13 @@ def _serialize_mod_room_public(room: dict, viewer_role: str = "") -> dict:
     }
 
 
-def _run_moderator_room_falk_turn(room: dict, is_checkin_synthesis: bool = False, final_compass: bool = False):
+def _run_moderator_room_falk_turn(
+    room: dict,
+    is_checkin_synthesis: bool = False,
+    final_compass: bool = False,
+    current_role: str = "",
+    overlap_event: dict = None,
+):
     convo = []
     for m in (room.get("messages") or [])[-24:]:
         role = m.get("role")
@@ -3651,7 +3740,27 @@ def _run_moderator_room_falk_turn(room: dict, is_checkin_synthesis: bool = False
             speaker = str(m.get("speaker_name") or ("Part 1" if role == "part_1" else "Part 2")).strip()
             convo.append({"role": "user", "content": f"[{speaker}]: {content}"})
 
-    latest_user_msg = convo[-1]["content"] if convo and convo[-1]["role"] == "user" else "Syntetisera parternas enskilda incheckning."
+    p1_name = room.get("part_1_name", "Part 1")
+    p2_name = room.get("part_2_name", "Part 2")
+    current_speaker_name = (
+        (p1_name if current_role == "part_1" else p2_name)
+        if current_role in {"part_1", "part_2"}
+        else ""
+    )
+
+    if isinstance(overlap_event, dict) and overlap_event.get("selected_speaker"):
+        next_role = overlap_event.get("selected_role") or _resolve_room_next_role(room, current_role)
+        next_speaker_name = overlap_event["selected_speaker"]
+    else:
+        next_role = _resolve_room_next_role(room, current_role)
+        next_speaker_name = p2_name if next_role == "part_2" else p1_name
+
+    default_prompt_msg = (
+        f"Röstavbrott upptäckt mellan {p1_name} och {p2_name}. Lottat ord: {next_speaker_name}."
+        if overlap_event
+        else "Syntetisera parternas enskilda incheckning."
+    )
+    latest_user_msg = convo[-1]["content"] if convo and convo[-1]["role"] == "user" else default_prompt_msg
     sys_prompt = build_falk_system_prompt(
         user_message=latest_user_msg,
         current_stage="EXPLORATION",
@@ -3665,10 +3774,14 @@ def _run_moderator_room_falk_turn(room: dict, is_checkin_synthesis: bool = False
             "track": "moderator",
             "context": room.get("context", "private"),
             "check_in_synthesis": is_checkin_synthesis,
+            "participants": [p1_name, p2_name],
+            "current_speaker": current_speaker_name,
+            "next_speaker": next_speaker_name,
+            "overlap_event": overlap_event,
         },
         final_compass=final_compass,
         is_new_session=(len(convo) <= 1),
-        user_name=f"{room.get('part_1_name', 'Part 1')} & {room.get('part_2_name', 'Part 2')}",
+        user_name=f"{p1_name} & {p2_name}",
     )
     raw = _call_llm(sys_prompt, convo or [{"role": "user", "content": latest_user_msg}])
     prev_falk = next((m["content"] for m in reversed(convo) if m["role"] == "assistant"), None)
@@ -3681,6 +3794,24 @@ def _run_moderator_room_falk_turn(room: dict, is_checkin_synthesis: bool = False
         previous_assistant_response=prev_falk,
     )
     clean_reply, meta = _parse_moderator_reply_meta(filtered)
+
+    if isinstance(overlap_event, dict) and overlap_event.get("selected_speaker"):
+        resolved_role = overlap_event.get("selected_role") or next_role
+        meta["next_speaker"] = overlap_event["selected_speaker"]
+        meta["overlap_event"] = overlap_event
+    else:
+        parsed_next = str(meta.get("next_speaker") or "").strip().lower()
+        if parsed_next == p2_name.strip().lower():
+            resolved_role = "part_2"
+            meta["next_speaker"] = p2_name
+        elif parsed_next == p1_name.strip().lower():
+            resolved_role = "part_1"
+            meta["next_speaker"] = p1_name
+        else:
+            resolved_role = next_role
+            meta["next_speaker"] = next_speaker_name
+
+    room["active_turn_role"] = resolved_role
     room["messages"].append({
         "id": _mod_secrets.token_hex(6),
         "role": "falk",
@@ -3733,6 +3864,9 @@ def create_moderator_room():
             "part_2_done": False,
             "synthesized": False,
         },
+        "active_turn_role": "part_1",
+        "last_speaker_role": "",
+        "overlap_event": None,
         "messages": [],
         "moderator_meta": _default_moderator_meta(),
         "speaker_counts": {"part_1": 0, "part_2": 0},
@@ -3859,6 +3993,60 @@ def submit_moderator_room_checkin(room_code):
     }), 200
 
 
+@app.route("/api/moderator/room/<room_code>/overlap", methods=["POST"])
+def resolve_moderator_room_overlap(room_code):
+    code = _sanitize_room_code(room_code)
+    room = _read_mod_room(code)
+    if not room:
+        return jsonify({"status": "error", "code": "ROOM_NOT_FOUND", "message": "Rummet hittades inte eller har löpt ut."}), 404
+
+    payload = request.get_json(silent=True) or {}
+    token = str(payload.get("participant_token") or request.headers.get("X-Moderator-Token") or "").strip()
+    announce_falk = payload.get("announce_falk", True)
+
+    role = ""
+    if token and token == room.get("host_token"):
+        role = "part_1"
+    elif token and token == room.get("guest_token"):
+        role = "part_2"
+    else:
+        return jsonify({"status": "error", "code": "UNAUTHORIZED_PARTICIPANT", "message": "Ogiltig deltagarnyckel."}), 403
+
+    now_ms = int(time.time() * 1000)
+    existing_ov = room.get("overlap_event")
+    if isinstance(existing_ov, dict) and (now_ms - int(existing_ov.get("ts") or 0)) < 3500:
+        return jsonify({
+            "status": "success",
+            "overlap_event": existing_ov,
+            "room": _serialize_mod_room_public(room, viewer_role=role),
+        }), 200
+
+    overlap_event = _draw_room_overlap_winner(room)
+    room["overlap_event"] = overlap_event
+    room["active_turn_role"] = overlap_event["selected_role"]
+
+    if announce_falk:
+        _run_moderator_room_falk_turn(
+            room,
+            is_checkin_synthesis=False,
+            final_compass=False,
+            current_role="",
+            overlap_event=overlap_event,
+        )
+    else:
+        meta = room.get("moderator_meta") or _default_moderator_meta()
+        meta["next_speaker"] = overlap_event["selected_speaker"]
+        meta["overlap_event"] = overlap_event
+        room["moderator_meta"] = meta
+
+    _write_mod_room(code, room)
+    return jsonify({
+        "status": "success",
+        "overlap_event": overlap_event,
+        "room": _serialize_mod_room_public(room, viewer_role=role),
+    }), 200
+
+
 @app.route("/api/moderator/room/<room_code>/message", methods=["POST"])
 def post_moderator_room_message(room_code):
     code = _sanitize_room_code(room_code)
@@ -3871,6 +4059,7 @@ def post_moderator_room_message(room_code):
     content = str(payload.get("content") or "").strip()[:3000]
     request_falk = payload.get("request_falk", True)
     final_compass = bool(payload.get("final_compass"))
+    overlap_detected = bool(payload.get("overlap_detected"))
 
     role = ""
     if token and token == room.get("host_token"):
@@ -3880,6 +4069,16 @@ def post_moderator_room_message(room_code):
     else:
         return jsonify({"status": "error", "code": "UNAUTHORIZED_PARTICIPANT", "message": "Ogiltig deltagarnyckel."}), 403
 
+    now_ms = int(time.time() * 1000)
+    msgs = room.get("messages") or []
+    prev_msg = msgs[-1] if msgs else None
+    rapid_collision = (
+        isinstance(prev_msg, dict)
+        and prev_msg.get("role") in {"part_1", "part_2"}
+        and prev_msg.get("role") != role
+        and (now_ms - int(prev_msg.get("ts") or 0)) <= 4500
+    )
+
     if content:
         speaker_name = room.get("part_1_name", "Part 1") if role == "part_1" else room.get("part_2_name", "Part 2")
         room["messages"].append({
@@ -3887,13 +4086,33 @@ def post_moderator_room_message(room_code):
             "role": role,
             "speaker_name": speaker_name,
             "content": content,
-            "ts": int(time.time() * 1000),
+            "ts": now_ms,
         })
         counts = room.setdefault("speaker_counts", {"part_1": 0, "part_2": 0})
         counts[role] = int(counts.get(role) or 0) + 1
+        room["last_speaker_role"] = role
 
-    if request_falk or final_compass:
-        _run_moderator_room_falk_turn(room, is_checkin_synthesis=False, final_compass=final_compass)
+    active_overlap = None
+    if overlap_detected or rapid_collision:
+        existing_ov = room.get("overlap_event")
+        if isinstance(existing_ov, dict) and (now_ms - int(existing_ov.get("ts") or 0)) < 3500:
+            active_overlap = existing_ov
+        else:
+            active_overlap = _draw_room_overlap_winner(room)
+        room["overlap_event"] = active_overlap
+        room["active_turn_role"] = active_overlap["selected_role"]
+    elif role in {"part_1", "part_2"}:
+        room["overlap_event"] = None
+        room["active_turn_role"] = _resolve_room_next_role(room, role)
+
+    if request_falk or final_compass or active_overlap is not None:
+        _run_moderator_room_falk_turn(
+            room,
+            is_checkin_synthesis=False,
+            final_compass=final_compass,
+            current_role=role,
+            overlap_event=active_overlap,
+        )
 
     _write_mod_room(code, room)
     return jsonify({

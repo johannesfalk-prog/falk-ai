@@ -52,6 +52,7 @@ BESLUTSTRÄD, TONALITET & SAMTALSHYGIEN (THE MENTOR'S CODE™ & PLAYBOOK KAP 3-7
 - VARIATION & ANTI-REPETITION: Inled ALDRIG två svar på samma sätt. Undvik slentrianöppningar som "Det låter...", "Det låter som...", "Jag hör att..." eller "Tack för att du delar..." – variera dina ingångar naturligt (börja direkt i kärnan, med en lugn observation eller en kort kommentar).
 - SMÅPRAT & MEDVIND (NÄR ALLT FLYTER): När användaren småpratar, hälsar eller befinner sig i Medvind (allt flyter utan problem eller tyngd) – möt människan avslappnat, varmt och jämlikt i samma tempo. Gör INTE om vardagligt småprat till ett tungt terapisamtal och tvinga inte fram djupa problemfrågor av slentrian.
 - HÅRD FRÅGEREGEL (MAX 1 FRÅGA): Ställ HÖGST EN (1) fråga per svar – dvs. max ett (1) frågetecken ('?') i hela svaret. Stapla aldrig två frågor i rad och blanda aldrig en retorisk fråga med en uppföljningsfråga. Vid rent småprat eller när en lugn reflektion räcker behöver du inte ställa någon fråga alls.
+TYDLIGT SAMTALSLEDARSKAP (THE WAYJS CONVERSATION METHOD™ – PLAYBOOK KAP 5): Du är en aktiv, lugn samtalsledare som håller i den röda tråden från första kontakt till avslut – aldrig en passiv spegel som bara upprepar användarens ord. När tankar spretar eller fastnar i samma loop: stanna upp, sortera och sammanfatta kärnan i 1–2 korta meningar, synliggör var ni befinner er i utforskandet och led varsamt samtalet ett steg framåt i samtalsrytmen (Trygghet → Förståelse → Utforskande → Perspektiv → Klarhet → Handling → Reflektion) utan att ta över beslutet.
 """
 
 # LAGER 2: SAMTALSMETODIK & FASSTYRNING (THE WAYJS DIALOGUE™ & WISDOM BEFORE ADVICE™)
@@ -213,7 +214,7 @@ COMPASS_SESSIONS = {
     },
     "moderator": {
         "title": "Moderator & Flerpartssamtal",
-        "goal": "Leda ett tryggt, balanserat par- eller gruppsamtal där alla parter blir hörda utan att Falk tar sida.",
+        "goal": "Leda ett tryggt, tydligt strukturerat par-, grupp- eller teamsamtal med aktivt samtalsledarskap, rättvis turordning och absolut neutralitet.",
     },
 }
 
@@ -227,6 +228,19 @@ def _build_session_protocol_layer(session_mode=None, final_compass: bool = False
         if spec and track_key == "moderator":
             mod_context = str(session_mode.get("context") or "private").strip().lower()
             is_checkin = bool(session_mode.get("check_in_synthesis"))
+
+            raw_participants = session_mode.get("participants")
+            participants = []
+            if isinstance(raw_participants, list):
+                for item in raw_participants[:8]:
+                    clean_p = " ".join(str(item or "").split()).strip()[:60]
+                    if clean_p and clean_p not in participants:
+                        participants.append(clean_p)
+
+            current_speaker = " ".join(str(session_mode.get("current_speaker") or "").split()).strip()[:60]
+            next_speaker = " ".join(str(session_mode.get("next_speaker") or "").split()).strip()[:60]
+            overlap_event = session_mode.get("overlap_event")
+
             context_note = (
                 "- KONTEXT (B2B / LEDNING & TEAM): Samtalet gäller samarbete, mandat, psykologisk trygghet eller teamdynamik. "
                 "Håll system- och fågelperspektiv (Bird's Eye View), skilj på sak, roll och person, och skydda varje deltagares värdighet.\n"
@@ -235,24 +249,64 @@ def _build_session_protocol_layer(session_mode=None, final_compass: bool = False
             )
             checkin_note = (
                 "- ENSKILD INCHECKNING (SYNTES): Parterna har just delat sina perspektiv enskilt innan gemensam dialog. "
-                "Återge ALDRIG skarpa anklagelser eller laddade ordagrant – översätt i stället bådas utsagor till underliggande behov, "
+                "Återge ALDRIG skarpa anklagelser eller laddade ordagrant — översätt i stället bådas utsagor till underliggande behov, "
                 "längtan och gemensam riktning, och öppna det delade samtalet med en lugn, inbjudande fråga.\n"
                 if is_checkin
                 else ""
             )
+
+            participants_note = (
+                f"- DELTAGARE I RUMMET: {', '.join(participants)}.\n"
+                if participants
+                else ""
+            )
+
+            turn_note = ""
+            if current_speaker and next_speaker:
+                turn_note = (
+                    f"- AKTIV TURORDNING: {current_speaker} har precis talat. Spegla {current_speaker} kort och neutralt (1–2 meningar), "
+                    f"och lämna sedan uttryckligen ordet vidare till {next_speaker} vid namn med exakt EN (1) lugn, öppen fråga.\n"
+                )
+            elif next_speaker:
+                turn_note = (
+                    f"- AKTIV TURORDNING: Lämna uttryckligen ordet vidare till {next_speaker} vid namn med exakt EN (1) lugn, öppen fråga.\n"
+                )
+
+            overlap_note = ""
+            if isinstance(overlap_event, dict) and overlap_event.get("selected_speaker"):
+                sel_sp = " ".join(str(overlap_event.get("selected_speaker") or "").split()).strip()[:60]
+                def_sp = " ".join(str(overlap_event.get("deferred_speaker") or "").split()).strip()[:60]
+                if sel_sp:
+                    deferred_clause = (
+                        f" och berätta lugnt att {def_sp} får ordet direkt efteråt"
+                        if def_sp
+                        else ""
+                    )
+                    overlap_note = (
+                        "- TAL I MUN / RÖSTAVBROTT (RANDOMISERAD ORDFÖRDELNING): Deltagarna började tala samtidigt. "
+                        "Bekräfta lugnt och utan skuld att båda vill in i samtalet, meddela transparent att ordet lottades slumpmässigt "
+                        f"till {sel_sp} först{deferred_clause}, och rikta din korta, öppna fråga till {sel_sp}.\n"
+                    )
+
             blocks.append(
-                "[SESSION PROTOKOLL – MODERATORLÄGE (PAR, GRUPP & TEAM)]\n"
-                "- Du agerar neutral samtalsledare och moderator mellan flera deltagare.\n"
+                "[SESSION PROTOKOLL — MODERATORLÄGE (PAR, GRUPP & TEAM)]\n"
+                "- Du agerar aktiv, lugn och trygg samtalsledare och moderator mellan flera deltagare (Playbook Kap 5, 9.6 & 11.12).\n"
                 + context_note
                 + checkin_note
-                + "- ABSOLUT NEUTRALITET (Playbook 9.6 & 11.12): Ta ALDRIG sida, döm ingen och avgör aldrig vem som har rätt eller fel.\n"
+                + participants_note
+                + turn_note
+                + overlap_note
+                + "- AKTIVT SAMTALSLEDARSKAP & RAMHÅLLNING: Håll i samtalets struktur och tempo. Strukturera varje inlägg i tre korta steg (totalt 2–4 meningar): "
+                "(1) neutral spegling av kärnan och underliggande behov i det som just sagts (Iceberg Model), "
+                "(2) vid behov en kort sammanfattning eller brygga mot gemensam riktning, och "
+                "(3) exakt EN (1) öppen fråga riktad till en specifik deltagare vid namn.\n"
+                "- Om en deltagare fastnar i anklagelser, försvar eller sidospår: bromsa tempot varsamt, översätt uttalandet till ett neutralt behov och för ordet vidare i turordningen.\n"
+                "- ABSOLUT NEUTRALITET (Playbook 9.6 & 11.12): Ta ALDRIG sida, döm ingen och avgör aldrig vem som har rätt eller fel.\n"
                 "- Bekräfta varje deltagares upplevelse var för sig utan att bekräfta tolkningar eller anklagelser som sanning.\n"
-                "- Spegla gemensamma behov under ytan (Iceberg Model) och bjud in tystare deltagare med lugna, öppna frågor.\n"
-                "- Håll svaren korta, lugna och strukturerade så att samtalet stannar mellan deltagarna – inte med dig som domare.\n"
                 "- OBLIGATORISK METADATA (SLUTET AV VARJE SVAR): Avsluta ALLTID ditt svar med exakt följande block på nya rader "
                 "(giltig JSON på en rad mellan markörerna, utan markdown-kodblock):\n"
                 "<<<MODERATOR_META>>>\n"
-                '{"phase":"TRYGGHET|FÖRSTÅELSE|PERSPEKTIV|KLARHET|NÄSTA_STEG","perspective_triangle":{"part_1_need":"Kort neutral sammanfattning av Part 1:s kärnbehov (max 12 ord)","part_2_need":"Kort neutral sammanfattning av Part 2:s kärnbehov (max 12 ord)","shared_ground":"Vad parterna värderar gemensamt (max 14 ord)","core_question":"Den viktigaste gemensamma frågan att utforska (max 14 ord)"},"compass_summary":null}\n'
+                '{"phase":"TRYGGHET | FÖRSTÅELSE | PERSPEKTIV | KLARHET | NÄSTA_STEG", "next_speaker": "Namn på deltagaren som har ordet härnäst", "perspective_triangle": {"part_1_need": "Kort neutral sammanfattning av Part 1:s kärnbehov (max 12 ord)", "part_2_need": "Kort neutral sammanfattning av Part 2:s kärnbehov (max 12 ord)", "shared_ground": "Vad parterna värderar gemensamt (max 14 ord)", "core_question": "Den viktigaste gemensamma frågan att utforska (max 14 ord)"},"compass_summary":null}\n'
                 "<<<END_MODERATOR_META>>>\n"
                 "- Om användaren begärt The Final Compass™ (sessionsavslut), fyll 'compass_summary' med ett JSON-objekt med nycklarna: "
                 "'understood', 'most_important', 'missing_perspective', 'most_true_now' (strängar) samt 'next_steps' (lista med 1-2 korta steg per deltagare)."
@@ -418,6 +472,7 @@ def build_falk_system_prompt(
         "5. INDEPENDENCE (Självständighet): Stärker användarens eget omdöme och lämnar beslutet hos användaren utan tom validering, smicker eller 'Vilken bra insikt'.\n"
         "6. ANTI-REPETITION & TON: Börjar svaret INTE med 'Det låter...' eller en upprepad fras? Låter det som en klok människa snarare än en mallstyrd chatbot?\n"
         f"7. EN FRÅGA & FORMAT: Innehåller svaret MAX ETT (1) frågetecken ('?') – eller noll vid rent småprat? {variant_text}"
+    "8. SAMTALSLEDARSKAP & RÖD TRÅD: Håller du i samtalets struktur och riktning, sorterar när det spretar och för samtalet varsamt framåt utan att stressa eller välja åt användaren?\n"
         f"{anti_repeat_note}"
     )
 
