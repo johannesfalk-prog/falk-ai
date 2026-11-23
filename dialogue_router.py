@@ -293,41 +293,110 @@ def dialogue_turn():
 
         api_key = os.environ.get('OPENAI_API_KEY')
         falk_reply = ''
+        active_stage = 'TRYGGHET'
+        resolved_num = 1
+        max_questions = 2
         if api_key and user_message:
             try:
+                import inspect
                 client = openai.OpenAI(api_key=api_key)
-                data = request.get_json() or {}
-                focus_scores = data.get('focus', {})
-                focus_context = ""
-                if focus_scores:
-                    focus_context = "\n\nAKTUELLA FOKUSOMRÅDEN FRÅN ANVÄNDAREN:\n" + "\n".join([f"- {k}: {v}%" for k, v in focus_scores.items()]) + "\nAnpassa ton, tempo och vägledning utifrån dessa nivåer."
+                if not data:
+                    data = request.get_json(silent=True) or {}
+                focus_scores = data.get('focus', {}) if isinstance(data.get('focus'), dict) else {}
 
                 hist = data.get('history') if isinstance(data.get('history'), list) else []
-                turn_count = (len(hist) // 2) + 1 if hist else (len(user_journal) + 1)
-                curr_num, _ = FalkStateMachine.normalize_stage(data.get('stage') or data.get('current_stage') or min(turn_count, 7))
+                turn_count = (len(hist) // 2) + 1 if hist else 1
+                raw_stage = data.get('stage') or data.get('current_stage')
+                if raw_stage:
+                    curr_num, _ = FalkStateMachine.normalize_stage(raw_stage)
+                    raw_phase_turns = data.get('turns_in_current_phase')
+                    if raw_phase_turns is not None:
+                        turns_in_phase = max(1, int(raw_phase_turns))
+                    else:
+                        turns_in_phase = turn_count if curr_num == 1 else 1
+                else:
+                    curr_num = min(turn_count, 7)
+                    turns_in_phase = 1
+
                 prop_num = min(curr_num + 1, 7) if turn_count > 1 else curr_num
-                has_caution_signal = bool(safety_flags.get('is_crisis')) or ('PROFESSIONELL GRÄNSDRAGNING' in (safety_flags.get('safety_instructions') or ''))
+
+                has_caution_signal = (
+                    bool(safety_flags.get('is_crisis'))
+                    or safety_flags.get('risk_level') == 'high'
+                    or ('PROFESSIONELL GRÄNSDRAGNING' in (safety_flags.get('safety_instructions') or ''))
+                )
+                stress_val = 0
+                for k, v in focus_scores.items():
+                    if 'stress' in str(k).lower():
+                        try:
+                            stress_val = max(stress_val, float(v))
+                        except (ValueError, TypeError):
+                            pass
+                msg_lower = user_message.lower()
+                stress_markers = (
+                    'stressad', 'överväldigad', 'hinner inte', 'allt snurrar',
+                    'orkar inte', 'panik', 'utmattad', 'för mycket', 'hjärtklappning', 'inre brus'
+                )
+                is_stressed = has_caution_signal or stress_val >= 60 or any(m in msg_lower for m in stress_markers)
+                max_questions = 1 if is_stressed else 2
+
                 crisis_st = 'FAIL_SAFE_CAUTION' if has_caution_signal else 'SAFE'
-                resolved_num = FalkStateMachine.resolve_next_phase(curr_num, prop_num, turn_count, crisis_st)
+                resolved_num = FalkStateMachine.resolve_next_phase(
+                    curr_num,
+                    prop_num,
+                    turns_in_phase,
+                    crisis_st,
+                    is_stressed=is_stressed,
+                )
                 _, active_stage = FalkStateMachine.normalize_stage(resolved_num)
-                full_system_prompt = build_falk_system_prompt(user_id=raw_user_id, current_dialogue_stage=active_stage, is_guest=bool(is_guest), user_message=user_message, focus_sliders=focus_scores, user_context=history_context, safety_instructions=safety_flags.get('safety_instructions'))
+
+                pb_kwargs = dict(
+                    user_id=raw_user_id,
+                    current_dialogue_stage=active_stage,
+                    is_guest=bool(is_guest),
+                    user_message=user_message,
+                    focus_sliders=focus_scores,
+                    user_context=history_context,
+                    safety_instructions=safety_flags.get('safety_instructions'),
+                    turns_in_current_phase=turns_in_phase,
+                    is_stressed=is_stressed,
+                    max_questions=max_questions,
+                )
+                pb_params = inspect.signature(build_falk_system_prompt).parameters
+                if not any(p.kind == inspect.Parameter.VAR_KEYWORD for p in pb_params.values()):
+                    pb_kwargs = {k: v for k, v in pb_kwargs.items() if k in pb_params}
+                full_system_prompt = build_falk_system_prompt(**pb_kwargs)
+
+                llm_messages = [{'role': 'system', 'content': full_system_prompt}]
+                for h_item in hist[-8:]:
+                    if isinstance(h_item, dict):
+                        h_role = h_item.get('role')
+                        h_content = str(h_item.get('content', '')).strip()
+                        if h_role in ('user', 'assistant') and h_content:
+                            llm_messages.append({'role': h_role, 'content': h_content})
+                if not llm_messages or llm_messages[-1].get('role') != 'user' or llm_messages[-1].get('content') != user_message.strip():
+                    llm_messages.append({'role': 'user', 'content': user_message})
+
                 comp = client.chat.completions.create(
                     model='gpt-4o-mini',
-                    messages=[
-                        {'role': 'system', 'content': full_system_prompt},
-                        {'role': 'user', 'content': user_message}
-                    ],
+                    messages=llm_messages,
                     max_tokens=500,
                     temperature=0.7
                 )
                 raw_reply = comp.choices[0].message.content
                 try:
-                    _, falk_reply, _ = validate_response_against_gates(
+                    gc_kwargs = dict(
                         proposed_response=raw_reply,
                         user_message=user_message,
                         active_stage=active_stage,
-                        is_guest=bool(is_guest)
+                        is_guest=bool(is_guest),
+                        max_questions=max_questions,
+                        is_stressed=is_stressed,
                     )
+                    gc_params = inspect.signature(validate_response_against_gates).parameters
+                    if not any(p.kind == inspect.Parameter.VAR_KEYWORD for p in gc_params.values()):
+                        gc_kwargs = {k: v for k, v in gc_kwargs.items() if k in gc_params}
+                    _, falk_reply, _ = validate_response_against_gates(**gc_kwargs)
                 except Exception as gate_err:
                     print('⚠️ Gate checker fallback:', gate_err)
                     falk_reply = raw_reply
@@ -347,7 +416,10 @@ def dialogue_turn():
             'status': 'success',
             'reply': falk_reply,
             'journal': formatted_journal,
-            'user_id': raw_user_id
+            'user_id': raw_user_id,
+            'stage': active_stage,
+            'stage_num': resolved_num,
+            'max_questions': max_questions
         }), 200
 
     except Exception as err:

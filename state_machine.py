@@ -4,13 +4,13 @@ from typing import Any, Tuple
 logger = logging.getLogger("falk-backend")
 
 TRANSITION_MATRIX = {
-    1: {"allowed_next": [1, 2], "min_turns": 1},
-    2: {"allowed_next": [1, 2, 3], "min_turns": 1},
-    3: {"allowed_next": [1, 2, 3, 4], "min_turns": 1},
-    4: {"allowed_next": [2, 3, 4, 5], "min_turns": 1},
-    5: {"allowed_next": [3, 4, 5, 6], "min_turns": 1},
-    6: {"allowed_next": [4, 5, 6, 7], "min_turns": 1},
-    7: {"allowed_next": [1, 5, 6, 7], "min_turns": 1},
+    1: {"allowed_next": [1, 2], "min_turns": 1, "max_turns": 2},
+    2: {"allowed_next": [1, 2, 3], "min_turns": 1, "max_turns": 2},
+    3: {"allowed_next": [1, 2, 3, 4], "min_turns": 1, "max_turns": 3},
+    4: {"allowed_next": [2, 3, 4, 5], "min_turns": 1, "max_turns": 2},
+    5: {"allowed_next": [3, 4, 5, 6], "min_turns": 1, "max_turns": 2},
+    6: {"allowed_next": [4, 5, 6, 7], "min_turns": 1, "max_turns": 2},
+    7: {"allowed_next": [1, 5, 6, 7], "min_turns": 1, "max_turns": 99},
 }
 
 STAGE_TO_NUM = {
@@ -52,6 +52,7 @@ class FalkStateMachine:
         proposed_phase: int,
         turns_in_current_phase: int,
         crisis_status: str,
+        is_stressed: bool = False,
     ) -> int:
         if crisis_status in ["ACUTE_CRISIS", "FAIL_SAFE_CAUTION"]:
             logger.warning(f"STATE MACHINE OVERRIDE: Krisstatus {crisis_status}. Tvingar återgång till Fas 1.")
@@ -71,7 +72,30 @@ class FalkStateMachine:
         except (ValueError, TypeError):
             prop = 1
 
-        allowed_list = TRANSITION_MATRIX.get(curr, TRANSITION_MATRIX[1])["allowed_next"]
+        try:
+            turns = max(0, int(turns_in_current_phase))
+        except (ValueError, TypeError):
+            turns = 0
+
+        phase_cfg = TRANSITION_MATRIX.get(curr, TRANSITION_MATRIX[1])
+        allowed_list = phase_cfg["allowed_next"]
+        max_turns = phase_cfg.get("max_turns", 2)
+
+        if is_stressed:
+            max_turns += 1
+            if curr >= 3 and prop > curr:
+                logger.info(
+                    f"STATE MACHINE STRESS HOLD: Användaren är stressad i Fas {curr}. Håller kvar i Fas {curr} för reglering."
+                )
+                return curr
+
+        if curr < 7 and turns >= max_turns and prop <= curr:
+            forced_next = min(curr + 1, 7)
+            logger.info(
+                f"STATE MACHINE PROACTIVE ADVANCE: {turns} turer i Fas {curr} (tak={max_turns}). "
+                f"Tvingar övergång från Fas {curr} ({NUM_TO_STAGE[curr]}) till Fas {forced_next} ({NUM_TO_STAGE[forced_next]})."
+            )
+            return forced_next
 
         if prop in allowed_list:
             return prop
