@@ -350,6 +350,40 @@ def dialogue_turn():
                 )
                 _, active_stage = FalkStateMachine.normalize_stage(resolved_num)
 
+                recent_assistant_messages = [
+                    str(h_item.get('content', '')).strip()
+                    for h_item in hist
+                    if isinstance(h_item, dict)
+                    and h_item.get('role') == 'assistant'
+                    and str(h_item.get('content', '')).strip()
+                ][-6:]
+
+                user_hist_items = [
+                    " ".join(str(h_item.get('content', '')).split())
+                    for h_item in hist
+                    if isinstance(h_item, dict)
+                    and h_item.get('role') == 'user'
+                    and str(h_item.get('content', '')).strip()
+                ]
+                summary_lines = []
+                if user_hist_items:
+                    summary_lines.append(f"Ursprungligt startfokus: \"{user_hist_items[0][:160]}\"")
+                if len(hist) > 20:
+                    older_user_items = [
+                        " ".join(str(h_item.get('content', '')).split())
+                        for h_item in hist[:-20]
+                        if isinstance(h_item, dict)
+                        and h_item.get('role') == 'user'
+                        and str(h_item.get('content', '')).strip()
+                    ]
+                    if older_user_items:
+                        older_joined = " | ".join(f'"{u[:110]}"' for u in older_user_items[-4:])
+                        summary_lines.append(f"Tidigare spår före senaste 20 meddelanden: {older_joined}")
+                if len(user_hist_items) >= 2:
+                    recent_trail = " -> ".join(f'"{u[:100]}"' for u in user_hist_items[-4:])
+                    summary_lines.append(f"Senaste användarspår i sessionen: {recent_trail}")
+                session_working_summary = "\n".join(summary_lines)[:750]
+
                 pb_kwargs = dict(
                     user_id=raw_user_id,
                     current_dialogue_stage=active_stage,
@@ -358,9 +392,12 @@ def dialogue_turn():
                     focus_sliders=focus_scores,
                     user_context=history_context,
                     safety_instructions=safety_flags.get('safety_instructions'),
+                    recent_assistant_messages=recent_assistant_messages,
+                    is_new_session=(len(hist) == 0),
                     turns_in_current_phase=turns_in_phase,
                     is_stressed=is_stressed,
                     max_questions=max_questions,
+                    session_working_summary=session_working_summary,
                 )
                 pb_params = inspect.signature(build_falk_system_prompt).parameters
                 if not any(p.kind == inspect.Parameter.VAR_KEYWORD for p in pb_params.values()):
@@ -368,7 +405,7 @@ def dialogue_turn():
                 full_system_prompt = build_falk_system_prompt(**pb_kwargs)
 
                 llm_messages = [{'role': 'system', 'content': full_system_prompt}]
-                for h_item in hist[-8:]:
+                for h_item in hist[-20:]:
                     if isinstance(h_item, dict):
                         h_role = h_item.get('role')
                         h_content = str(h_item.get('content', '')).strip()

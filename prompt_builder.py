@@ -450,6 +450,7 @@ def build_falk_system_prompt(
     turns_in_current_phase: int = 0,
     emotional_state: Optional[str] = None,
     max_questions: Optional[int] = None,
+    session_working_summary: Optional[str] = None,
 ) -> str:
     """
     Bygger FALKs 5-lagers systemprompt enligt The Wayjs Prompt Architecture™ (Playbook Vol I Kap 14 & Vol II Modul 5).
@@ -513,12 +514,20 @@ def build_falk_system_prompt(
             "Sammanfatta nu kort det ni landat i och för samtalet proaktivt vidare till NÄSTA fas i detta svar."
         )
 
+    clean_working_summary = str(session_working_summary or "").strip()
+    working_context_note = ""
+    if clean_working_summary:
+        working_context_note = (
+            f"\n- AKTIV SESSIONSKARTA (RÖD TRÅD & ETABLERAT NULÄGE HITTILLS I SAMTALET – BYGG VIDARE, BÖRJA INTE OM):\n"
+            f"{clean_working_summary}"
+        )
+
     stage_block = (
         f"LAGER 2 – AKTUELL SAMTALSFAS & PROAKTIV FASSTYRNING:\n"
         f"{stage_text}\n"
         f"- {question_policy_line}\n"
         f"- SAMTALSFLÖDE (7 FASER): Trygghet → Förståelse → Utforskande → Perspektiv → Klarhet → Handling → Reflektion. "
-        f"Stanna aldrig kvar i passivt frågande när fasens syfte är uppfyllt.{phase_pacing_note}"
+        f"Stanna aldrig kvar i passivt frågande när fasens syfte är uppfyllt.{phase_pacing_note}{working_context_note}"
     )
 
     # Kontinuitetsminnen & Kompassprofil (endast för inloggade användare, isolerat från organisatorisk B2B-nivå)
@@ -569,18 +578,40 @@ def build_falk_system_prompt(
     variant_text = VARIANT_INSTRUCTIONS[variant_key]
 
     recent_openings: List[str] = []
+    recent_questions: List[str] = []
     if isinstance(recent_assistant_messages, list):
-        for prev in recent_assistant_messages[-3:]:
+        for prev in recent_assistant_messages[-4:]:
             cleaned = str(prev or "").strip()
             if cleaned:
                 opening = " ".join(cleaned.split()[:4])
                 if opening and opening not in recent_openings:
                     recent_openings.append(f'"{opening}..."')
-    anti_repeat_note = ""
+        for prev in recent_assistant_messages[-6:]:
+            cleaned = " ".join(str(prev or "").split())
+            if "?" in cleaned:
+                for chunk in cleaned.split("?"):
+                    q_candidate = chunk.strip()
+                    if not q_candidate:
+                        continue
+                    for sep in (". ", "! ", " – ", " - "):
+                        if sep in q_candidate:
+                            q_candidate = q_candidate.rsplit(sep, 1)[-1].strip()
+                    if len(q_candidate) >= 8:
+                        q_formatted = f'"{q_candidate[:110]}?"'
+                        if q_formatted not in recent_questions:
+                            recent_questions.append(q_formatted)
+
+    anti_repeat_parts: List[str] = []
     if recent_openings:
-        anti_repeat_note = (
-            f"\n- FÖRBJUDNA ÖPPNINGAR (redan använda nyligen, välj en helt ny ingång): {', '.join(recent_openings)}"
+        anti_repeat_parts.append(
+            f"- FÖRBJUDNA ÖPPNINGAR (redan använda nyligen, välj en helt ny ingång): {', '.join(recent_openings)}"
         )
+    if recent_questions:
+        anti_repeat_parts.append(
+            "- REDAN STÄLLDA FRÅGOR & SPÅR I SAMTALET (upprepa INTE dessa och ställ INTE om samma fråga med andra ord – bygg vidare framåt): "
+            + "; ".join(recent_questions[-6:])
+        )
+    anti_repeat_note = ("\n" + "\n".join(anti_repeat_parts)) if anti_repeat_parts else ""
 
     # Lager 5: Quality & Ethics Filter (The Five Gates™ + 7 Etiska frågor + The Falk Filter™)
     quality_layer = (
@@ -594,6 +625,7 @@ def build_falk_system_prompt(
         "6. THE FALK FILTER™ (Röst & Ton): Är svaret klart utan att behöva läsas om, respektfullt, fritt från förbjudna fraser ('du borde', 'det är enkelt', 'fantastiskt!', 'hoppas det hjälper') och omisskännligt Falk?\n"
         f"7. FRÅGEGRÄNS & FORMAT: Innehåller svaret MAX {question_budget} frågetecken ('?') (strikt max 1 vid stress/kris, max 2 i lugnt normalläge, 0 vid rent småprat)? {variant_text}\n"
         "8. PROAKTIVT SAMTALSLEDARSKAP: Håller du i den röda tråden, sorterar när det spretar och för samtalet proaktivt framåt genom Fas 1–7 utan att stressa eller välja åt användaren?\n"
+        "9. ANTI-LOOP & PROGRESSION: Om användaren redan svarat på en vinkel eller om sessionskartan visar att ett spår redan utforskats, sammanfatta kort det etablerade nuläget och ta samtalet ett steg djupare (Perspektiv, Klarhet eller Handling) i stället för att börja om.\n"
         f"{anti_repeat_note}"
     )
 
