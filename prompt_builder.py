@@ -518,7 +518,7 @@ def build_falk_system_prompt(
     working_context_note = ""
     if clean_working_summary:
         working_context_note = (
-            f"\n- AKTIV SESSIONSKARTA (RÖD TRÅD & ETABLERAT NULÄGE HITTILLS I SAMTALET – BYGG VIDARE, BÖRJA INTE OM):\n"
+            "\n- AKTIV SESSIONSKARTA (RÖD TRÅD & ETABLERAT NULÄGE HITTILLS I SAMTALET – BYGG VIDARE, BÖRJA INTE OM, FRÅGA INTE OM REDAN BESVARAT):\n"
             f"{clean_working_summary}"
         )
 

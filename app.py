@@ -638,7 +638,7 @@ def handle_chat():
     # Samtalsfas via FalkStateMachine
     raw_history = data.get("history") if isinstance(data.get("history"), list) else []
     clean_history: List[Dict[str, str]] = []
-    for item in raw_history[-20:]:
+    for item in raw_history[-36:]:
         if isinstance(item, dict) and item.get("role") in ("user", "assistant") and item.get("content"):
             clean_history.append({"role": item["role"], "content": str(item["content"])[:2000]})
 
@@ -829,28 +829,33 @@ def handle_chat():
         _user_hist_items = [
             " ".join(str(item.get("content", "")).split())
             for item in raw_history
-            if isinstance(item, dict)
-            and item.get("role") == "user"
-            and str(item.get("content", "")).strip()
+            if isinstance(item, dict) and item.get("role") == "user" and str(item.get("content", "")).strip()
+        ]
+        _assistant_hist_items = [
+            " ".join(str(item.get("content", "")).split())
+            for item in raw_history
+            if isinstance(item, dict) and item.get("role") == "assistant" and str(item.get("content", "")).strip()
         ]
         _summary_lines: List[str] = []
         if _user_hist_items:
-            _summary_lines.append(f"Ursprungligt startfokus: \"{_user_hist_items[0][:160]}\"")
-        if len(raw_history) > 20:
+            _summary_lines.append(f'Ursprungligt startfokus / behov: "{_user_hist_items[0][:180]}"')
+        if len(raw_history) > 36:
             _older_user_items = [
                 " ".join(str(item.get("content", "")).split())
-                for item in raw_history[:-20]
-                if isinstance(item, dict)
-                and item.get("role") == "user"
-                and str(item.get("content", "")).strip()
+                for item in raw_history[:-36]
+                if isinstance(item, dict) and item.get("role") == "user" and str(item.get("content", "")).strip()
             ]
             if _older_user_items:
-                _older_joined = " | ".join(f'"{u[:110]}"' for u in _older_user_items[-4:])
-                _summary_lines.append(f"Tidigare spår före senaste 20 meddelanden: {_older_joined}")
-        if len(_user_hist_items) >= 2:
-            _recent_trail = " -> ".join(f'"{u[:100]}"' for u in _user_hist_items[-4:])
-            _summary_lines.append(f"Senaste användarspår i sessionen: {_recent_trail}")
-        _session_working_summary = "\n".join(_summary_lines)[:750]
+                _older_joined = " | ".join(f'"{u[:120]}"' for u in _older_user_items[-6:])
+                _summary_lines.append(f"Tidigare behovsanalys-spår före senaste 36 meddelanden: {_older_joined}")
+        if _user_hist_items:
+            _recent_trail = " -> ".join(f'"{u[:110]}"' for u in _user_hist_items[-6:])
+            _summary_lines.append(f"Etablerade användarspår & svar i sessionen (redan delat): {_recent_trail}")
+        if _assistant_hist_items:
+            _recent_mentor = " | ".join(f'"{a[:110]}"' for a in _assistant_hist_items[-3:])
+            _summary_lines.append(f"Senaste FALK-vinklar/frågor (gå vidare härifrån, upprepa ej): {_recent_mentor}")
+        _summary_lines.append(f"Aktuell fas-läge: {next_stage} (användarturer: {user_turns})")
+        _session_working_summary = "\n".join(_summary_lines)[:1200]
 
     system_prompt = build_falk_system_prompt(
         user_message=message,

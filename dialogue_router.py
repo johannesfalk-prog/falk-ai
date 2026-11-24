@@ -379,9 +379,22 @@ def dialogue_turn():
                     if older_user_items:
                         older_joined = " | ".join(f'"{u[:110]}"' for u in older_user_items[-4:])
                         summary_lines.append(f"Tidigare spår före senaste 20 meddelanden: {older_joined}")
+                summary_lines.append(f"Aktiv fas: {active_stage} (turer i fas: {turns_in_phase})")
                 if len(user_hist_items) >= 2:
-                    recent_trail = " -> ".join(f'"{u[:100]}"' for u in user_hist_items[-4:])
+                    recent_trail = " -> ".join(f'"{u[:90]}"' for u in user_hist_items[-4:])
                     summary_lines.append(f"Senaste användarspår i sessionen: {recent_trail}")
+                if focus_scores:
+                    active_focus = [
+                        f"{k}:{v}%" for k, v in focus_scores.items()
+                        if isinstance(v, (int, float)) and v > 0
+                    ]
+                    if active_focus:
+                        summary_lines.append(f"Fokusreglage: {', '.join(active_focus[:3])}")
+                if safety_flags.get("circle_warning") or safety_flags.get("loop_warning") or safety_flags.get("stuck_pattern"):
+                    summary_lines.append("Cirkelvarning: möjligen återkommande spår; sänk tempot och pröva perspektiv eller minsta steg.")
+                if safety_flags.get("needs_analysis") or safety_flags.get("core_need"):
+                    need_val = safety_flags.get("core_need") or safety_flags.get("needs_analysis")
+                    summary_lines.append(f"Behovshypotes (ej fastställd): {str(need_val)[:80]}")
                 session_working_summary = "\n".join(summary_lines)[:750]
 
                 pb_kwargs = dict(
