@@ -526,6 +526,7 @@ def build_falk_system_prompt(
         f"LAGER 2 – AKTUELL SAMTALSFAS & PROAKTIV FASSTYRNING:\n"
         f"{stage_text}\n"
         f"- {question_policy_line}\n"
+        f"- SAMTALSREGI (ÖMSESIDIG FÖRSTÅELSE): Hjälp parterna översätta ståndpunkter till underliggande behov, pröva motpartens perspektiv utan att döma och bygga gemensam förståelse utan att överskrida frågebudgeten.\n"
         f"- SAMTALSFLÖDE (7 FASER): Trygghet → Förståelse → Utforskande → Perspektiv → Klarhet → Handling → Reflektion. "
         f"Stanna aldrig kvar i passivt frågande när fasens syfte är uppfyllt.{phase_pacing_note}{working_context_note}"
     )

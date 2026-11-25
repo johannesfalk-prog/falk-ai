@@ -390,6 +390,7 @@ def dialogue_turn():
                     ]
                     if active_focus:
                         summary_lines.append(f"Fokusreglage: {', '.join(active_focus[:3])}")
+                summary_lines.append("Samtalsmål: ömsesidig förståelse — översätt positioner till behov, pröva motpartens perspektiv utan att döma och bygg gemensam förståelse.")
                 if safety_flags.get("circle_warning") or safety_flags.get("loop_warning") or safety_flags.get("stuck_pattern"):
                     summary_lines.append("Cirkelvarning: möjligen återkommande spår; sänk tempot och pröva perspektiv eller minsta steg.")
                 if safety_flags.get("needs_analysis") or safety_flags.get("core_need"):
