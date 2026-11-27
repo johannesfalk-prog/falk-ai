@@ -398,6 +398,17 @@ def dialogue_turn():
                     summary_lines.append(f"Behovshypotes (ej fastställd): {str(need_val)[:80]}")
                 session_working_summary = "\n".join(summary_lines)[:750]
 
+                raw_session_mode = data.get('session_mode')
+                if isinstance(raw_session_mode, str) and raw_session_mode.strip():
+                    resolved_session_mode = {'track': raw_session_mode.strip()}
+                elif isinstance(raw_session_mode, dict):
+                    resolved_session_mode = raw_session_mode
+                else:
+                    resolved_session_mode = None
+
+                raw_card_ctx = data.get('card_context')
+                resolved_card_context = raw_card_ctx if isinstance(raw_card_ctx, dict) else None
+
                 pb_kwargs = dict(
                     user_id=raw_user_id,
                     current_dialogue_stage=active_stage,
@@ -412,6 +423,8 @@ def dialogue_turn():
                     is_stressed=is_stressed,
                     max_questions=max_questions,
                     session_working_summary=session_working_summary,
+                    session_mode=resolved_session_mode,
+                    card_context=resolved_card_context,
                 )
                 pb_params = inspect.signature(build_falk_system_prompt).parameters
                 if not any(p.kind == inspect.Parameter.VAR_KEYWORD for p in pb_params.values()):

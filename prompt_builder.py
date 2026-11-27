@@ -279,6 +279,10 @@ COMPASS_SESSIONS = {
         "title": "Relationer i fokus",
         "goal": "Skapa förståelse och klarhet när kommunikation eller tillit kärvar med Perspektivtriangeln.",
     },
+    "relationer_fokus": {
+        "title": "Relationer i fokus",
+        "goal": "Skapa förståelse och klarhet när kommunikation eller tillit kärvar med Perspektivtriangeln.",
+    },
     "aterhamta_balansen": {
         "title": "Återhämta balansen",
         "goal": "Sänka tempot och sortera belastning med Kontrollcirkeln och Energiflödesmodellen.",
@@ -428,6 +432,43 @@ def _build_session_protocol_layer(session_mode=None, final_compass: bool = False
     return "\n\n".join(blocks)
 
 
+def _build_card_purpose_layer(card_context: Optional[Dict[str, Any]] = None) -> str:
+    """Bygger aktiv samtalsstyrning för onboardingkort, övningskort eller kompass-session."""
+    if not isinstance(card_context, dict):
+        return ""
+    kind = str(card_context.get("kind") or "").strip().lower()
+    if kind not in ("onboarding", "exercise", "compass_session"):
+        return ""
+    title = " ".join(str(card_context.get("title") or "").split()).strip()[:120]
+    purpose = " ".join(str(card_context.get("purpose") or card_context.get("goal") or "").split()).strip()[:320]
+    raw_steps = card_context.get("steps")
+    steps: List[str] = []
+    if isinstance(raw_steps, list):
+        for st in raw_steps[:5]:
+            clean_st = " ".join(str(st or "").split()).strip()[:160]
+            if clean_st:
+                steps.append(clean_st)
+    if not (title or purpose or steps):
+        return ""
+    kind_label = {
+        "onboarding": "ONBOARDINGKORT",
+        "exercise": "ÖVNINGSKORT",
+        "compass_session": "KOMPASS-SESSION",
+    }[kind]
+    lines = [
+        f"=== AKTIVT KORT- & SESSIONÄNDAMÅL ({kind_label}) ===",
+        "Led samtalet aktivt och målmedvetet mot ändamålet nedan genom hela sessionen utan att tappa den röda tråden eller bryta frågebudgeten:",
+    ]
+    if title:
+        lines.append(f"- Kort / Session: {title}")
+    if purpose:
+        lines.append(f"- Ändamål & mål: {purpose}")
+    if steps:
+        lines.append("- Föreslagen stegordning: " + " -> ".join(steps))
+    lines.append("- Samtalsledning: Håll fokus på detta syfte, spegla kort, för samtalet framåt mot klarhet och ett konkret nästa steg.")
+    return "\n".join(lines)
+
+
 def build_falk_system_prompt(
     user_message: str = "",
     current_stage: Optional[Any] = None,
@@ -451,6 +492,7 @@ def build_falk_system_prompt(
     emotional_state: Optional[str] = None,
     max_questions: Optional[int] = None,
     session_working_summary: Optional[str] = None,
+    card_context: Optional[Dict[str, Any]] = None,
 ) -> str:
     """
     Bygger FALKs 5-lagers systemprompt enligt The Wayjs Prompt Architecture™ (Playbook Vol I Kap 14 & Vol II Modul 5).
@@ -659,6 +701,9 @@ def build_falk_system_prompt(
         if _b2b_layer:
             extra_layers.append(_b2b_layer)
 
+    _card_layer = _build_card_purpose_layer(card_context=card_context)
+    if _card_layer:
+        extra_layers.append(_card_layer)
     _session_layer = _build_session_protocol_layer(
         session_mode=session_mode,
         final_compass=final_compass,

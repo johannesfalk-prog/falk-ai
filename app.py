@@ -2776,6 +2776,108 @@ def b2b_org_analytics():
         logging.error(f"B2B analytics-fel för org {org_id}: {e}")
         return jsonify({"status": "error", "message": "Kunde inte hämta anonymiserad organisationsanalys."}), 500
 
+@app.route("/api/b2b/org/pulse-dispatch", methods=["POST", "OPTIONS"])
+def b2b_org_pulse_dispatch():
+    if request.method == "OPTIONS":
+        return "", 200
+    auth_uid, _, _ = _resolve_auth_user()
+    if not auth_uid:
+        return jsonify({"status": "error", "code": "AUTH_REQUIRED", "message": "Inloggning krävs."}), 401
+    if not _verify_adult_and_terms(auth_uid):
+        return jsonify({
+            "status": "error",
+            "code": "AGE_AND_TERMS_REQUIRED",
+            "message": "Bekräftelse av 18+ och godkända villkor krävs.",
+        }), 403
+    if not supabase:
+        return jsonify({"status": "error", "message": "Databasanslutning saknas."}), 500
+
+    data = request.get_json(silent=True) or {}
+    requested_org_id = str(data.get("org_id") or request.args.get("org_id") or "").strip() or None
+    admin_mem, org_row = _get_active_b2b_admin_membership(auth_uid, requested_org_id)
+    if not admin_mem or not org_row:
+        return jsonify({
+            "status": "error",
+            "code": "ORG_ADMIN_REQUIRED",
+            "message": "Endast aktiv organisationsadministratör kan skicka ut pulsmätningar.",
+        }), 403
+
+    org_id = org_row.get("id")
+    title = " ".join(str(data.get("title") or "Team-pulsmätning").split()).strip()[:120]
+    questions = data.get("questions")
+    clean_questions: List[str] = []
+    if isinstance(questions, list):
+        for q in questions[:8]:
+            cq = " ".join(str(q or "").split()).strip()[:220]
+            if cq:
+                clean_questions.append(cq)
+    if not clean_questions:
+        clean_questions = [
+            "Hur upplever du tydligheten i riktning och prioriteringar just nu?",
+            "Hur känns balansen mellan tempo och återhämtning denna vecka?",
+        ]
+
+    raw_due = str(data.get("remind_at") or "").strip() or None
+    frequency = str(data.get("frequency") or "once").strip() or "once"
+    target_member_ids = data.get("member_ids")
+    target_set = set(str(x).strip() for x in target_member_ids if str(x).strip()) if isinstance(target_member_ids, list) else None
+
+    try:
+        mem_res = (
+            supabase.table("organization_members")
+            .select("user_id, status")
+            .eq("org_id", org_id)
+            .eq("status", "active")
+            .execute()
+        )
+        active_rows = mem_res.data or []
+        recipient_uids: List[str] = []
+        seen_uids = set()
+        for r in active_rows:
+            uid = str(r.get("user_id") or "").strip()
+            if not uid or uid in seen_uids:
+                continue
+            if target_set is not None and uid not in target_set:
+                continue
+            seen_uids.add(uid)
+            recipient_uids.append(uid)
+
+        q_preview = " | ".join(clean_questions[:3])
+        reminder_text = f"[Pulsmätning: {title}] {q_preview}"[:450]
+        dispatched_count = 0
+        for r_uid in recipient_uids:
+            payload: Dict[str, Any] = {
+                "user_id": r_uid,
+                "content": reminder_text,
+                "frequency": frequency,
+            }
+            if raw_due:
+                payload["remind_at"] = raw_due
+                payload["reminder_at"] = raw_due
+            try:
+                supabase.table("user_reminders").insert(payload).execute()
+            except Exception:
+                supabase.table("user_reminders").insert({
+                    "user_id": r_uid,
+                    "content": reminder_text,
+                    "frequency": frequency,
+                }).execute()
+            dispatched_count += 1
+
+        return jsonify({
+            "status": "success",
+            "dispatched_count": dispatched_count,
+            "pulse": {
+                "title": title,
+                "questions": clean_questions,
+                "org_id": org_id,
+            },
+        }), 201
+    except Exception as e:
+        logging.error(f"Fel vid pulsmätarutskick för org {org_id}: {e}")
+        return jsonify({"status": "error", "message": "Kunde inte skicka ut pulsmätningen."}), 500
+
+
 
 @app.route("/api/b2b/org/members", methods=["GET", "POST", "DELETE", "OPTIONS"])
 def b2b_org_members():
